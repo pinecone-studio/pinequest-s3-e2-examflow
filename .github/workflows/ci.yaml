@@ -2,33 +2,33 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: ["*"]
   pull_request:
-    branches: [ main ]
+    branches: ["*"]
 
 jobs:
   lint-and-build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
 
-    - name: Install dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Lint
-      run: npm run lint
+      - name: Lint
+        run: npm run lint
 
-    - name: Build
-      run: npm run build
+      - name: Build
+        run: npm run build
 
-    - name: Build web preview
-      run: npm run build --workspace @pinequest/web
-      # This builds the web app for production, which can serve as a preview check
+      - name: Build web preview
+        run: npm run build --workspace @pinequest/web
+        # This builds the web app for production, which can serve as a preview check
