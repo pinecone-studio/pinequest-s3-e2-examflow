@@ -52,7 +52,7 @@ jobs:
               - 'tsconfig.base.json'
 
   web:
-    name: Validate web for deploy
+    name: Validate web and UI for deploy
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: changes
@@ -70,6 +70,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Lint UI
+        run: npm run lint --workspace @pinequest/ui
 
       - name: Lint web
         run: npm run lint --workspace @pinequest/web

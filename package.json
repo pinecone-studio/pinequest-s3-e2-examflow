@@ -26,5 +26,13 @@
     "url": "https://github.com/pinecone-studio/pinequest-s3-e2-team-9/issues"
   },
   "homepage": "https://github.com/pinecone-studio/pinequest-s3-e2-team-9#readme",
-  "dependencies": {}
+  "dependencies": {},
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.1",
+    "eslint-plugin-unused-imports": "^4.3.0",
+    "globals": "^16.4.0",
+    "typescript-eslint": "^8.46.1"
+  }
 }
