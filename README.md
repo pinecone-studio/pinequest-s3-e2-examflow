@@ -8,30 +8,53 @@ Monorepo structure:
 
 ## CI/CD
 
-This repository now includes GitHub Actions workflows for CI and CD:
+This repository now uses GitHub Actions for CI and provider-native CD:
 
 - `/.github/workflows/ci.yml`
   - Runs on pull requests and pushes to `main` and `develop`
   - Detects which monorepo apps changed
   - Runs separate jobs for `apps/web` and `apps/api`
   - Only executes the relevant app checks for the current changeset
-- `/.github/workflows/deploy.yml`
-  - Runs on pushes to `develop` and `main`, plus manual dispatch
-  - Re-validates `web` and `api` in separate jobs before deployment
-  - Deploys `develop` to the `staging` environment
-  - Deploys `main` to the `production` environment
-  - Uses each environment's own `DEPLOY_WEBHOOK_URL` secret
+- `/render.yaml`
+  - Defines Render services for the API staging and production environments
+  - Waits for CI checks to pass before deploying the linked branch
+  - Limits API deploys to backend-related file changes
 
-### Required GitHub configuration
+### Web deployment with Vercel
 
-Create these GitHub environments and add the same secret in each one:
+Connect the repository to a Vercel project for `apps/web`:
 
-- `staging`
-  - `DEPLOY_WEBHOOK_URL`: staging deploy endpoint from Vercel, Render, Railway, your VPS, or another hosting provider
-- `production`
-  - `DEPLOY_WEBHOOK_URL`: production deploy endpoint from Vercel, Render, Railway, your VPS, or another hosting provider
+1. Import the GitHub repository in Vercel
+2. Set the project root directory to `apps/web`
+3. Confirm the production branch is `main`
+4. Keep `Include source files outside of the Root Directory` enabled so `packages/ui` is available during builds
+
+After that, Vercel will automatically:
+
+- create a preview deployment URL for each pull request
+- add the preview URL to the GitHub pull request
+- deploy `main` to the production domain
+
+### API deployment with Render
+
+Use the root-level `render.yaml` blueprint to create two Render services:
+
+- `pinequest-api-staging`
+  - branch: `develop`
+  - root directory: `apps/api`
+- `pinequest-api-production`
+  - branch: `main`
+  - root directory: `apps/api`
+
+Suggested setup flow:
+
+1. Connect the GitHub repository to Render
+2. Create a Blueprint from `render.yaml`
+3. Add the required API environment variables in Render for both services
+4. Keep `autoDeployTrigger` as `checksPass` so Render deploys only after GitHub checks succeed
 
 ### Suggested branch flow
 
-- `develop`: integration branch that deploys to staging
-- `main`: production branch that deploys to production
+- `develop`: integration branch that deploys the API to Render staging
+- `main`: production branch that deploys the API to Render production and the web app to Vercel production
+- pull requests: Vercel creates preview URLs for the web app automatically
