@@ -3,9 +3,18 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { UserButton, useAuth } from "@clerk/nextjs";
+import { SignOutButton, useAuth, useUser } from "@clerk/nextjs";
 import { SpotlightCard } from "@pinequest/ui";
 import { AuthStatusCard, ClerkConfigCard } from "../auth-status-card";
+
+const getDisplayName = (
+  firstName?: string | null,
+  lastName?: string | null,
+  username?: string | null,
+) => {
+  const name = [firstName, lastName].filter(Boolean).join(" ");
+  return name || username || "Clerk user";
+};
 
 const shortenId = (value: string) => {
   if (value.length <= 18) {
@@ -20,6 +29,7 @@ const hasClerkConfig = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 function DashboardContent() {
   const router = useRouter();
   const { isLoaded: isAuthLoaded, userId } = useAuth();
+  const { user } = useUser();
 
   useEffect(() => {
     if (isAuthLoaded && !userId) {
@@ -47,6 +57,16 @@ function DashboardContent() {
     );
   }
 
+  const displayName = getDisplayName(
+    user?.firstName,
+    user?.lastName,
+    user?.username,
+  );
+  const email =
+    user?.primaryEmailAddress?.emailAddress ??
+    user?.emailAddresses[0]?.emailAddress ??
+    "Loading email...";
+
   return (
     <main className="page">
       <SpotlightCard
@@ -57,13 +77,13 @@ function DashboardContent() {
         <div className="dashboard-header">
           <div>
             <p className="auth-kicker">Session verified</p>
-            <h2 className="auth-heading">Teacher access confirmed</h2>
+            <h2 className="auth-heading">{displayName}</h2>
             <p className="auth-copy">
-              This page unlocks as soon as Clerk confirms the browser session.
-              Signed-out users are redirected to `/sign-in` immediately.
+              Clerk is supplying the active user session on the client. Profile
+              details stream in after the page unlocks, but signed-out users
+              are redirected to `/sign-in` immediately.
             </p>
           </div>
-          <UserButton />
         </div>
 
         <div className="dashboard-grid">
@@ -72,8 +92,8 @@ function DashboardContent() {
             <p className="dashboard-value">{shortenId(userId)}</p>
           </article>
           <article className="dashboard-card">
-            <p className="dashboard-label">Session source</p>
-            <p className="dashboard-value">Clerk browser session</p>
+            <p className="dashboard-label">Primary email</p>
+            <p className="dashboard-value">{email}</p>
           </article>
           <article className="dashboard-card">
             <p className="dashboard-label">Route status</p>
@@ -85,9 +105,11 @@ function DashboardContent() {
           <Link className="secondary-button" href="/">
             Back to home
           </Link>
-          <Link className="ghost-link" href="/sign-in">
-            Open sign-in page
-          </Link>
+          <SignOutButton redirectUrl="/sign-in">
+            <button className="primary-button" type="button">
+              Sign out
+            </button>
+          </SignOutButton>
         </div>
       </SpotlightCard>
     </main>
