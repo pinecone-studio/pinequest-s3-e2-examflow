@@ -1,4 +1,4 @@
-name: CD - Production Deploy
+name: CD
 
 on:
   push:
@@ -12,11 +12,11 @@ concurrency:
 
 env:
   NODE_VERSION: 20
-  CF_PAGES_PROJECT_NAME: ${{ github.event.repository.name }}
+  CF_PAGES_PROJECT_NAME: pinequest-web
 
 jobs:
   verify:
-    name: Verify Before Deploy
+    name: Verify
     runs-on: ubuntu-latest
 
     steps:
