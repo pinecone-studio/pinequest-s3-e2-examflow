@@ -185,7 +185,7 @@ jobs:
           NEXT_PUBLIC_GRAPHQL_ENDPOINT: ${{ vars.NEXT_PUBLIC_GRAPHQL_ENDPOINT }}
         run: npm run build:pages
 
-      - name: Ensure Cloudflare Pages project exists
+      - name: Ensure Cloudflare Pages compatibility settings
         if: steps.cloudflare.outputs.available == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -195,6 +195,23 @@ jobs:
           project="${CF_PAGES_PROJECT_NAME}"
           api_base="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects"
           compat_date="$(date -u +%F)"
+          payload="$(cat <<JSON
+          {
+            "name": "${project}",
+            "production_branch": "main",
+            "deployment_configs": {
+              "preview": {
+                "compatibility_date": "${compat_date}",
+                "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"]
+              },
+              "production": {
+                "compatibility_date": "${compat_date}",
+                "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"]
+              }
+            }
+          }
+          JSON
+          )"
 
           status="$(curl -sS -o /tmp/cf-project-check.json -w "%{http_code}" \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
@@ -204,11 +221,22 @@ jobs:
             create_response="$(curl -sS -X POST "${api_base}" \
               -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
               -H "Content-Type: application/json" \
-              --data "{\"name\":\"${project}\",\"production_branch\":\"main\",\"deployment_configs\":{\"preview\":{\"compatibility_date\":\"${compat_date}\",\"compatibility_flags\":[\"nodejs_compat\"]},\"production\":{\"compatibility_date\":\"${compat_date}\",\"compatibility_flags\":[\"nodejs_compat\"]}}}")"
+              --data "${payload}")"
 
             if ! echo "${create_response}" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true'; then
               echo "::error::Failed to create Pages project '${project}'."
               echo "${create_response}"
+              exit 1
+            fi
+          else
+            update_response="$(curl -sS -X PATCH "${api_base}/${project}" \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data "${payload}")"
+
+            if ! echo "${update_response}" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true'; then
+              echo "::error::Failed to update Pages project '${project}'."
+              echo "${update_response}"
               exit 1
             fi
           fi

@@ -158,6 +158,62 @@ jobs:
         if: steps.cloudflare.outputs.available == 'true'
         run: npm ci
 
+      - name: Ensure Cloudflare Pages compatibility settings
+        if: steps.cloudflare.outputs.available == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          project="${CF_PAGES_PROJECT_NAME}"
+          api_base="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects"
+          compat_date="$(date -u +%F)"
+          payload="$(cat <<JSON
+          {
+            "name": "${project}",
+            "production_branch": "main",
+            "deployment_configs": {
+              "preview": {
+                "compatibility_date": "${compat_date}",
+                "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"]
+              },
+              "production": {
+                "compatibility_date": "${compat_date}",
+                "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"]
+              }
+            }
+          }
+          JSON
+          )"
+
+          status="$(curl -sS -o /tmp/cf-project-check.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "${api_base}/${project}")"
+
+          if [ "${status}" != "200" ] || ! grep -Eq '"success"[[:space:]]*:[[:space:]]*true' /tmp/cf-project-check.json; then
+            create_response="$(curl -sS -X POST "${api_base}" \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data "${payload}")"
+
+            if ! echo "${create_response}" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true'; then
+              echo "::error::Failed to create Pages project '${project}'."
+              echo "${create_response}"
+              exit 1
+            fi
+          else
+            update_response="$(curl -sS -X PATCH "${api_base}/${project}" \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data "${payload}")"
+
+            if ! echo "${update_response}" | grep -Eq '"success"[[:space:]]*:[[:space:]]*true'; then
+              echo "::error::Failed to update Pages project '${project}'."
+              echo "${update_response}"
+              exit 1
+            fi
+          fi
+
       - name: Build web for Cloudflare Pages
         if: steps.cloudflare.outputs.available == 'true'
         env:
