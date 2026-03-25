@@ -19,7 +19,6 @@ export function useEmailOtpSignIn() {
   const [verificationSubmissionErrors, setVerificationSubmissionErrors] = useState<string[]>(
     [],
   );
-  const [shouldFinalizeSignIn, setShouldFinalizeSignIn] = useState(false);
 
   const redirectTarget = useMemo(
     () => getSafeRedirectPath(searchParams.get("redirect_url")),
@@ -49,16 +48,6 @@ export function useEmailOtpSignIn() {
       setStatusMessage(null);
     }
   }, [redirectTarget, router, signIn]);
-
-  useEffect(() => {
-    if (!shouldFinalizeSignIn || signIn.status !== "complete") {
-      return;
-    }
-
-    setShouldFinalizeSignIn(false);
-    setStatusMessage("Нэвтрүүлж байна...");
-    void finishSignIn();
-  }, [finishSignIn, shouldFinalizeSignIn, signIn.status]);
 
   const identifierErrors = [
     ...collectErrorMessages({
@@ -92,7 +81,6 @@ export function useEmailOtpSignIn() {
       setStatusMessage(null);
       setIdentifierSubmissionErrors([]);
       setVerificationSubmissionErrors([]);
-      setShouldFinalizeSignIn(false);
 
       const { error: createError } = await signIn.create({ identifier: normalizedEmail });
       if (createError) {
@@ -134,7 +122,6 @@ export function useEmailOtpSignIn() {
 
       setStatusMessage(null);
       setVerificationSubmissionErrors([]);
-      setShouldFinalizeSignIn(false);
 
       const { error } = await signIn.emailCode.verifyCode({ code: submittedCode });
       if (error) {
@@ -142,8 +129,8 @@ export function useEmailOtpSignIn() {
         return;
       }
 
-      setShouldFinalizeSignIn(true);
-      setStatusMessage("Кодыг шалгаж байна...");
+      setStatusMessage("Нэвтрүүлж байна...");
+      await finishSignIn();
     },
     [finishSignIn, signIn],
   );
@@ -166,7 +153,6 @@ export function useEmailOtpSignIn() {
     setStatusMessage(null);
     setIdentifierSubmissionErrors([]);
     setVerificationSubmissionErrors([]);
-    setShouldFinalizeSignIn(false);
   }, [signIn]);
 
   return {

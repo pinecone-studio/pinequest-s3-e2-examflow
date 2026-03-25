@@ -2,17 +2,16 @@
 
 import { useEffect } from "react";
 
-declare global {
-  interface Window {
-    __internal_onBeforeSetActive?: (intent?: string) => Promise<unknown> | unknown;
-  }
-}
+type WindowWithClerkIntent = Window & {
+  __internal_onBeforeSetActive?: (intent?: string) => Promise<unknown> | unknown;
+};
 
 export function ClerkSignOutFix() {
   useEffect(() => {
-    const originalBeforeSetActive = window.__internal_onBeforeSetActive;
+    const win = window as WindowWithClerkIntent;
+    const originalBeforeSetActive = win.__internal_onBeforeSetActive;
 
-    window.__internal_onBeforeSetActive = (intent?: string) => {
+    win.__internal_onBeforeSetActive = (intent?: string) => {
       if (intent === "sign-out") {
         return Promise.resolve();
       }
@@ -21,7 +20,7 @@ export function ClerkSignOutFix() {
     };
 
     return () => {
-      window.__internal_onBeforeSetActive = originalBeforeSetActive;
+      win.__internal_onBeforeSetActive = originalBeforeSetActive;
     };
   }, []);
 
