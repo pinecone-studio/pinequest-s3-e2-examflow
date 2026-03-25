@@ -6,7 +6,19 @@ const config: CodegenConfig = {
   ignoreNoDocuments: false,
   generates: {
     "src/graphql/generated.ts": {
-      plugins: ["typescript", "typescript-operations", "typed-document-node"],
+      plugins: [
+        "typescript",
+        "typescript-operations",
+        "typescript-react-apollo",
+      ],
+      config: {
+        withHooks: true,
+        withComponent: false,
+        withHOC: false,
+        reactApolloVersion: 3,
+        apolloReactCommonImportFrom: "../lib/apollo-codegen",
+        apolloReactHooksImportFrom: "../lib/apollo-codegen",
+      },
     },
   },
 };

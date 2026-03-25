@@ -6,6 +6,10 @@ import { navItems } from "./dashboard-data";
 
 export function Sidebar() {
   const pathname = usePathname();
+
+  const isCurrentPath = (href: string) =>
+    href === "/" ? pathname === href : pathname.startsWith(href);
+
   return (
     <aside className="w-full border-b border-[#E4E7EC] bg-[#F6F9FC] lg:w-[224px] lg:border-b-0 lg:border-r">
       <div className="flex h-14 items-center gap-2 border-b border-[#E4E7EC] px-4">
@@ -19,7 +23,7 @@ export function Sidebar() {
       <nav className="flex-1 space-y-1 px-3 py-3 text-[14px]">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = isCurrentPath(item.href);
           return (
             <Link
               key={item.label}

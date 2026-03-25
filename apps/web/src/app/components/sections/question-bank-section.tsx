@@ -1,7 +1,6 @@
 "use client";
 
-import { useQuery } from "@apollo/client/react";
-import { QuestionBanksQueryDocument } from "@/graphql/generated";
+import { useQuestionBanksQueryQuery } from "@/graphql/generated";
 import { BookIcon, PlusIcon, SearchIcon } from "../icons";
 import {
   formatQuestionBankDate,
@@ -28,7 +27,7 @@ const mapQuestionBankItems = (
   }));
 
 export function QuestionBankSection() {
-  const { data, loading, error } = useQuery(QuestionBanksQueryDocument, {
+  const { data, loading, error } = useQuestionBanksQueryQuery({
     fetchPolicy: "cache-and-network",
   });
 
