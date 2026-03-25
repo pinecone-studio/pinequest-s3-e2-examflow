@@ -4,6 +4,8 @@ dist
 .DS_Store
 *.log
 .env
+.env.local
+.env.*.local
 node_modules
 .wrangler
 apps/api/.wrangler
