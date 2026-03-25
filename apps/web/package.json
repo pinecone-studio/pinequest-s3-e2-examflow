@@ -12,6 +12,7 @@
     "type-check": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@apollo/client": "^4.1.6",
     "@cloudflare/next-on-pages": "^1.13.16",
     "@pinequest/ui": "file:../../packages/ui",
     "next": "^16.2.1",
