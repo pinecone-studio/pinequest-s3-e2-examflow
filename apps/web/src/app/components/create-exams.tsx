@@ -1,6 +1,5 @@
 /* eslint-disable max-lines */
-import { UploadIcon } from "./icons";
-import { SparkleIcon } from "./icons-actions";
+import { SparkleIcon, UploadIcon } from "./icons-actions";
 import { ТохиргооIcon } from "./icons-actions";
 import { BookIcon } from "./icons-actions";
 export function CreateExam() {
