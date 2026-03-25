@@ -5,3 +5,5 @@ dist
 *.log
 .env
 node_modules
+.wrangler
+apps/api/.wrangler

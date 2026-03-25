@@ -1,5 +1,6 @@
 import { buildSchema, graphql } from "graphql";
-import { createRootValue, type D1DatabaseLike } from "./graphql/root-value";
+import type { D1DatabaseLike } from "./lib/d1";
+import { createRootValue } from "./graphql/root-value";
 import { schemaSource } from "./graphql/schema";
 
 const corsHeaders = {

@@ -9,7 +9,7 @@
     "start": "next start",
     "codegen": "graphql-codegen --config codegen.ts",
     "lint": "eslint .",
-    "type-check": "tsc --noEmit"
+    "type-check": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@cloudflare/next-on-pages": "^1.13.16",
