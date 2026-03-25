@@ -3,5 +3,9 @@
 Monorepo structure:
 
 - `apps/web`: Next.js application
-- `apps/api`: Express backend application
+- `apps/api`: Cloudflare Workers GraphQL backend application
 - `packages/ui`: shared UI package
+
+Docs:
+
+- `docs/backend-architecture.md`: backend architecture, D1 tables, submit flow
