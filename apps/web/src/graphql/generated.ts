@@ -153,10 +153,12 @@ export type Mutation = {
   createExam: Exam;
   createQuestion: Question;
   createQuestionBank: QuestionBank;
+  deleteQuestion: Scalars['Boolean']['output'];
   publishExam: Exam;
   saveAnswer: Attempt;
   startAttempt: Attempt;
   submitAttempt: Attempt;
+  updateQuestion: Question;
 };
 
 
@@ -205,6 +207,11 @@ export type MutationCreateQuestionBankArgs = {
 };
 
 
+export type MutationDeleteQuestionArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationPublishExamArgs = {
   examId: Scalars['ID']['input'];
 };
@@ -225,6 +232,18 @@ export type MutationStartAttemptArgs = {
 
 export type MutationSubmitAttemptArgs = {
   attemptId: Scalars['ID']['input'];
+};
+
+
+export type MutationUpdateQuestionArgs = {
+  correctAnswer?: InputMaybe<Scalars['String']['input']>;
+  difficulty?: InputMaybe<Difficulty>;
+  id: Scalars['ID']['input'];
+  options?: InputMaybe<Array<Scalars['String']['input']>>;
+  prompt: Scalars['String']['input'];
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  title: Scalars['String']['input'];
+  type: QuestionType;
 };
 
 export type Query = {
@@ -352,6 +371,41 @@ export type CreateExamMutationVariables = Exact<{
 
 export type CreateExamMutation = { __typename?: 'Mutation', createExam: { __typename?: 'Exam', id: string, title: string, status: ExamStatus, mode: ExamMode, durationMinutes: number, createdAt: string, class: { __typename?: 'Class', id: string, name: string } } };
 
+export type CreateQuestionMutationMutationVariables = Exact<{
+  bankId: Scalars['ID']['input'];
+  type: QuestionType;
+  title: Scalars['String']['input'];
+  prompt: Scalars['String']['input'];
+  options?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
+  correctAnswer?: InputMaybe<Scalars['String']['input']>;
+  difficulty: Difficulty;
+  tags?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
+}>;
+
+
+export type CreateQuestionMutationMutation = { __typename?: 'Mutation', createQuestion: { __typename?: 'Question', id: string } };
+
+export type DeleteQuestionMutationMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteQuestionMutationMutation = { __typename?: 'Mutation', deleteQuestion: boolean };
+
+export type UpdateQuestionMutationMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  type: QuestionType;
+  title: Scalars['String']['input'];
+  prompt: Scalars['String']['input'];
+  options?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
+  correctAnswer?: InputMaybe<Scalars['String']['input']>;
+  difficulty: Difficulty;
+  tags?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
+}>;
+
+
+export type UpdateQuestionMutationMutation = { __typename?: 'Mutation', updateQuestion: { __typename?: 'Question', id: string } };
+
 export type ClassDetailQueryVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
@@ -378,6 +432,13 @@ export type HealthQueryQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type HealthQueryQuery = { __typename?: 'Query', health: { __typename?: 'Health', ok: boolean, service: string, runtime: string } };
+
+export type QuestionBankDetailQueryQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type QuestionBankDetailQueryQuery = { __typename?: 'Query', questionBank?: { __typename?: 'QuestionBank', id: string, title: string, description?: string | null, subject: string, questionCount: number, questions: Array<{ __typename?: 'Question', id: string, title: string, prompt: string, type: QuestionType, difficulty: Difficulty, options: Array<string>, correctAnswer?: string | null, tags: Array<string> }> } | null };
 
 export type QuestionBanksQueryQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -514,6 +575,135 @@ export function useCreateExamMutation(baseOptions?: ApolloReactHooks.MutationHoo
 export type CreateExamMutationHookResult = ReturnType<typeof useCreateExamMutation>;
 export type CreateExamMutationResult = ApolloReactCommon.MutationResult<CreateExamMutation>;
 export type CreateExamMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateExamMutation, CreateExamMutationVariables>;
+export const CreateQuestionMutationDocument = gql`
+    mutation CreateQuestionMutation($bankId: ID!, $type: QuestionType!, $title: String!, $prompt: String!, $options: [String!], $correctAnswer: String, $difficulty: Difficulty!, $tags: [String!]) {
+  createQuestion(
+    bankId: $bankId
+    type: $type
+    title: $title
+    prompt: $prompt
+    options: $options
+    correctAnswer: $correctAnswer
+    difficulty: $difficulty
+    tags: $tags
+  ) {
+    id
+  }
+}
+    `;
+export type CreateQuestionMutationMutationFn = ApolloReactCommon.MutationFunction<CreateQuestionMutationMutation, CreateQuestionMutationMutationVariables>;
+
+/**
+ * __useCreateQuestionMutationMutation__
+ *
+ * To run a mutation, you first call `useCreateQuestionMutationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateQuestionMutationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createQuestionMutationMutation, { data, loading, error }] = useCreateQuestionMutationMutation({
+ *   variables: {
+ *      bankId: // value for 'bankId'
+ *      type: // value for 'type'
+ *      title: // value for 'title'
+ *      prompt: // value for 'prompt'
+ *      options: // value for 'options'
+ *      correctAnswer: // value for 'correctAnswer'
+ *      difficulty: // value for 'difficulty'
+ *      tags: // value for 'tags'
+ *   },
+ * });
+ */
+export function useCreateQuestionMutationMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<CreateQuestionMutationMutation, CreateQuestionMutationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<CreateQuestionMutationMutation, CreateQuestionMutationMutationVariables>(CreateQuestionMutationDocument, options);
+      }
+export type CreateQuestionMutationMutationHookResult = ReturnType<typeof useCreateQuestionMutationMutation>;
+export type CreateQuestionMutationMutationResult = ApolloReactCommon.MutationResult<CreateQuestionMutationMutation>;
+export type CreateQuestionMutationMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateQuestionMutationMutation, CreateQuestionMutationMutationVariables>;
+export const DeleteQuestionMutationDocument = gql`
+    mutation DeleteQuestionMutation($id: ID!) {
+  deleteQuestion(id: $id)
+}
+    `;
+export type DeleteQuestionMutationMutationFn = ApolloReactCommon.MutationFunction<DeleteQuestionMutationMutation, DeleteQuestionMutationMutationVariables>;
+
+/**
+ * __useDeleteQuestionMutationMutation__
+ *
+ * To run a mutation, you first call `useDeleteQuestionMutationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteQuestionMutationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteQuestionMutationMutation, { data, loading, error }] = useDeleteQuestionMutationMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteQuestionMutationMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<DeleteQuestionMutationMutation, DeleteQuestionMutationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<DeleteQuestionMutationMutation, DeleteQuestionMutationMutationVariables>(DeleteQuestionMutationDocument, options);
+      }
+export type DeleteQuestionMutationMutationHookResult = ReturnType<typeof useDeleteQuestionMutationMutation>;
+export type DeleteQuestionMutationMutationResult = ApolloReactCommon.MutationResult<DeleteQuestionMutationMutation>;
+export type DeleteQuestionMutationMutationOptions = ApolloReactCommon.BaseMutationOptions<DeleteQuestionMutationMutation, DeleteQuestionMutationMutationVariables>;
+export const UpdateQuestionMutationDocument = gql`
+    mutation UpdateQuestionMutation($id: ID!, $type: QuestionType!, $title: String!, $prompt: String!, $options: [String!], $correctAnswer: String, $difficulty: Difficulty!, $tags: [String!]) {
+  updateQuestion(
+    id: $id
+    type: $type
+    title: $title
+    prompt: $prompt
+    options: $options
+    correctAnswer: $correctAnswer
+    difficulty: $difficulty
+    tags: $tags
+  ) {
+    id
+  }
+}
+    `;
+export type UpdateQuestionMutationMutationFn = ApolloReactCommon.MutationFunction<UpdateQuestionMutationMutation, UpdateQuestionMutationMutationVariables>;
+
+/**
+ * __useUpdateQuestionMutationMutation__
+ *
+ * To run a mutation, you first call `useUpdateQuestionMutationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateQuestionMutationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateQuestionMutationMutation, { data, loading, error }] = useUpdateQuestionMutationMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      type: // value for 'type'
+ *      title: // value for 'title'
+ *      prompt: // value for 'prompt'
+ *      options: // value for 'options'
+ *      correctAnswer: // value for 'correctAnswer'
+ *      difficulty: // value for 'difficulty'
+ *      tags: // value for 'tags'
+ *   },
+ * });
+ */
+export function useUpdateQuestionMutationMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<UpdateQuestionMutationMutation, UpdateQuestionMutationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<UpdateQuestionMutationMutation, UpdateQuestionMutationMutationVariables>(UpdateQuestionMutationDocument, options);
+      }
+export type UpdateQuestionMutationMutationHookResult = ReturnType<typeof useUpdateQuestionMutationMutation>;
+export type UpdateQuestionMutationMutationResult = ApolloReactCommon.MutationResult<UpdateQuestionMutationMutation>;
+export type UpdateQuestionMutationMutationOptions = ApolloReactCommon.BaseMutationOptions<UpdateQuestionMutationMutation, UpdateQuestionMutationMutationVariables>;
 export const ClassDetailDocument = gql`
     query ClassDetail($id: ID!) {
   class(id: $id) {
@@ -811,6 +1001,63 @@ export type HealthQueryQueryHookResult = ReturnType<typeof useHealthQueryQuery>;
 export type HealthQueryLazyQueryHookResult = ReturnType<typeof useHealthQueryLazyQuery>;
 export type HealthQuerySuspenseQueryHookResult = ReturnType<typeof useHealthQuerySuspenseQuery>;
 export type HealthQueryQueryResult = ApolloReactCommon.QueryResult<HealthQueryQuery, HealthQueryQueryVariables>;
+export const QuestionBankDetailQueryDocument = gql`
+    query QuestionBankDetailQuery($id: ID!) {
+  questionBank(id: $id) {
+    id
+    title
+    description
+    subject
+    questionCount
+    questions {
+      id
+      title
+      prompt
+      type
+      difficulty
+      options
+      correctAnswer
+      tags
+    }
+  }
+}
+    `;
+
+/**
+ * __useQuestionBankDetailQueryQuery__
+ *
+ * To run a query within a React component, call `useQuestionBankDetailQueryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useQuestionBankDetailQueryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useQuestionBankDetailQueryQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useQuestionBankDetailQueryQuery(baseOptions: ApolloReactHooks.QueryHookOptions<QuestionBankDetailQueryQuery, QuestionBankDetailQueryQueryVariables> & ({ variables: QuestionBankDetailQueryQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<QuestionBankDetailQueryQuery, QuestionBankDetailQueryQueryVariables>(QuestionBankDetailQueryDocument, options);
+      }
+export function useQuestionBankDetailQueryLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<QuestionBankDetailQueryQuery, QuestionBankDetailQueryQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<QuestionBankDetailQueryQuery, QuestionBankDetailQueryQueryVariables>(QuestionBankDetailQueryDocument, options);
+        }
+// @ts-ignore
+export function useQuestionBankDetailQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<QuestionBankDetailQueryQuery, QuestionBankDetailQueryQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<QuestionBankDetailQueryQuery, QuestionBankDetailQueryQueryVariables>;
+export function useQuestionBankDetailQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<QuestionBankDetailQueryQuery, QuestionBankDetailQueryQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<QuestionBankDetailQueryQuery | undefined, QuestionBankDetailQueryQueryVariables>;
+export function useQuestionBankDetailQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<QuestionBankDetailQueryQuery, QuestionBankDetailQueryQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<QuestionBankDetailQueryQuery, QuestionBankDetailQueryQueryVariables>(QuestionBankDetailQueryDocument, options);
+        }
+export type QuestionBankDetailQueryQueryHookResult = ReturnType<typeof useQuestionBankDetailQueryQuery>;
+export type QuestionBankDetailQueryLazyQueryHookResult = ReturnType<typeof useQuestionBankDetailQueryLazyQuery>;
+export type QuestionBankDetailQuerySuspenseQueryHookResult = ReturnType<typeof useQuestionBankDetailQuerySuspenseQuery>;
+export type QuestionBankDetailQueryQueryResult = ApolloReactCommon.QueryResult<QuestionBankDetailQueryQuery, QuestionBankDetailQueryQueryVariables>;
 export const QuestionBanksQueryDocument = gql`
     query QuestionBanksQuery {
   questionBanks {
