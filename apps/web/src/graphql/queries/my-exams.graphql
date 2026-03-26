@@ -4,6 +4,8 @@ query MyExamsQuery {
   }
   exams {
     id
+    isTemplate
+    sourceExamId
     title
     status
     durationMinutes

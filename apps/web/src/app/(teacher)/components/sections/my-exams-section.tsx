@@ -1,36 +1,48 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@apollo/client/react";
-import { MyExamsQueryDocument, type MyExamsQueryQuery } from "@/graphql/generated";
+import { ExamStatus, MyExamsQueryDocument, type MyExamsQueryQuery } from "@/graphql/generated";
 import { ChevronDownIcon, PlusIcon, SearchIcon } from "../icons";
 import { ExamPreviewDialog } from "./exam-preview-dialog";
+import { MyExamsLoadingList } from "./my-exams-loading-list";
 import { ExamResultsDialog } from "./exam-results-dialog";
 import { MyExamCard } from "./my-exams-card";
+import {
+  getMyExamsSectionContent,
+  type MyExamsSectionMode,
+} from "./my-exams-section-config";
 import type { MyExamView } from "./my-exams-types";
 import { buildMyExamViews } from "./my-exams-view-model";
 
-const skeletonRows = Array.from({ length: 4 }, (_, index) => index);
-const statusOptions = ["Бүх төлөв", "Нийтлэгдсэн", "Дууссан", "Ноорог"];
+type MyExamsSectionProps = { mode?: MyExamsSectionMode };
 
-export function MyExamsSection() {
+const isLibraryExam = (exam: MyExamsQueryQuery["exams"][number]) =>
+  exam.isTemplate || (!exam.sourceExamId && exam.status === ExamStatus.Draft);
+
+export function MyExamsSection({ mode = "library" }: MyExamsSectionProps) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("Бүх төлөв");
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isResultsOpen, setIsResultsOpen] = useState(false);
   const [selectedExam, setSelectedExam] = useState<MyExamView | null>(null);
   const { data, loading, error } = useQuery<MyExamsQueryQuery>(MyExamsQueryDocument, {
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "network-only",
+    nextFetchPolicy: "cache-first",
+    notifyOnNetworkStatusChange: true,
   });
 
   const { exams, errorMessage } = useMemo(() => {
     try {
       const actorId = data?.me?.id ?? null;
-      const ownExams = actorId
-        ? (data?.exams ?? []).filter((exam) => exam.createdBy.id === actorId)
-        : [];
+      const ownExams = actorId ? (data?.exams ?? []).filter((exam) => exam.createdBy.id === actorId) : [];
+      const scopedExams =
+        mode === "evaluation"
+          ? ownExams.filter((exam) => !isLibraryExam(exam))
+          : ownExams.filter(isLibraryExam);
       return {
-        exams: buildMyExamViews(ownExams),
+        exams: buildMyExamViews(scopedExams),
         errorMessage: error
           ? "Шалгалтын мэдээлэл уншихад алдаа гарлаа."
           : null,
@@ -42,7 +54,7 @@ export function MyExamsSection() {
         errorMessage: "Шалгалтын өгөгдлийг боловсруулахад алдаа гарлаа.",
       };
     }
-  }, [data?.exams, data?.me?.id, error]);
+  }, [data?.exams, data?.me?.id, error, mode]);
 
   const filteredExams = useMemo(() => {
     try {
@@ -62,21 +74,21 @@ export function MyExamsSection() {
     }
   }, [exams, search, status]);
 
+  const { title, subtitle, statusOptions, emptyMessage } = getMyExamsSectionContent(mode);
+
   return (
     <section className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-[24px] font-semibold text-[#0F1216]">
-            Миний шалгалтууд
-          </h1>
-          <p className="mt-1 text-[14px] text-[#52555B]">
-            Шалгалтуудаа харах, удирдах
-          </p>
+          <h1 className="text-[24px] font-semibold text-[#0F1216]">{title}</h1>
+          <p className="mt-1 text-[14px] text-[#52555B]">{subtitle}</p>
         </div>
-        <button className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-[#00267F] px-4 py-2 text-[14px] font-medium text-white">
-          <PlusIcon className="h-4 w-4" />
-          Шинэ шалгалт
-        </button>
+        {mode === "library" ? (
+          <Link href="/create-exam" className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-[#00267F] px-4 py-2 text-[14px] font-medium text-white">
+            <PlusIcon className="h-4 w-4" />
+            Шинэ шалгалт
+          </Link>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -119,23 +131,7 @@ export function MyExamsSection() {
       {errorMessage ? <p className="text-[14px] text-[#B42318]">{errorMessage}</p> : null}
 
       <div className="space-y-4">
-        {loading
-          ? skeletonRows.map((row) => (
-              <div
-                key={row}
-                className="animate-pulse rounded-xl border border-[#DFE1E5] bg-white p-6 shadow-[0px_1px_3px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 space-y-3">
-                    <div className="h-5 w-1/3 rounded bg-[#E9EDF3]" />
-                    <div className="h-4 w-2/3 rounded bg-[#E9EDF3]" />
-                  </div>
-                  <div className="h-8 w-28 rounded bg-[#E9EDF3]" />
-                </div>
-                <div className="mt-4 h-16 rounded bg-[#E9EDF3]" />
-              </div>
-            ))
-          : null}
+        {loading ? <MyExamsLoadingList /> : null}
         {filteredExams.map((exam) => (
           <MyExamCard
             key={exam.id}
@@ -154,7 +150,7 @@ export function MyExamsSection() {
         ))}
         {!loading && !errorMessage && !filteredExams.length ? (
           <p className="rounded-xl border border-[#DFE1E5] bg-white p-6 text-[14px] text-[#52555B] shadow-[0px_1px_3px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
-            Шүүлтүүрт тохирох шалгалт олдсонгүй.
+            {emptyMessage}
           </p>
         ) : null}
       </div>

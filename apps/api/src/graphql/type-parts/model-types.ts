@@ -55,6 +55,8 @@ export type QuestionRow = {
 export type ExamRow = {
   id: string;
   class_id: string;
+  is_template: number;
+  source_exam_id: string | null;
   title: string;
   description: string | null;
   mode: ExamMode;

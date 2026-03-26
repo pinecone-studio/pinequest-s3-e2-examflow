@@ -19,7 +19,7 @@ export function CreateExamContent({
   returnTo = "",
 }: CreateExamContentProps) {
   const router = useRouter();
-  const flow = useCreateExamFlow(initialClassId);
+  const flow = useCreateExamFlow(initialClassId, returnTo ? initialClassId : "");
 
   const isDisabled =
     flow.isSubmitting ||

@@ -1,8 +1,8 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import {
   useAddQuestionToExamMutation,
+  useAssignExamToClassMutation,
   useCreateExamMutation,
   useCreateExamOptionsQuery,
 } from "@/graphql/generated";
@@ -19,7 +19,7 @@ import {
   toErrorMessage,
 } from "./create-exam-flow-helpers";
 import { type CreateExamFieldErrors, type CreateExamFormValues, type CreateExamSubmitState, type SelectedQuestionPoints } from "../create-exam-types";
-export const useCreateExamFlow = (initialClassId = "") => {
+export const useCreateExamFlow = (initialClassId = "", assignmentClassId = "") => {
   const optionsQuery = useCreateExamOptionsQuery({
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
@@ -27,6 +27,7 @@ export const useCreateExamFlow = (initialClassId = "") => {
   });
   const [runCreateExam, createExamState] = useCreateExamMutation();
   const [runAddQuestionToExam] = useAddQuestionToExamMutation();
+  const [runAssignExamToClass, assignExamState] = useAssignExamToClassMutation();
   const [formValues, setFormValues] = useState(INITIAL_FORM_VALUES);
   const [selectedQuestionPoints, setSelectedQuestionPoints] = useState<SelectedQuestionPoints>({});
   const [errors, setErrors] = useState<CreateExamFieldErrors>(EMPTY_ERRORS);
@@ -36,34 +37,25 @@ export const useCreateExamFlow = (initialClassId = "") => {
     () => (optionsQuery.data?.classes ?? []).map((classroom) => ({ id: classroom.id, name: classroom.name })),
     [optionsQuery.data?.classes],
   );
-  const questionBankOptions = useMemo(
-    () =>
-      (optionsQuery.data?.questionBanks ?? []).map((bank) => ({
-        id: bank.id,
-        title: bank.title,
-        subject: bank.subject,
-      })),
-    [optionsQuery.data?.questionBanks],
-  );
-  const questionOptions = useMemo(
-    () =>
-      (optionsQuery.data?.questions ?? []).map((question) => ({
-        id: question.id,
-        title: question.title,
-        prompt: question.prompt,
-        type: question.type,
-        difficulty: question.difficulty,
-        bankTitle: question.bank.title,
-        bankSubject: question.bank.subject,
-      })),
-    [optionsQuery.data?.questions],
-  );
+  const questionBankOptions = useMemo(() => (optionsQuery.data?.questionBanks ?? []).map((bank) => ({
+    id: bank.id,
+    title: bank.title,
+    subject: bank.subject,
+  })), [optionsQuery.data?.questionBanks]);
+  const questionOptions = useMemo(() => (optionsQuery.data?.questions ?? []).map((question) => ({
+    id: question.id,
+    title: question.title,
+    prompt: question.prompt,
+    type: question.type,
+    difficulty: question.difficulty,
+    bankTitle: question.bank.title,
+    bankSubject: question.bank.subject,
+  })), [optionsQuery.data?.questions]);
   useEffect(() => {
     if (formValues.classId || !classOptions.length) {
       return;
     }
-    const nextClassId =
-      classOptions.find((item) => item.id === initialClassId)?.id ?? classOptions[0].id;
+    const nextClassId = classOptions.find((item) => item.id === initialClassId)?.id ?? classOptions[0].id;
     setFormValues((previous) => ({ ...previous, classId: nextClassId }));
   }, [classOptions, formValues.classId, initialClassId]);
 
@@ -88,9 +80,7 @@ export const useCreateExamFlow = (initialClassId = "") => {
     setSubmitState({ status: "idle" });
   };
   const addQuestion = (questionId: string) => {
-    setSelectedQuestionPoints((previous) =>
-      previous[questionId] ? previous : { ...previous, [questionId]: "1" },
-    );
+    setSelectedQuestionPoints((previous) => (previous[questionId] ? previous : { ...previous, [questionId]: "1" }));
     setErrors((previous) => ({ ...previous, selectedQuestions: undefined }));
     setSubmitState({ status: "idle" });
   };
@@ -145,11 +135,22 @@ export const useCreateExamFlow = (initialClassId = "") => {
           variables: { examId: createdExam.id, questionId: selectedQuestion.questionId, points: selectedQuestion.points },
         });
       }
+      const resolvedAssignedExamId =
+        assignmentClassId.trim().length > 0
+          ? (
+              await runAssignExamToClass({
+                variables: { examId: createdExam.id, classId: assignmentClassId },
+              })
+            ).data?.assignExamToClass?.id ?? null
+          : null;
+      if (assignmentClassId.trim().length > 0 && !resolvedAssignedExamId) {
+        throw new Error("Шалгалтыг ангид холбоход алдаа гарлаа.");
+      }
       setSubmitState({ status: "success", examId: createdExam.id, title: createdExam.title, questionCount: selectedQuestions.length });
       setFormValues((previous) => ({ ...INITIAL_FORM_VALUES, classId: previous.classId, mode: previous.mode }));
       setSelectedQuestionPoints({});
       await optionsQuery.refetch();
-      return createdExam.id;
+      return resolvedAssignedExamId ?? createdExam.id;
     } catch (error) {
       setSubmitState({ status: "error", message: toErrorMessage(error) });
       return null;
@@ -167,7 +168,7 @@ export const useCreateExamFlow = (initialClassId = "") => {
     submitState,
     isOptionsLoading: optionsQuery.loading,
     optionsError: optionsQuery.error,
-    isSubmitting: createExamState.loading || isAddingQuestions,
+    isSubmitting: createExamState.loading || assignExamState.loading || isAddingQuestions,
     isClassSelectionLocked: Boolean(initialClassId),
     setFieldValue,
     toggleQuestion,

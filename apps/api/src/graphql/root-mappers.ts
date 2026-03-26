@@ -60,8 +60,10 @@ export const createEntityMappers = ({
         await closeExpiredExams(db),
         await all<ExamRow>(
           db,
-          `SELECT id, class_id, title, description, mode, status, duration_minutes, started_at, ends_at, created_by_id, scheduled_for, created_at
-           FROM exams WHERE class_id = ? ORDER BY created_at DESC`,
+          `SELECT id, class_id, is_template, source_exam_id, title, description, mode, status, duration_minutes, started_at, ends_at, created_by_id, scheduled_for, created_at
+           FROM exams
+           WHERE class_id = ? AND COALESCE(is_template, 0) = 0
+           ORDER BY created_at DESC`,
           [classroom.id],
         )
       ).map(toExam),
@@ -141,6 +143,8 @@ export const createEntityMappers = ({
 
   const toExam = (exam: ExamRow) => ({
     id: exam.id,
+    isTemplate: Boolean(exam.is_template),
+    sourceExamId: exam.source_exam_id,
     title: exam.title,
     description: exam.description,
     mode: exam.mode,

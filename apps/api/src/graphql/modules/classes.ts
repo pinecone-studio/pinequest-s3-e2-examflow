@@ -14,9 +14,9 @@ const loadClassMetrics = async (
     db,
     `SELECT
       (SELECT COUNT(*) FROM class_students WHERE class_id = ?) AS studentCount,
-      (SELECT COUNT(*) FROM exams WHERE class_id = ?) AS assignedExamCount,
-      (SELECT COUNT(*) FROM exams WHERE class_id = ? AND status = 'PUBLISHED') AS upcomingExamCount,
-      (SELECT COUNT(*) FROM exams WHERE class_id = ? AND status = 'CLOSED') AS completedExamCount,
+      (SELECT COUNT(*) FROM exams WHERE class_id = ? AND COALESCE(is_template, 0) = 0) AS assignedExamCount,
+      (SELECT COUNT(*) FROM exams WHERE class_id = ? AND COALESCE(is_template, 0) = 0 AND status = 'PUBLISHED') AS upcomingExamCount,
+      (SELECT COUNT(*) FROM exams WHERE class_id = ? AND COALESCE(is_template, 0) = 0 AND status = 'CLOSED') AS completedExamCount,
       (
         SELECT ROUND(AVG((a.total_score * 100.0) / totals.total_points), 1)
         FROM attempts a
@@ -26,7 +26,7 @@ const loadClassMetrics = async (
           FROM exam_questions
           GROUP BY exam_id
         ) totals ON totals.exam_id = e.id
-        WHERE e.class_id = ? AND a.status IN ('SUBMITTED', 'GRADED') AND totals.total_points > 0
+        WHERE e.class_id = ? AND COALESCE(e.is_template, 0) = 0 AND a.status IN ('SUBMITTED', 'GRADED') AND totals.total_points > 0
       ) AS averageScore`,
     [classId, classId, classId, classId, classId],
   );
@@ -71,7 +71,7 @@ export const createClassAnalytics = ({
       COUNT(DISTINCT CASE WHEN a.status IN ('SUBMITTED', 'GRADED') THEN e.id END) AS completed_exam_count
     FROM class_students cs
     JOIN users u ON u.id = cs.student_id
-    LEFT JOIN exams e ON e.class_id = cs.class_id
+    LEFT JOIN exams e ON e.class_id = cs.class_id AND COALESCE(e.is_template, 0) = 0
     LEFT JOIN attempts a ON a.exam_id = e.id AND a.student_id = u.id
     LEFT JOIN (
       SELECT exam_id, SUM(points) AS total_points
@@ -113,7 +113,7 @@ export const createClassAnalytics = ({
       FROM exam_questions
       GROUP BY exam_id
     ) totals ON totals.exam_id = e.id
-    WHERE e.class_id = ?
+    WHERE e.class_id = ? AND COALESCE(e.is_template, 0) = 0
     GROUP BY e.id, e.created_at, students.student_count, totals.question_count
     ORDER BY e.created_at DESC`,
     [classroom.id],

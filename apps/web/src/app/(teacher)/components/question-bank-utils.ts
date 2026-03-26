@@ -36,10 +36,10 @@ export type QuestionBankQuestionRow = {
 
 const QUESTION_TYPE_LABELS: Record<RawQuestion["type"], string> = {
   MCQ: "Олон сонголт",
-  TRUE_FALSE: "Үнэн / худал",
+  TRUE_FALSE: "Үнэн/Худал",
   SHORT_ANSWER: "Тоо бодолт",
   ESSAY: "Задгай хариулт",
-  IMAGE_UPLOAD: "Зураг оруулах",
+  IMAGE_UPLOAD: "Зураг",
 };
 
 const DIFFICULTY_LABELS: Record<RawQuestion["difficulty"], string> = {
@@ -89,7 +89,7 @@ export const buildQuestionBankRows = (
 ): QuestionBankQuestionRow[] =>
   questions.map((question, index) => ({
     id: question.id,
-    text: question.title.trim() || question.prompt.trim(),
+    text: question.prompt.trim() || question.title.trim(),
     prompt: question.prompt.trim(),
     type: QUESTION_TYPE_LABELS[question.type],
     rawType: question.type,
