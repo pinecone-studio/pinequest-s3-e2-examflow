@@ -7,6 +7,9 @@ import { ClassesStatePanel } from "../components/classes-state-panel";
 import { ClassExamsTable } from "../components/class-exams-table";
 import { ClassStudentsTable } from "../components/class-students-table";
 import { ClassSummaryCard } from "../components/class-summary-card";
+import { ClassAssignExamDialog } from "./class-assign-exam-dialog";
+import { ClassStartExamDialog } from "./class-start-exam-dialog";
+import { useClassDetailActions } from "./use-class-detail-actions";
 import { useClassDetail } from "./use-class-detail";
 
 type ClassDetailPageContentProps = {
@@ -16,8 +19,17 @@ type ClassDetailPageContentProps = {
 export function ClassDetailPageContent({
   id,
 }: ClassDetailPageContentProps) {
-  const { viewModel, students, search, setSearch, loading, error, refetch } =
-    useClassDetail(id);
+  const {
+    viewModel,
+    students,
+    studentInsights,
+    search,
+    setSearch,
+    loading,
+    error,
+    refetch,
+  } = useClassDetail(id);
+  const actions = useClassDetailActions(viewModel?.exams ?? [], studentInsights, refetch);
 
   if (loading && !viewModel) {
     return (
@@ -70,7 +82,11 @@ export function ClassDetailPageContent({
             </p>
           </div>
         </div>
-        <button className="inline-flex h-10 items-center gap-2 rounded-md border border-[#DFE1E5] bg-white px-4 text-[14px] font-medium text-[#0F1216] shadow-[0px_1px_2px_rgba(0,0,0,0.05)]">
+        <button
+          type="button"
+          className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-[#DFE1E5] bg-white px-4 text-[14px] font-medium text-[#0F1216] shadow-[0px_1px_2px_rgba(0,0,0,0.05)]"
+          onClick={actions.openAssignDialog}
+        >
           <ClipboardIcon className="h-4 w-4" />
           Шалгалт оноох
         </button>
@@ -119,7 +135,12 @@ export function ClassDetailPageContent({
         </h2>
         <div className="mt-6">
           {viewModel.exams.length > 0 ? (
-            <ClassExamsTable rows={viewModel.exams} />
+            <ClassExamsTable
+              rows={viewModel.exams}
+              highlightedExamId={actions.highlightedExamId}
+              startingExamId={actions.startingExamId}
+              onStartExam={(exam) => actions.openStartDialog(exam.id)}
+            />
           ) : (
             <ClassesStatePanel
               title="Одоогоор оноосон шалгалт алга"
@@ -128,6 +149,24 @@ export function ClassDetailPageContent({
           )}
         </div>
       </section>
+      <ClassAssignExamDialog
+        classId={viewModel.id}
+        className={viewModel.name}
+        open={actions.isAssignDialogOpen}
+        onClose={actions.closeAssignDialog}
+        onAssigned={actions.handleAssigned}
+      />
+      <ClassStartExamDialog
+        examTitle={actions.selectedStartExam?.title ?? ""}
+        durationMinutes={actions.selectedStartExam?.durationMinutes ?? 0}
+        activeStudentCount={actions.activeStudentCount}
+        totalStudentCount={viewModel.studentCount}
+        open={Boolean(actions.selectedStartExam)}
+        submitting={actions.isStarting}
+        errorMessage={actions.startExamError}
+        onClose={actions.closeStartDialog}
+        onConfirm={() => void actions.handleStartExam()}
+      />
     </section>
   );
 }

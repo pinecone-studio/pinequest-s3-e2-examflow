@@ -39,6 +39,7 @@ export const buildClassDetailViewModel = (
     id: item.id,
     name: item.name,
     subtitle: `${item.subject} · ${formatGradeLabel(item.grade)} · Багш: ${item.teacher.fullName}`,
+    studentCount: item.studentCount,
     summaryCards: [
       { label: "сурагч", value: String(item.studentCount) },
       { label: "Оноосон шалгалтууд", value: String(item.assignedExamCount) },
@@ -65,6 +66,8 @@ export const buildClassDetailViewModel = (
       id: entry.exam.id,
       title: entry.exam.title,
       meta: `${entry.exam.durationMinutes} минут · ${entry.questionCount} асуулт`,
+      rawStatus: entry.exam.status,
+      durationMinutes: entry.exam.durationMinutes,
       status: formatExamStatus(entry.exam.status),
       submitted: `${entry.submittedCount}/${entry.totalStudents}`,
       progressPercent: entry.progressPercent,

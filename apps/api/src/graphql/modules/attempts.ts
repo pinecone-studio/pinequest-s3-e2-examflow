@@ -1,4 +1,5 @@
 import { all, first, invariant, run, type D1DatabaseLike } from "../../lib/d1";
+import { closeExpiredExams } from "./exams";
 import {
   makeId,
   normalize,
@@ -127,6 +128,7 @@ export const createAttemptMutations = ({
   toAttempt,
 }: AttemptMutationDependencies) => ({
   startAttempt: async ({ examId, studentId }: StartAttemptArgs) => {
+    await closeExpiredExams(db);
     const exam = await findExam(db, examId);
     invariant(
       exam.status === "PUBLISHED",

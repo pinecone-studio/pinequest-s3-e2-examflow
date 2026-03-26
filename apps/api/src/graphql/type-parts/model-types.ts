@@ -60,6 +60,8 @@ export type ExamRow = {
   mode: ExamMode;
   status: ExamStatus;
   duration_minutes: number;
+  started_at: string | null;
+  ends_at: string | null;
   created_by_id: string;
   scheduled_for: string | null;
   created_at: string;

@@ -1,0 +1,11 @@
+mutation AssignExamToClass($examId: ID!, $classId: ID!) {
+  assignExamToClass(examId: $examId, classId: $classId) {
+    id
+    title
+    status
+    class {
+      id
+      name
+    }
+  }
+}

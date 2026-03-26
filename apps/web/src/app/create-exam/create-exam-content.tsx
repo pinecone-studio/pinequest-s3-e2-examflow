@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { CreateExamDetailsCard } from "./create-exam-details-card";
 import { CreateExamHeader } from "./create-exam-header";
 import { CreateExamQuestionCard } from "./create-exam-question-card";
@@ -8,8 +9,17 @@ import { CreateExamSettingsCard } from "./create-exam-settings-card";
 import { CreateExamSubmitAlert } from "./create-exam-submit-alert";
 import { useCreateExamFlow } from "./hooks/use-create-exam-flow";
 
-export function CreateExamContent() {
-  const flow = useCreateExamFlow();
+type CreateExamContentProps = {
+  initialClassId?: string;
+  returnTo?: string;
+};
+
+export function CreateExamContent({
+  initialClassId = "",
+  returnTo = "",
+}: CreateExamContentProps) {
+  const router = useRouter();
+  const flow = useCreateExamFlow(initialClassId);
 
   const isDisabled =
     flow.isSubmitting ||
@@ -19,7 +29,12 @@ export function CreateExamContent() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void flow.submitForm();
+    void (async () => {
+      const examId = await flow.submitForm();
+      if (examId && returnTo) {
+        router.push(`${returnTo}?assignedExamId=${examId}`);
+      }
+    })();
   };
 
   return (
@@ -56,6 +71,7 @@ export function CreateExamContent() {
             classOptions={flow.classOptions}
             errors={flow.errors}
             disabled={isDisabled}
+            lockClassSelection={flow.isClassSelectionLocked}
             onFieldChange={flow.setFieldValue}
           />
           <CreateExamSettingsCard

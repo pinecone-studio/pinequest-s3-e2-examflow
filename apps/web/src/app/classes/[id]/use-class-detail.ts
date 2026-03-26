@@ -35,6 +35,7 @@ export function useClassDetail(id: string) {
   return {
     viewModel,
     students: filteredStudents,
+    studentInsights: query.data?.class?.studentInsights ?? [],
     search,
     setSearch,
     loading: query.loading,
