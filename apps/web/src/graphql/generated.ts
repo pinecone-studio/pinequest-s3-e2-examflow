@@ -107,9 +107,11 @@ export type Exam = {
   createdBy: User;
   description?: Maybe<Scalars['String']['output']>;
   durationMinutes: Scalars['Int']['output'];
+  endsAt?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   mode: ExamMode;
   questions: Array<ExamQuestion>;
+  startedAt?: Maybe<Scalars['String']['output']>;
   status: ExamStatus;
   title: Scalars['String']['output'];
 };
@@ -148,6 +150,7 @@ export type Hello = {
 export type Mutation = {
   __typename?: 'Mutation';
   addQuestionToExam: Exam;
+  assignExamToClass: Exam;
   closeExam: Exam;
   createClass: Class;
   createExam: Exam;
@@ -166,6 +169,12 @@ export type MutationAddQuestionToExamArgs = {
   examId: Scalars['ID']['input'];
   points: Scalars['Int']['input'];
   questionId: Scalars['ID']['input'];
+};
+
+
+export type MutationAssignExamToClassArgs = {
+  classId: Scalars['ID']['input'];
+  examId: Scalars['ID']['input'];
 };
 
 
@@ -353,6 +362,14 @@ export type AddQuestionToExamMutationVariables = Exact<{
 
 export type AddQuestionToExamMutation = { __typename?: 'Mutation', addQuestionToExam: { __typename?: 'Exam', id: string, questions: Array<{ __typename?: 'ExamQuestion', id: string, points: number, order: number, question: { __typename?: 'Question', id: string } }> } };
 
+export type AssignExamToClassMutationVariables = Exact<{
+  examId: Scalars['ID']['input'];
+  classId: Scalars['ID']['input'];
+}>;
+
+
+export type AssignExamToClassMutation = { __typename?: 'Mutation', assignExamToClass: { __typename?: 'Exam', id: string, title: string, status: ExamStatus, class: { __typename?: 'Class', id: string, name: string } } };
+
 export type CloseExamMutationVariables = Exact<{
   examId: Scalars['ID']['input'];
 }>;
@@ -391,6 +408,13 @@ export type DeleteQuestionMutationMutationVariables = Exact<{
 
 
 export type DeleteQuestionMutationMutation = { __typename?: 'Mutation', deleteQuestion: boolean };
+
+export type PublishExamMutationVariables = Exact<{
+  examId: Scalars['ID']['input'];
+}>;
+
+
+export type PublishExamMutation = { __typename?: 'Mutation', publishExam: { __typename?: 'Exam', id: string, status: ExamStatus, startedAt?: string | null, endsAt?: string | null } };
 
 export type UpdateQuestionMutationMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -494,6 +518,46 @@ export function useAddQuestionToExamMutation(baseOptions?: ApolloReactHooks.Muta
 export type AddQuestionToExamMutationHookResult = ReturnType<typeof useAddQuestionToExamMutation>;
 export type AddQuestionToExamMutationResult = ApolloReactCommon.MutationResult<AddQuestionToExamMutation>;
 export type AddQuestionToExamMutationOptions = ApolloReactCommon.BaseMutationOptions<AddQuestionToExamMutation, AddQuestionToExamMutationVariables>;
+export const AssignExamToClassDocument = gql`
+    mutation AssignExamToClass($examId: ID!, $classId: ID!) {
+  assignExamToClass(examId: $examId, classId: $classId) {
+    id
+    title
+    status
+    class {
+      id
+      name
+    }
+  }
+}
+    `;
+export type AssignExamToClassMutationFn = ApolloReactCommon.MutationFunction<AssignExamToClassMutation, AssignExamToClassMutationVariables>;
+
+/**
+ * __useAssignExamToClassMutation__
+ *
+ * To run a mutation, you first call `useAssignExamToClassMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAssignExamToClassMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [assignExamToClassMutation, { data, loading, error }] = useAssignExamToClassMutation({
+ *   variables: {
+ *      examId: // value for 'examId'
+ *      classId: // value for 'classId'
+ *   },
+ * });
+ */
+export function useAssignExamToClassMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<AssignExamToClassMutation, AssignExamToClassMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<AssignExamToClassMutation, AssignExamToClassMutationVariables>(AssignExamToClassDocument, options);
+      }
+export type AssignExamToClassMutationHookResult = ReturnType<typeof useAssignExamToClassMutation>;
+export type AssignExamToClassMutationResult = ApolloReactCommon.MutationResult<AssignExamToClassMutation>;
+export type AssignExamToClassMutationOptions = ApolloReactCommon.BaseMutationOptions<AssignExamToClassMutation, AssignExamToClassMutationVariables>;
 export const CloseExamDocument = gql`
     mutation CloseExam($examId: ID!) {
   closeExam(examId: $examId) {
@@ -660,6 +724,42 @@ export function useDeleteQuestionMutationMutation(baseOptions?: ApolloReactHooks
 export type DeleteQuestionMutationMutationHookResult = ReturnType<typeof useDeleteQuestionMutationMutation>;
 export type DeleteQuestionMutationMutationResult = ApolloReactCommon.MutationResult<DeleteQuestionMutationMutation>;
 export type DeleteQuestionMutationMutationOptions = ApolloReactCommon.BaseMutationOptions<DeleteQuestionMutationMutation, DeleteQuestionMutationMutationVariables>;
+export const PublishExamDocument = gql`
+    mutation PublishExam($examId: ID!) {
+  publishExam(examId: $examId) {
+    id
+    status
+    startedAt
+    endsAt
+  }
+}
+    `;
+export type PublishExamMutationFn = ApolloReactCommon.MutationFunction<PublishExamMutation, PublishExamMutationVariables>;
+
+/**
+ * __usePublishExamMutation__
+ *
+ * To run a mutation, you first call `usePublishExamMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePublishExamMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [publishExamMutation, { data, loading, error }] = usePublishExamMutation({
+ *   variables: {
+ *      examId: // value for 'examId'
+ *   },
+ * });
+ */
+export function usePublishExamMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<PublishExamMutation, PublishExamMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<PublishExamMutation, PublishExamMutationVariables>(PublishExamDocument, options);
+      }
+export type PublishExamMutationHookResult = ReturnType<typeof usePublishExamMutation>;
+export type PublishExamMutationResult = ApolloReactCommon.MutationResult<PublishExamMutation>;
+export type PublishExamMutationOptions = ApolloReactCommon.BaseMutationOptions<PublishExamMutation, PublishExamMutationVariables>;
 export const UpdateQuestionMutationDocument = gql`
     mutation UpdateQuestionMutation($id: ID!, $type: QuestionType!, $title: String!, $prompt: String!, $options: [String!], $correctAnswer: String, $difficulty: Difficulty!, $tags: [String!]) {
   updateQuestion(

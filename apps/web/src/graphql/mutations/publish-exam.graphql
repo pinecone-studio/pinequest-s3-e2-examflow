@@ -1,0 +1,8 @@
+mutation PublishExam($examId: ID!) {
+  publishExam(examId: $examId) {
+    id
+    status
+    startedAt
+    endsAt
+  }
+}

@@ -22,7 +22,7 @@ const hasValidationErrors = (errors: CreateExamFieldErrors): boolean =>
   Boolean(errors.classId || errors.title || errors.durationMinutes || errors.selectedQuestions || Object.keys(errors.pointsByQuestionId).length);
 const toErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : "Шалгалт үүсгэх үед алдаа гарлаа. Дахин оролдоно уу.";
-export const useCreateExamFlow = () => {
+export const useCreateExamFlow = (initialClassId = "") => {
   const optionsQuery = useCreateExamOptionsQuery({
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
@@ -65,8 +65,10 @@ export const useCreateExamFlow = () => {
     if (formValues.classId || !classOptions.length) {
       return;
     }
-    setFormValues((previous) => ({ ...previous, classId: classOptions[0].id }));
-  }, [classOptions, formValues.classId]);
+    const nextClassId =
+      classOptions.find((item) => item.id === initialClassId)?.id ?? classOptions[0].id;
+    setFormValues((previous) => ({ ...previous, classId: nextClassId }));
+  }, [classOptions, formValues.classId, initialClassId]);
 
   const setFieldValue = <K extends keyof CreateExamFormValues>(field: K, value: CreateExamFormValues[K]) => {
     setFormValues((previous) => ({ ...previous, [field]: value }));
@@ -104,18 +106,18 @@ export const useCreateExamFlow = () => {
     });
     setSubmitState({ status: "idle" });
   };
-  const submitForm = async (): Promise<void> => {
+  const submitForm = async (): Promise<string | null> => {
     const nextErrors = validateCreateExamForm(formValues, selectedQuestionPoints);
     if (hasValidationErrors(nextErrors)) {
       setErrors(nextErrors);
       setSubmitState({ status: "idle" });
-      return;
+      return null;
     }
 
     const durationMinutes = parseDurationMinutes(formValues.durationMinutes);
     if (!durationMinutes) {
       setErrors((previous) => ({ ...previous, durationMinutes: "Хугацааны утга буруу байна." }));
-      return;
+      return null;
     }
     const selectedQuestions = toSelectedQuestionsPayload(selectedQuestionPoints);
     setErrors(EMPTY_ERRORS);
@@ -144,8 +146,10 @@ export const useCreateExamFlow = () => {
       setFormValues((previous) => ({ ...INITIAL_FORM_VALUES, classId: previous.classId, mode: previous.mode }));
       setSelectedQuestionPoints({});
       await optionsQuery.refetch();
+      return createdExam.id;
     } catch (error) {
       setSubmitState({ status: "error", message: toErrorMessage(error) });
+      return null;
     } finally {
       setIsAddingQuestions(false);
     }
@@ -161,6 +165,7 @@ export const useCreateExamFlow = () => {
     isOptionsLoading: optionsQuery.loading,
     optionsError: optionsQuery.error,
     isSubmitting: createExamState.loading || isAddingQuestions,
+    isClassSelectionLocked: Boolean(initialClassId),
     setFieldValue,
     toggleQuestion,
     addQuestion,

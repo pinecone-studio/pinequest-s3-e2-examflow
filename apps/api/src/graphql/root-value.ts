@@ -1,7 +1,7 @@
 import { all, first, type D1DatabaseLike } from "../lib/d1";
 import { getClassSelectFields, insertClassRow } from "./class-schema";
 import { createAttemptMutations } from "./modules/attempts";
-import { createExamQueriesAndMutations, findExamById } from "./modules/exams";
+import { closeExpiredExams, createExamQueriesAndMutations, findExamById } from "./modules/exams";
 import {
   createQuestionQueriesAndMutations,
   findQuestionBankById,
@@ -37,6 +37,7 @@ export const createRootValue = (db: D1DatabaseLike) => {
         )
       ).map(toUser),
     classes: async () => {
+      await closeExpiredExams(db);
       const classSelectFields = await getClassSelectFields(db);
       return (
         await all<ClassRow>(
@@ -47,6 +48,7 @@ export const createRootValue = (db: D1DatabaseLike) => {
       ).map(toClass);
     },
     class: async ({ id }: ByIdArgs) => {
+      await closeExpiredExams(db);
       const classSelectFields = await getClassSelectFields(db);
       const classroom = await first<ClassRow>(
         db,

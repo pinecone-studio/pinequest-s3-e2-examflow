@@ -9,6 +9,7 @@ type CreateExamDetailsCardProps = {
   classOptions: CreateExamClassOption[];
   errors: CreateExamFieldErrors;
   disabled: boolean;
+  lockClassSelection?: boolean;
   onFieldChange: <K extends keyof CreateExamFormValues>(
     field: K,
     value: CreateExamFormValues[K],
@@ -20,6 +21,7 @@ export function CreateExamDetailsCard({
   classOptions,
   errors,
   disabled,
+  lockClassSelection = false,
   onFieldChange,
 }: CreateExamDetailsCardProps) {
   return (
@@ -34,7 +36,7 @@ export function CreateExamDetailsCard({
             className="rounded-md border border-[#DFE1E5] bg-white px-3 py-2 text-[14px] text-[#0F1216] shadow-sm"
             value={values.classId}
             onChange={(event) => onFieldChange("classId", event.target.value)}
-            disabled={disabled}
+            disabled={disabled || lockClassSelection}
           >
             {!classOptions.length ? <option value="">Анги олдсонгүй</option> : null}
             {classOptions.map((classroom) => (

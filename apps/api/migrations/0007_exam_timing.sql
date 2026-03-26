@@ -1,0 +1,2 @@
+ALTER TABLE exams ADD COLUMN started_at TEXT;
+ALTER TABLE exams ADD COLUMN ends_at TEXT;

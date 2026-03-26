@@ -46,6 +46,7 @@ export const schemaRootTypes = /* GraphQL */ `
       mode: ExamMode = SCHEDULED
       durationMinutes: Int!
     ): Exam!
+    assignExamToClass(examId: ID!, classId: ID!): Exam!
     addQuestionToExam(examId: ID!, questionId: ID!, points: Int!): Exam!
     publishExam(examId: ID!): Exam!
     closeExam(examId: ID!): Exam!

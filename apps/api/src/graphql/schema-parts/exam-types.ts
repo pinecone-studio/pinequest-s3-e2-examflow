@@ -14,6 +14,8 @@ export const schemaExamTypes = /* GraphQL */ `
     mode: ExamMode!
     status: ExamStatus!
     durationMinutes: Int!
+    startedAt: String
+    endsAt: String
     questions: [ExamQuestion!]!
     createdBy: User!
     attempts: [Attempt!]!
