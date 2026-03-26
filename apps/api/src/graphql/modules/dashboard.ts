@@ -51,7 +51,7 @@ export const createDashboardOverviewQuery = ({
           `SELECT COUNT(*) AS count
            FROM exams e
            JOIN classes c ON c.id = e.class_id
-           WHERE c.teacher_id = ? AND e.status = 'DRAFT'`,
+           WHERE c.teacher_id = ? AND COALESCE(e.is_template, 0) = 1 AND e.status = 'DRAFT'`,
           [teacherId],
         ),
         first<CountRow>(
@@ -60,6 +60,7 @@ export const createDashboardOverviewQuery = ({
            FROM exams e
            JOIN classes c ON c.id = e.class_id
            WHERE c.teacher_id = ?
+             AND COALESCE(e.is_template, 0) = 0
              AND e.status = 'PUBLISHED'
              AND EXISTS (
                SELECT 1
@@ -74,6 +75,7 @@ export const createDashboardOverviewQuery = ({
            FROM exams e
            JOIN classes c ON c.id = e.class_id
            WHERE c.teacher_id = ?
+             AND COALESCE(e.is_template, 0) = 0
              AND e.status != 'CLOSED'
              AND COALESCE(e.scheduled_for, e.created_at) >= ?`,
           [teacherId, nowIso],
@@ -90,6 +92,7 @@ export const createDashboardOverviewQuery = ({
            JOIN classes c ON c.id = e.class_id
            LEFT JOIN exam_questions eq ON eq.exam_id = e.id
            WHERE c.teacher_id = ?
+             AND COALESCE(e.is_template, 0) = 0
              AND e.status != 'CLOSED'
              AND COALESCE(e.scheduled_for, e.created_at) >= ?
            GROUP BY e.id, e.title, e.status, scheduled_for
@@ -124,6 +127,7 @@ export const createDashboardOverviewQuery = ({
              ON a.exam_id = e.id
             AND a.status IN ('SUBMITTED', 'GRADED')
            WHERE c.teacher_id = ?
+             AND COALESCE(e.is_template, 0) = 0
              AND e.status = 'CLOSED'
            GROUP BY e.id, e.title, totals.max_score
            HAVING COUNT(a.id) > 0

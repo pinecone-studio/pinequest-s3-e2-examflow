@@ -53,6 +53,9 @@ export function QuestionBankDetailTable({
     }
   };
 
+  const formatPreviewText = (text: string) =>
+    text.length > 78 ? `${text.slice(0, 75)}...` : text;
+
   return (
     <>
       <div className="overflow-hidden rounded-xl border border-[#DFE1E5] bg-white shadow-[0px_1px_3px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]">
@@ -83,25 +86,50 @@ export function QuestionBankDetailTable({
         ) : null}
         {!loading && !errorMessage ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left">
+            <table className="w-full table-fixed text-left">
+              <colgroup>
+                <col className="w-[47%]" />
+                <col className="w-[18%]" />
+                <col className="w-[12%]" />
+                <col className="w-[9%]" />
+                <col className="w-[10%]" />
+                <col className="w-[4%]" />
+              </colgroup>
               <thead className="border-b border-[#DFE1E5] text-[14px] font-medium text-[#0F1216]">
                 <tr>
                   <th className="px-4 py-3">Асуулт</th>
-                  <th className="px-4 py-3">Төрөл</th>
-                  <th className="px-4 py-3">Түвшин</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Төрөл</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Түвшин</th>
                   <th className="px-4 py-3 text-center">Ашигласан</th>
-                  <th className="px-4 py-3">Дундаж оноо</th>
-                  <th className="px-4 py-3 text-right">Үйлдэл</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Дундаж оноо</th>
+                  <th className="px-4 py-3 text-right whitespace-nowrap">Үйлдэл</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id} className="border-b border-[#DFE1E5] last:border-b-0">
                     <td className="px-4 py-4 text-[14px] text-[#0F1216]">
-                      <button type="button" className="cursor-pointer text-left hover:text-[#00267F]" onClick={() => setSelectedRow(row)}>{row.text}</button>
+                      <button
+                        type="button"
+                        className="cursor-pointer text-left transition hover:text-[#00267F] hover:underline hover:underline-offset-4"
+                        title="Дарж дэлгэрэнгүй харах"
+                        onClick={() => setSelectedRow(row)}
+                      >
+                        {formatPreviewText(row.text)}
+                      </button>
                     </td>
-                    <td className="px-4 py-4"><span className="rounded-md border border-[#DFE1E5] px-3 py-1 text-[12px] font-medium text-[#0F1216]">{row.type}</span></td>
-                    <td className="px-4 py-4"><span className={`rounded-md border px-3 py-1 text-[12px] font-medium ${row.difficultyTone}`}>{row.difficulty}</span></td>
+                    <td className="px-4 py-4">
+                      <span className="inline-flex whitespace-nowrap rounded-md border border-[#DFE1E5] px-2.5 py-1 text-[12px] font-medium text-[#0F1216]">
+                        {row.type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span
+                        className={`inline-flex whitespace-nowrap rounded-md border px-2.5 py-1 text-[12px] font-medium ${row.difficultyTone}`}
+                      >
+                        {row.difficulty}
+                      </span>
+                    </td>
                     <td className="px-4 py-4 text-center text-[14px] text-[#52555B]">{row.usedCount}</td>
                     <td className="px-4 py-4 text-[14px] text-[#0F1216]">{row.averageScore}</td>
                     <td className="relative px-4 py-4 text-right">

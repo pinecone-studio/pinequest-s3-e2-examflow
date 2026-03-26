@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAssignExamToClassMutation, useMyExamsQueryQuery } from "@/graphql/generated";
+import { ExamStatus, useAssignExamToClassMutation, useMyExamsQueryQuery } from "@/graphql/generated";
 
 type ClassAssignExamDialogProps = {
   classId: string;
@@ -37,11 +37,15 @@ export function ClassAssignExamDialog({ classId, className, open, onClose, onAss
   const exams = useMemo(() => {
     const actorId = data?.me?.id ?? "";
     const items = actorId
-      ? (data?.exams ?? []).filter((exam) => exam.createdBy.id === actorId && exam.class.id !== classId)
+      ? (data?.exams ?? []).filter(
+          (exam) =>
+            exam.createdBy.id === actorId &&
+            (exam.isTemplate || (!exam.sourceExamId && exam.status === ExamStatus.Draft)),
+        )
       : [];
     const keyword = search.trim().toLowerCase();
     return items.filter((exam) => !keyword || `${exam.title} ${exam.class.name}`.toLowerCase().includes(keyword));
-  }, [classId, data?.exams, data?.me?.id, search]);
+  }, [data?.exams, data?.me?.id, search]);
   if (!open) return null;
 
   const handleCreateNew = () => {

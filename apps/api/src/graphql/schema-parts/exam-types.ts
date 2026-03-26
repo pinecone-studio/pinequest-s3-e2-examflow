@@ -9,6 +9,8 @@ export const schemaExamTypes = /* GraphQL */ `
   type Exam {
     id: ID!
     class: Class!
+    isTemplate: Boolean!
+    sourceExamId: ID
     title: String!
     description: String
     mode: ExamMode!

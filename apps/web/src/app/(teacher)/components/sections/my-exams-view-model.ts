@@ -26,19 +26,19 @@ const formatDate = (value: string | null | undefined) => {
 const getExamStatus = (status: ExamStatus) => {
   if (status === ExamStatus.Published) {
     return {
-      label: "Нийтлэгдсэн",
-      tone: "border-[#31AA4033] bg-[#31AA401A] text-[#31AA40]",
+      label: "Явагдаж буй",
+      tone: "border-[#EAB53233] bg-[#EAB5321A] text-[#946200]",
     };
   }
   if (status === ExamStatus.Closed) {
     return {
       label: "Дууссан",
-      tone: "border-[#19223033] bg-[#1922301A] text-[#192230]",
+      tone: "border-[#31AA4033] bg-[#31AA401A] text-[#0F7A4F]",
     };
   }
   return {
     label: "Ноорог",
-    tone: "border-[#DFE1E5] bg-[#F0F2F5] text-[#52555B]",
+    tone: "border-[#DFE1E5] bg-[#F2F4F7] text-[#52555B]",
   };
 };
 

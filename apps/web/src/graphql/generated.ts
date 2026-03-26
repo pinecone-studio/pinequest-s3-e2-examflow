@@ -144,9 +144,11 @@ export type Exam = {
   durationMinutes: Scalars['Int']['output'];
   endsAt?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
+  isTemplate: Scalars['Boolean']['output'];
   mode: ExamMode;
   questions: Array<ExamQuestion>;
   scheduledFor?: Maybe<Scalars['String']['output']>;
+  sourceExamId?: Maybe<Scalars['ID']['output']>;
   startedAt?: Maybe<Scalars['String']['output']>;
   status: ExamStatus;
   title: Scalars['String']['output'];
@@ -523,7 +525,7 @@ export type HealthQueryQuery = { __typename?: 'Query', health: { __typename?: 'H
 export type MyExamsQueryQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type MyExamsQueryQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string } | null, exams: Array<{ __typename?: 'Exam', id: string, title: string, status: ExamStatus, durationMinutes: number, createdAt: string, createdBy: { __typename?: 'User', id: string }, class: { __typename?: 'Class', id: string, name: string, students: Array<{ __typename?: 'User', id: string, fullName: string }> }, questions: Array<{ __typename?: 'ExamQuestion', id: string, points: number, order: number, question: { __typename?: 'Question', id: string, title: string, prompt: string, type: QuestionType, options: Array<string> } }>, attempts: Array<{ __typename?: 'Attempt', id: string, status: AttemptStatus, totalScore: number, startedAt: string, submittedAt?: string | null, student: { __typename?: 'User', id: string, fullName: string } }> }> };
+export type MyExamsQueryQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string } | null, exams: Array<{ __typename?: 'Exam', id: string, isTemplate: boolean, sourceExamId?: string | null, title: string, status: ExamStatus, durationMinutes: number, createdAt: string, createdBy: { __typename?: 'User', id: string }, class: { __typename?: 'Class', id: string, name: string, students: Array<{ __typename?: 'User', id: string, fullName: string }> }, questions: Array<{ __typename?: 'ExamQuestion', id: string, points: number, order: number, question: { __typename?: 'Question', id: string, title: string, prompt: string, type: QuestionType, options: Array<string> } }>, attempts: Array<{ __typename?: 'Attempt', id: string, status: AttemptStatus, totalScore: number, startedAt: string, submittedAt?: string | null, student: { __typename?: 'User', id: string, fullName: string } }> }> };
 
 export type QuestionBankDetailQueryQueryVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -1319,6 +1321,8 @@ export const MyExamsQueryDocument = gql`
   }
   exams {
     id
+    isTemplate
+    sourceExamId
     title
     status
     durationMinutes

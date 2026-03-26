@@ -17,6 +17,21 @@ import {
   type UserRow,
 } from "../types";
 
+const examSelectFields = `id,
+      class_id,
+      is_template,
+      source_exam_id,
+      title,
+      description,
+      mode,
+      status,
+      duration_minutes,
+      started_at,
+      ends_at,
+      created_by_id,
+      scheduled_for,
+      created_at`;
+
 const getExamEndTimestamp = (startedAt: string, durationMinutes: number): string => {
   const startedAtMs = Date.parse(startedAt);
   return new Date(startedAtMs + durationMinutes * 60_000).toISOString();
@@ -41,18 +56,7 @@ export const findExamById = async (
   const exam = await first<ExamRow>(
     db,
     `SELECT
-      id,
-      class_id,
-      title,
-      description,
-      mode,
-      status,
-      duration_minutes,
-      started_at,
-      ends_at,
-      created_by_id,
-      scheduled_for,
-      created_at
+      ${examSelectFields}
     FROM exams
     WHERE id = ?`,
     [id],
@@ -86,37 +90,15 @@ export const createExamQueriesAndMutations = ({
         ? await all<ExamRow>(
             db,
             `SELECT
-              id,
-              class_id,
-              title,
-              description,
-              mode,
-              status,
-              duration_minutes,
-              started_at,
-              ends_at,
-              created_by_id,
-              scheduled_for,
-              created_at
+              ${examSelectFields}
             FROM exams
             ORDER BY created_at DESC`,
           )
         : actor.role === "TEACHER"
           ? await all<ExamRow>(
-              db,
-              `SELECT
-                e.id,
-                e.class_id,
-                e.title,
-                e.description,
-                e.mode,
-                e.status,
-                e.duration_minutes,
-                e.started_at,
-                e.ends_at,
-                e.created_by_id,
-                e.scheduled_for,
-                e.created_at
+            db,
+            `SELECT
+                e.${examSelectFields.replaceAll(",\n      ", ",\n                e.")}
               FROM exams e
               JOIN classes c ON c.id = e.class_id
               WHERE c.teacher_id = ?
@@ -126,21 +108,10 @@ export const createExamQueriesAndMutations = ({
           : await all<ExamRow>(
               db,
               `SELECT DISTINCT
-                e.id,
-                e.class_id,
-                e.title,
-                e.description,
-                e.mode,
-                e.status,
-                e.duration_minutes,
-                e.started_at,
-                e.ends_at,
-                e.created_by_id,
-                e.scheduled_for,
-                e.created_at
+                e.${examSelectFields.replaceAll(",\n      ", ",\n                e.")}
               FROM exams e
               JOIN class_students cs ON cs.class_id = e.class_id
-              WHERE cs.student_id = ? AND e.status != 'DRAFT'
+              WHERE COALESCE(e.is_template, 0) = 0 AND cs.student_id = ?
               ORDER BY e.created_at DESC`,
               [actor.id],
             );
@@ -154,18 +125,7 @@ export const createExamQueriesAndMutations = ({
         ? await first<ExamRow>(
             db,
             `SELECT
-              id,
-              class_id,
-              title,
-              description,
-              mode,
-              status,
-              duration_minutes,
-              started_at,
-              ends_at,
-              created_by_id,
-              scheduled_for,
-              created_at
+              ${examSelectFields}
             FROM exams
             WHERE id = ?`,
             [id],
@@ -174,18 +134,7 @@ export const createExamQueriesAndMutations = ({
           ? await first<ExamRow>(
               db,
               `SELECT
-                e.id,
-                e.class_id,
-                e.title,
-                e.description,
-                e.mode,
-                e.status,
-                e.duration_minutes,
-                e.started_at,
-                e.ends_at,
-                e.created_by_id,
-                e.scheduled_for,
-                e.created_at
+                e.${examSelectFields.replaceAll(",\n      ", ",\n                e.")}
               FROM exams e
               JOIN classes c ON c.id = e.class_id
               WHERE e.id = ? AND c.teacher_id = ?`,
@@ -194,21 +143,10 @@ export const createExamQueriesAndMutations = ({
           : await first<ExamRow>(
               db,
               `SELECT DISTINCT
-                e.id,
-                e.class_id,
-                e.title,
-                e.description,
-                e.mode,
-                e.status,
-                e.duration_minutes,
-                e.started_at,
-                e.ends_at,
-                e.created_by_id,
-                e.scheduled_for,
-                e.created_at
+                e.${examSelectFields.replaceAll(",\n      ", ",\n                e.")}
               FROM exams e
               JOIN class_students cs ON cs.class_id = e.class_id
-              WHERE e.id = ? AND cs.student_id = ? AND e.status != 'DRAFT'`,
+              WHERE COALESCE(e.is_template, 0) = 0 AND e.id = ? AND cs.student_id = ?`,
               [id, actor.id],
             );
     return exam ? toExam(db, exam) : null;
@@ -240,6 +178,8 @@ export const createExamQueriesAndMutations = ({
       `INSERT INTO exams (
         id,
         class_id,
+        is_template,
+        source_exam_id,
         title,
         description,
         mode,
@@ -251,10 +191,12 @@ export const createExamQueriesAndMutations = ({
         scheduled_for,
         created_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         classId,
+        1,
+        null,
         title,
         description ?? null,
         mode ?? "SCHEDULED",
@@ -284,6 +226,7 @@ export const createExamQueriesAndMutations = ({
     }
 
     const sourceExam = await findExamById(db, examId);
+    invariant(sourceExam.is_template === 1, "Зөвхөн ноорог шалгалтыг ангид оноож болно.");
     if (actor.role === "TEACHER") {
       const sourceClass = await findClass(db, sourceExam.class_id);
       invariant(
@@ -292,11 +235,6 @@ export const createExamQueriesAndMutations = ({
       );
     }
 
-    invariant(
-      sourceExam.class_id !== classId,
-      "Энэ шалгалт сонгосон ангид аль хэдийн харьяалагдаж байна.",
-    );
-
     const nextExamId = makeId("exam");
     const createdAt = now();
     await run(
@@ -304,6 +242,8 @@ export const createExamQueriesAndMutations = ({
       `INSERT INTO exams (
         id,
         class_id,
+        is_template,
+        source_exam_id,
         title,
         description,
         mode,
@@ -315,10 +255,12 @@ export const createExamQueriesAndMutations = ({
         scheduled_for,
         created_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         nextExamId,
         classId,
+        0,
+        sourceExam.source_exam_id ?? sourceExam.id,
         sourceExam.title,
         sourceExam.description,
         sourceExam.mode,
@@ -403,6 +345,7 @@ export const createExamQueriesAndMutations = ({
   publishExam: async ({ examId }: PublishExamArgs, context: RequestContext) => {
     const actor = await requireActor(context, ["ADMIN", "TEACHER"]);
     const exam = await findExamById(db, examId);
+    invariant(!exam.is_template, "Template шалгалтыг ангид оноосны дараа эхлүүлнэ үү.");
     if (actor.role === "TEACHER") {
       const classroom = await findClass(db, exam.class_id);
       invariant(
@@ -434,6 +377,7 @@ export const createExamQueriesAndMutations = ({
   closeExam: async ({ examId }: CloseExamArgs, context: RequestContext) => {
     const actor = await requireActor(context, ["ADMIN", "TEACHER"]);
     const exam = await findExamById(db, examId);
+    invariant(!exam.is_template, "Template шалгалтыг шууд хаах боломжгүй.");
     if (actor.role === "TEACHER") {
       const classroom = await findClass(db, exam.class_id);
       invariant(
