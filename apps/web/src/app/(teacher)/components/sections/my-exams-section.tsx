@@ -1,9 +1,7 @@
 "use client";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@apollo/client/react";
 import { ExamStatus, MyExamsQueryDocument, type MyExamsQueryQuery } from "@/graphql/generated";
-import { BellIcon, ChevronDownIcon, PlusIcon, SearchIcon } from "../icons";
 import { ExamPreviewDialog } from "./exam-preview-dialog";
 import { MyExamsLoadingList } from "./my-exams-loading-list";
 import { ExamResultsDialog } from "./exam-results-dialog";
@@ -13,7 +11,9 @@ import {
   type MyExamsSectionMode,
 } from "./my-exams-section-config";
 import type { MyExamView } from "./my-exams-types";
+import { MyExamsToolbar } from "./my-exams-toolbar";
 import { buildMyExamViews } from "./my-exams-view-model";
+
 type MyExamsSectionProps = { mode?: MyExamsSectionMode };
 
 const isLibraryExam = (exam: MyExamsQueryQuery["exams"][number]) =>
@@ -76,58 +76,17 @@ export function MyExamsSection({ mode = "library" }: MyExamsSectionProps) {
   const isLibraryMode = mode === "library";
 
   return (
-    <section className="px-8 pb-8 pt-6">
+    <section className="px-6 pb-8 pt-5 sm:px-7 lg:px-8">
       <h1 className="sr-only">{title}</h1>
-      <div className="w-full max-w-[1120px]">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-          <div className="flex flex-col gap-3 xl:w-[608px] xl:flex-row xl:items-start xl:gap-5">
-            <label className="relative block xl:w-[448px]">
-              <span className="sr-only">Шалгалт хайх</span>
-              <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[#52555B]">
-                <SearchIcon className="h-4 w-4" />
-              </span>
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Шалгалт хайх..."
-                className="h-[42px] w-full rounded-[20px] border border-transparent bg-white px-[42px] pr-3 text-[14px] leading-4 text-[#52555B] shadow-[0px_1px_2px_rgba(0,0,0,0.1),0px_1px_3px_rgba(0,0,0,0.1)] outline-none placeholder:text-[#787C84] focus:border-[#D8E4FF]"
-              />
-            </label>
-            <label className="relative inline-flex h-[36px] w-full items-center rounded-[20px] bg-white px-3 text-[14px] text-[#0F1216] xl:mt-[3px] xl:w-[140px]">
-              <select
-                value={status}
-                onChange={(event) => setStatus(event.target.value)}
-                className="h-full w-full cursor-pointer appearance-none bg-transparent pr-6 outline-none"
-              >
-                {statusOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              <ChevronDownIcon className="pointer-events-none absolute right-3 h-4 w-4 text-[#A0A4AB]" />
-            </label>
-          </div>
-          {isLibraryMode ? (
-            <div className="flex items-start gap-4 xl:pt-[1px]">
-              <Link
-                href="/create-exam"
-                className="inline-flex h-[36px] items-center justify-center gap-4 rounded-[20px] bg-[#16A34A] px-3 text-[14px] font-medium leading-5 text-white"
-              >
-                <PlusIcon className="h-4 w-4" />
-                Шинэ шалгалт
-              </Link>
-              <button
-                type="button"
-                aria-label="Notifications"
-                className="flex h-10 w-10 items-center justify-center"
-              >
-                <BellIcon className="h-5 w-4" />
-              </button>
-            </div>
-          ) : null}
-        </div>
+      <div className="mx-auto w-full max-w-[1120px]">
+        <MyExamsToolbar
+          isLibraryMode={isLibraryMode}
+          search={search}
+          status={status}
+          statusOptions={statusOptions}
+          onSearchChange={setSearch}
+          onStatusChange={setStatus}
+        />
         {errorMessage ? (
           <p className="mt-4 text-[14px] text-[#B42318]">{errorMessage}</p>
         ) : null}
