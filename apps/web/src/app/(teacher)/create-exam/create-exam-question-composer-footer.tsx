@@ -25,38 +25,34 @@ export function CreateExamQuestionComposerFooter({
 }: CreateExamQuestionComposerFooterProps) {
   return (
     <>
-      <div className="space-y-2 border-t border-[#DFE1E5] pt-4">
-        <label className="flex items-center gap-2 text-[14px] text-[#0F1216]">
+      <div className="space-y-3 rounded-[20px] border border-[#E4E7EC] bg-[#FCFCFD] px-4 py-4">
+        <label className="flex items-start gap-3 text-[14px] text-[#101828]">
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border border-[#DFE1E5]"
+            className="mt-1 h-4 w-4 rounded border border-[#D0D5DD]"
             checked={saveToBank}
             onChange={(event) => onToggleSave(event.target.checked)}
             disabled={disabled || loading}
           />
-          Энэ асуултыг асуултын санд хадгалах
+          <span>Энэ асуултыг асуултын санд хадгалах</span>
         </label>
-        {bankSummary ? (
-          <p className="text-[12px] text-[#52555B]">{bankSummary}</p>
-        ) : null}
-        {errorMessage ? (
-          <p className="text-[12px] text-[#B42318]">{errorMessage}</p>
-        ) : null}
+        {bankSummary ? <p className="text-[13px] text-[#667085]">{bankSummary}</p> : null}
+        {errorMessage ? <p className="text-[13px] text-[#B42318]">{errorMessage}</p> : null}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+      <div className="flex flex-col gap-3 border-t border-[#EAECF0] pt-5 sm:flex-row sm:items-center sm:justify-between">
         <button
           type="button"
-          className="cursor-pointer rounded-md border border-[#DFE1E5] bg-[#FAFAFA] px-4 py-2 text-[14px] font-medium text-[#0F1216] shadow-[0px_1px_2px_rgba(0,0,0,0.05)]"
+          className="inline-flex h-11 items-center justify-center rounded-xl border border-[#D0D5DD] bg-white px-4 text-[14px] font-semibold text-[#344054] shadow-[0px_1px_2px_rgba(16,24,40,0.05)]"
           onClick={onOpenLibrary}
           disabled={disabled || loading}
         >
           Сангаас нэмэх
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <button
             type="button"
-            className="cursor-pointer rounded-md px-4 py-2 text-[14px] font-medium text-[#0F1216]"
+            className="inline-flex h-11 items-center justify-center px-2 text-[14px] font-medium text-[#667085]"
             onClick={onCancel}
             disabled={disabled || loading}
           >
@@ -64,7 +60,7 @@ export function CreateExamQuestionComposerFooter({
           </button>
           <button
             type="button"
-            className="cursor-pointer rounded-md bg-[#00267F] px-4 py-2 text-[14px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-[#163D99] px-5 text-[14px] font-semibold text-white shadow-[0px_10px_20px_rgba(22,61,153,0.18)] disabled:cursor-not-allowed disabled:opacity-60"
             onClick={onSubmit}
             disabled={disabled || loading}
           >

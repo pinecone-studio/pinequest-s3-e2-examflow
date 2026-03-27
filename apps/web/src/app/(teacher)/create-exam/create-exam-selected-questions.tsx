@@ -30,19 +30,8 @@ const DIFFICULTY_LABELS: Record<string, string> = {
 
 const formatQuestionText = (question: CreateExamQuestionOption) => {
   const source = question.prompt.trim() || question.title.trim();
-  return source.length > 110 ? `${source.slice(0, 107)}...` : source;
+  return source.length > 140 ? `${source.slice(0, 137)}...` : source;
 };
-
-const getQuestionTypeLabel = (type: string) => QUESTION_TYPE_LABELS[type] ?? type;
-
-const getDifficultyLabel = (difficulty: string) =>
-  DIFFICULTY_LABELS[difficulty] ?? difficulty;
-
-const getTotalPoints = (selectedQuestionPoints: SelectedQuestionPoints) =>
-  Object.values(selectedQuestionPoints).reduce((sum, value) => {
-    const points = Number(value);
-    return Number.isFinite(points) ? sum + points : sum;
-  }, 0);
 
 export function CreateExamSelectedQuestions({
   questionOptions,
@@ -61,55 +50,59 @@ export function CreateExamSelectedQuestions({
   }
 
   return (
-    <div className="rounded-xl border border-[#DFE1E5] bg-white p-4 shadow-sm">
-      <h3 className="text-[16px] font-semibold text-[#0F1216]">
-        Таны сонгосон асуултууд
-      </h3>
-      <div className="mt-3 space-y-2">
-        {selectedQuestions.map((question) => (
-          <div
-            key={question.id}
-            className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-[#DFE1E5] px-3 py-3"
-          >
-            <div>
-              <p className="text-[14px] font-medium text-[#0F1216]">{formatQuestionText(question)}</p>
-              <p className="text-[12px] text-[#52555B]">
-                {question.bankTitle} | {getQuestionTypeLabel(question.type)} |{" "}
-                {getDifficultyLabel(question.difficulty)}
+    <div className="space-y-3">
+      {selectedQuestions.map((question) => (
+        <article
+          key={question.id}
+          className="rounded-[20px] border border-[#E4E7EC] bg-white p-4 shadow-[0px_4px_12px_rgba(16,24,40,0.04)]"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-3">
+              <p className="text-[15px] font-semibold leading-6 text-[#101828]">
+                {formatQuestionText(question)}
               </p>
+              <div className="flex flex-wrap gap-2 text-[12px]">
+                <span className="rounded-full border border-[#D0D5DD] bg-[#F9FAFB] px-2.5 py-1 text-[#344054]">
+                  {QUESTION_TYPE_LABELS[question.type] ?? question.type}
+                </span>
+                <span className="rounded-full border border-[#D6E2FF] bg-[#F3F7FF] px-2.5 py-1 text-[#163D99]">
+                  {question.bankTitle}
+                </span>
+                <span className="rounded-full border border-[#E4E7EC] bg-[#FCFCFD] px-2.5 py-1 text-[#475467]">
+                  {DIFFICULTY_LABELS[question.difficulty] ?? question.difficulty}
+                </span>
+              </div>
             </div>
-            <div className="flex items-start gap-2">
-              <div className="w-[120px]">
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <label className="grid gap-1.5 text-[13px] font-medium text-[#344054]">
+                <span>Оноо</span>
                 <input
                   type="text"
-                  className="w-full rounded-md border border-[#DFE1E5] px-3 py-2 text-[13px]"
-                  placeholder="Оноо"
+                  className="h-11 w-full rounded-xl border border-[#D0D5DD] bg-white px-4 text-[14px] text-[#101828] outline-none focus:border-[#98B7FF] sm:w-[120px]"
                   value={selectedQuestionPoints[question.id] ?? ""}
                   onChange={(event) => onPointsChange(question.id, event.target.value)}
                   disabled={disabled}
                   inputMode="numeric"
                 />
                 {errors.pointsByQuestionId[question.id] ? (
-                  <p className="mt-1 text-[11px] text-[#B42318]">
+                  <span className="text-[12px] font-normal text-[#B42318]">
                     {errors.pointsByQuestionId[question.id]}
-                  </p>
+                  </span>
                 ) : null}
-              </div>
+              </label>
               <button
                 type="button"
-                className="cursor-pointer rounded-md px-3 py-2 text-[13px] text-[#52555B]"
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-[#E4E7EC] px-4 text-[14px] font-medium text-[#667085]"
                 onClick={() => onRemove(question.id)}
                 disabled={disabled}
               >
-                Устгах
+                Хасах
               </button>
             </div>
           </div>
-        ))}
-      </div>
-      <div className="mt-4 border-t border-[#DFE1E5] pt-3 text-[14px] font-medium text-[#0F1216]">
-        Нийт оноо: {getTotalPoints(selectedQuestionPoints)}
-      </div>
+        </article>
+      ))}
     </div>
   );
 }
