@@ -109,7 +109,7 @@ export const buildQuestionBankRows = (
   questions: RawQuestion[],
   usageStats: QuestionUsageStats = {},
 ): QuestionBankQuestionRow[] =>
-  questions.map((question, index) => ({
+  questions.map((question) => ({
     id: question.id,
     text: question.prompt.trim() || question.title.trim(),
     prompt: question.prompt.trim(),
@@ -124,7 +124,8 @@ export const buildQuestionBankRows = (
     difficultyTone: DIFFICULTY_TONES[question.difficulty],
     usedCount: `${usageStats[question.id]?.usedCount ?? 0} удаа`,
     averageScore:
-      usageStats[question.id]?.averageScorePercent == null
+      usageStats[question.id]?.averageScorePercent === undefined ||
+      usageStats[question.id]?.averageScorePercent === null
         ? "-"
         : `${Math.round(usageStats[question.id].averageScorePercent ?? 0)}%`,
     options: question.options,

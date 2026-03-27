@@ -1,6 +1,7 @@
+/* eslint-disable max-lines */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   QuestionBankVisibility,
@@ -14,10 +15,9 @@ import {
 } from "../question-bank-curriculum";
 import { CloseIcon } from "../icons";
 import { QuestionBankDialogFooter } from "./question-bank-dialog-actions";
-import { QuestionBankDialogSelect } from "./question-bank-dialog-fields";
+import { QuestionBankCreateDialogForm } from "./question-bank-create-dialog-form";
 
 type QuestionBankCreateDialogProps = {
-  open: boolean;
   initialGrade?: number | null;
   initialSubject?: string | null;
   initialTopic?: string | null;
@@ -36,19 +36,40 @@ const toDefaultTitle = (
   return `${grade}-р анги ${subject} · ${topic}`;
 };
 
+const getInitialDialogState = (
+  initialGrade: number | null,
+  initialSubject: string | null,
+  initialTopic: string | null,
+) => {
+  const grade = initialGrade ? String(initialGrade) : "";
+  const subject = initialSubject?.trim() ?? "";
+  const topic = initialTopic?.trim() ?? "";
+
+  return {
+    grade,
+    subject,
+    topic,
+    title: toDefaultTitle(initialGrade, subject, topic),
+  };
+};
+
 export function QuestionBankCreateDialog({
-  open,
   initialGrade = null,
   initialSubject = null,
   initialTopic = null,
   onClose,
 }: QuestionBankCreateDialogProps) {
   const router = useRouter();
-  const [title, setTitle] = useState("");
+  const initialState = getInitialDialogState(
+    initialGrade,
+    initialSubject,
+    initialTopic,
+  );
+  const [title, setTitle] = useState(initialState.title);
   const [description, setDescription] = useState("");
-  const [grade, setGrade] = useState<string>("");
-  const [subject, setSubject] = useState("");
-  const [topic, setTopic] = useState("");
+  const [grade, setGrade] = useState<string>(initialState.grade);
+  const [subject, setSubject] = useState(initialState.subject);
+  const [topic, setTopic] = useState(initialState.topic);
   const [visibility, setVisibility] = useState<QuestionBankVisibility>(
     QuestionBankVisibility.Private,
   );
@@ -68,28 +89,6 @@ export function QuestionBankCreateDialog({
     () => (grade && subject ? getCurriculumTopics(Number(grade), subject) : []),
     [grade, subject],
   );
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const nextGrade = initialGrade ? String(initialGrade) : "";
-    const nextSubject = initialSubject?.trim() ?? "";
-    const nextTopic = initialTopic?.trim() ?? "";
-
-    setGrade(nextGrade);
-    setSubject(nextSubject);
-    setTopic(nextTopic);
-    setTitle(toDefaultTitle(initialGrade, nextSubject, nextTopic));
-    setDescription("");
-    setVisibility(QuestionBankVisibility.Private);
-    setErrorMessage(null);
-  }, [initialGrade, initialSubject, initialTopic, open]);
-
-  if (!open) {
-    return null;
-  }
 
   const handleSubmit = async () => {
     const numericGrade = Number(grade);
@@ -161,98 +160,35 @@ export function QuestionBankCreateDialog({
         </div>
 
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="block space-y-2">
-              <span className="text-[12px] font-medium text-[#52555B]">Анги</span>
-              <QuestionBankDialogSelect
-                value={grade}
-                onChange={(value) => {
-                  setGrade(value);
-                  setSubject("");
-                  setTopic("");
-                  setTitle(toDefaultTitle(Number(value), "", ""));
-                }}
-              >
-                <option value="">Анги сонгох</option>
-                {gradeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}-р анги
-                  </option>
-                ))}
-              </QuestionBankDialogSelect>
-            </label>
-            <label className="block space-y-2">
-              <span className="text-[12px] font-medium text-[#52555B]">Хичээл</span>
-              <QuestionBankDialogSelect
-                disabled={!grade}
-                value={subject}
-                onChange={(value) => {
-                  setSubject(value);
-                  setTopic("");
-                  setTitle(toDefaultTitle(Number(grade), value, ""));
-                }}
-              >
-                <option value="">Хичээл сонгох</option>
-                {subjectOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </QuestionBankDialogSelect>
-            </label>
-            <label className="block space-y-2">
-              <span className="text-[12px] font-medium text-[#52555B]">Дэд сэдэв</span>
-              <QuestionBankDialogSelect
-                disabled={!grade || !subject}
-                value={topic}
-                onChange={(value) => {
-                  setTopic(value);
-                  setTitle(toDefaultTitle(Number(grade), subject, value));
-                }}
-              >
-                <option value="">Дэд сэдэв сонгох</option>
-                {topicOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </QuestionBankDialogSelect>
-            </label>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block space-y-2">
-              <span className="text-[12px] font-medium text-[#52555B]">Сангийн нэр</span>
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="Жишээ: 10-р анги Математик · Алгебр"
-                className="h-10 w-full rounded-md border border-[#DFE1E5] bg-white px-3 text-[14px] text-[#0F1216] shadow-[0px_1px_2px_rgba(0,0,0,0.05)] placeholder:text-[#98A2B3]"
-              />
-            </label>
-            <label className="block space-y-2">
-              <span className="text-[12px] font-medium text-[#52555B]">Харагдах байдал</span>
-              <QuestionBankDialogSelect
-                value={visibility}
-                onChange={(value) =>
-                  setVisibility(value as QuestionBankVisibility)
-                }
-              >
-                <option value={QuestionBankVisibility.Private}>Миний сан</option>
-                <option value={QuestionBankVisibility.Public}>Нэгдсэн сан</option>
-              </QuestionBankDialogSelect>
-            </label>
-          </div>
-
-          <label className="block space-y-2">
-            <span className="text-[12px] font-medium text-[#52555B]">Тайлбар</span>
-            <textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Энэ сэдвийн санг ямар зорилгоор ашиглах вэ?"
-              className="min-h-24 w-full rounded-md border border-[#DFE1E5] bg-white px-3 py-2 text-[14px] text-[#0F1216] shadow-[0px_1px_2px_rgba(0,0,0,0.05)] placeholder:text-[#98A2B3]"
-            />
-          </label>
+          <QuestionBankCreateDialogForm
+            grade={grade}
+            subject={subject}
+            topic={topic}
+            title={title}
+            description={description}
+            visibility={visibility}
+            gradeOptions={gradeOptions}
+            subjectOptions={subjectOptions}
+            topicOptions={topicOptions}
+            onGradeChange={(value) => {
+              setGrade(value);
+              setSubject("");
+              setTopic("");
+              setTitle(toDefaultTitle(Number(value), "", ""));
+            }}
+            onSubjectChange={(value) => {
+              setSubject(value);
+              setTopic("");
+              setTitle(toDefaultTitle(Number(grade), value, ""));
+            }}
+            onTopicChange={(value) => {
+              setTopic(value);
+              setTitle(toDefaultTitle(Number(grade), subject, value));
+            }}
+            onTitleChange={setTitle}
+            onDescriptionChange={setDescription}
+            onVisibilityChange={setVisibility}
+          />
 
           {errorMessage ? (
             <p className="text-[14px] text-[#B42318]">{errorMessage}</p>
