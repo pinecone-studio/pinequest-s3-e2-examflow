@@ -19,7 +19,11 @@ import {
   toErrorMessage,
 } from "./create-exam-flow-helpers";
 import { type CreateExamFieldErrors, type CreateExamFormValues, type CreateExamSubmitState, type SelectedQuestionPoints } from "../create-exam-types";
-export const useCreateExamFlow = (initialClassId = "", assignmentClassId = "") => {
+export const useCreateExamFlow = (
+  initialClassId = "",
+  assignmentClassId = "",
+  initialBankId = "",
+) => {
   const optionsQuery = useCreateExamOptionsQuery({
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
@@ -37,20 +41,51 @@ export const useCreateExamFlow = (initialClassId = "", assignmentClassId = "") =
     () => (optionsQuery.data?.classes ?? []).map((classroom) => ({ id: classroom.id, name: classroom.name })),
     [optionsQuery.data?.classes],
   );
-  const questionBankOptions = useMemo(() => (optionsQuery.data?.questionBanks ?? []).map((bank) => ({
-    id: bank.id,
-    title: bank.title,
-    subject: bank.subject,
-  })), [optionsQuery.data?.questionBanks]);
-  const questionOptions = useMemo(() => (optionsQuery.data?.questions ?? []).map((question) => ({
-    id: question.id,
-    title: question.title,
-    prompt: question.prompt,
-    type: question.type,
-    difficulty: question.difficulty,
-    bankTitle: question.bank.title,
-    bankSubject: question.bank.subject,
-  })), [optionsQuery.data?.questions]);
+  const allQuestionBankOptions = useMemo(
+    () =>
+      (optionsQuery.data?.questionBanks ?? []).map((bank) => ({
+        id: bank.id,
+        title: bank.title,
+        subject: bank.subject,
+      })),
+    [optionsQuery.data?.questionBanks],
+  );
+  const questionBankOptions = useMemo(() => {
+    if (!initialBankId.trim()) {
+      return allQuestionBankOptions;
+    }
+
+    const selectedBank = allQuestionBankOptions.find(
+      (bank) => bank.id === initialBankId,
+    );
+
+    return selectedBank ? [selectedBank] : allQuestionBankOptions;
+  }, [allQuestionBankOptions, initialBankId]);
+  const allQuestionOptions = useMemo(
+    () =>
+      (optionsQuery.data?.questions ?? []).map((question) => ({
+        id: question.id,
+        title: question.title,
+        prompt: question.prompt,
+        type: question.type,
+        difficulty: question.difficulty,
+        bankId: question.bank.id,
+        bankTitle: question.bank.title,
+        bankSubject: question.bank.subject,
+      })),
+    [optionsQuery.data?.questions],
+  );
+  const questionOptions = useMemo(() => {
+    if (!initialBankId.trim()) {
+      return allQuestionOptions;
+    }
+
+    const filtered = allQuestionOptions.filter(
+      (question) => question.bankId === initialBankId,
+    );
+
+    return filtered.length ? filtered : allQuestionOptions;
+  }, [allQuestionOptions, initialBankId]);
   useEffect(() => {
     if (formValues.classId || !classOptions.length) {
       return;
