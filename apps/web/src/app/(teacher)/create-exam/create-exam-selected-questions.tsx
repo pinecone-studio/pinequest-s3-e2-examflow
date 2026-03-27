@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  PreviewFileIcon,
+  PreviewPencilIcon,
+  PreviewTrashIcon,
+} from "../components/icons";
 import type {
   CreateExamFieldErrors,
   CreateExamQuestionOption,
@@ -15,23 +20,33 @@ type CreateExamSelectedQuestionsProps = {
   onPointsChange: (questionId: string, value: string) => void;
 };
 
-const QUESTION_TYPE_LABELS: Record<string, string> = {
-  MCQ: "Олон сонголт",
-  TRUE_FALSE: "Үнэн/Худал",
-  SHORT_ANSWER: "Тоо бодолт",
-  ESSAY: "Задгай хариулт",
+const TYPE_LABELS: Record<string, string> = {
+  MCQ: "MCQ",
+  TRUE_FALSE: "True/False",
+  SHORT_ANSWER: "Numeric",
+  ESSAY: "Essay",
 };
 
-const DIFFICULTY_LABELS: Record<string, string> = {
-  EASY: "Хялбар",
-  MEDIUM: "Дунд",
-  HARD: "Хүнд",
+const DIFFICULTY_STYLES: Record<string, string> = {
+  EASY: "border border-[rgba(49,170,64,0.2)] bg-[rgba(49,170,64,0.1)] text-[#31AA40]",
+  MEDIUM: "border border-[rgba(245,158,11,0.2)] bg-[rgba(245,158,11,0.1)] text-[#D97706]",
+  HARD: "border border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.1)] text-[#DC2626]",
 };
 
-const formatQuestionText = (question: CreateExamQuestionOption) => {
-  const source = question.prompt.trim() || question.title.trim();
-  return source.length > 140 ? `${source.slice(0, 137)}...` : source;
-};
+function McqBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-[6px] border border-[#DFE1E5] px-[5.8px] py-[0.62px] text-[12px] font-medium leading-4 text-[#0F1216]">
+      <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
+        <path d="M2 6.5 4.2 8.7 10 3" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" stroke="currentColor" />
+      </svg>
+      MCQ
+    </span>
+  );
+}
+
+const promptFor = (question: CreateExamQuestionOption) =>
+  (question.prompt.trim() || question.title.trim()).slice(0, 160);
 
 export function CreateExamSelectedQuestions({
   questionOptions,
@@ -50,56 +65,76 @@ export function CreateExamSelectedQuestions({
   }
 
   return (
-    <div className="space-y-3">
-      {selectedQuestions.map((question) => (
+    <div className="space-y-6">
+      {selectedQuestions.map((question, index) => (
         <article
           key={question.id}
-          className="rounded-[20px] border border-[#E4E7EC] bg-white p-4 shadow-[0px_4px_12px_rgba(16,24,40,0.04)]"
+          className="flex items-start gap-4 rounded-[12px] border border-[#DFE1E5] bg-white p-4 shadow-[0px_1px_3px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)]"
         >
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-3">
-              <p className="text-[15px] font-semibold leading-6 text-[#101828]">
-                {formatQuestionText(question)}
-              </p>
-              <div className="flex flex-wrap gap-2 text-[12px]">
-                <span className="rounded-full border border-[#D0D5DD] bg-[#F9FAFB] px-2.5 py-1 text-[#344054]">
-                  {QUESTION_TYPE_LABELS[question.type] ?? question.type}
-                </span>
-                <span className="rounded-full border border-[#D6E2FF] bg-[#F3F7FF] px-2.5 py-1 text-[#163D99]">
-                  {question.bankTitle}
-                </span>
-                <span className="rounded-full border border-[#E4E7EC] bg-[#FCFCFD] px-2.5 py-1 text-[#475467]">
-                  {DIFFICULTY_LABELS[question.difficulty] ?? question.difficulty}
-                </span>
+          <div className="flex-1 space-y-2">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2 text-[14px] leading-5">
+                <span className="font-medium text-[#0F1216]">Question {index + 1}</span>
+                <span className="text-[16px] leading-6 text-[#52555B]">—</span>
+                <label className="inline-flex items-center gap-1 font-semibold text-[#6F90FF]">
+                  <input
+                    type="text"
+                    value={selectedQuestionPoints[question.id] ?? ""}
+                    onChange={(event) => onPointsChange(question.id, event.target.value)}
+                    disabled={disabled}
+                    inputMode="numeric"
+                    className="w-8 bg-transparent text-right outline-none"
+                  />
+                  <span>pts</span>
+                </label>
               </div>
+              <p className="text-[14px] leading-[23px] text-[#52555B]">{promptFor(question)}</p>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-              <label className="grid gap-1.5 text-[13px] font-medium text-[#344054]">
-                <span>Оноо</span>
-                <input
-                  type="text"
-                  className="h-11 w-full rounded-xl border border-[#D0D5DD] bg-white px-4 text-[14px] text-[#101828] outline-none focus:border-[#98B7FF] sm:w-[120px]"
-                  value={selectedQuestionPoints[question.id] ?? ""}
-                  onChange={(event) => onPointsChange(question.id, event.target.value)}
-                  disabled={disabled}
-                  inputMode="numeric"
-                />
-                {errors.pointsByQuestionId[question.id] ? (
-                  <span className="text-[12px] font-normal text-[#B42318]">
-                    {errors.pointsByQuestionId[question.id]}
-                  </span>
-                ) : null}
-              </label>
-              <button
-                type="button"
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-[#E4E7EC] px-4 text-[14px] font-medium text-[#667085]"
-                onClick={() => onRemove(question.id)}
-                disabled={disabled}
+            <div className="flex flex-wrap items-center gap-[6px]">
+              {question.type === "MCQ" ? (
+                <McqBadge />
+              ) : (
+                <span className="rounded-[6px] border border-[#DFE1E5] px-[5.8px] py-[0.62px] text-[12px] font-medium leading-4 text-[#0F1216]">
+                  {TYPE_LABELS[question.type] ?? question.type}
+                </span>
+              )}
+              <span className="rounded-[6px] bg-[#6F90FF] px-[5.8px] py-[0.62px] text-[12px] font-medium leading-4 text-white">
+                {question.bankSubject}
+              </span>
+              <span
+                className={[
+                  "rounded-[6px] px-[5.8px] py-[0.62px] text-[12px] font-medium leading-4 capitalize",
+                  DIFFICULTY_STYLES[question.difficulty] ??
+                    "border border-[#DFE1E5] bg-white text-[#52555B]",
+                ].join(" ")}
               >
-                Хасах
-              </button>
+                {question.difficulty.toLowerCase()}
+              </span>
             </div>
+
+            {errors.pointsByQuestionId[question.id] ? (
+              <p className="text-[12px] text-[#B42318]">
+                {errors.pointsByQuestionId[question.id]}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-3 text-[#52555B]">
+            <button type="button" className="disabled:opacity-40" disabled>
+              <PreviewPencilIcon className="h-5 w-5" />
+            </button>
+            <button type="button" className="disabled:opacity-40" disabled>
+              <PreviewFileIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              className="disabled:opacity-40"
+              onClick={() => onRemove(question.id)}
+              disabled={disabled}
+            >
+              <PreviewTrashIcon className="h-5 w-5" />
+            </button>
           </div>
         </article>
       ))}

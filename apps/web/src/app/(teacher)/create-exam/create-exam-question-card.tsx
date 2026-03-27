@@ -22,6 +22,14 @@ type CreateExamQuestionCardProps = {
   onQuestionsRefresh: () => Promise<unknown>;
 };
 
+function PlusIcon({ solid = false }: { solid?: boolean }) {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none">
+      <path d="M8 3.333v9.334M3.333 8h9.334" stroke={solid ? "#FFF" : "currentColor"} strokeWidth="1.333" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function CreateExamQuestionCard({
   questionBankOptions,
   questionOptions,
@@ -44,34 +52,29 @@ export function CreateExamQuestionCard({
   };
 
   return (
-    <section className="space-y-5">
-      <div className="space-y-1">
-        <h2 className="text-[24px] font-semibold text-[#101828]">
-          Асуултууд ({selectedCount})
-        </h2>
-        <p className="text-[14px] text-[#667085]">
-          Шалгалтдаа оруулах асуултуудаа эндээс үүсгэж эсвэл сангаас нэмнэ.
-        </p>
+    <section className="space-y-3">
+      <div className="h-5 text-[14px] font-medium leading-5 text-[#52555B]">
+        Questions ({selectedCount})
       </div>
 
-      {!isComposerOpen ? (
+      <div className="grid gap-3 md:grid-cols-2">
         <button
           type="button"
-          className="flex min-h-[88px] w-full items-center justify-center rounded-[24px] border border-dashed border-[#BFCDEB] bg-white px-5 text-[18px] font-medium text-[#344054]"
-          onClick={() => setIsComposerOpen(true)}
+          className="flex h-[47.2px] items-center justify-center gap-2 rounded-[8px] border border-dashed border-[#DFE1E5] bg-white px-4 text-[14px] font-medium leading-5 text-[#52555B]"
+          onClick={() => setIsComposerOpen((current) => !current)}
         >
-          + Асуулт нэмэх
+          <PlusIcon />
+          Create Question
         </button>
-      ) : null}
-
-      {selectedCount === 0 && !isComposerOpen ? (
-        <div className="rounded-[24px] border border-[#E4E7EC] bg-white px-6 py-12 text-center shadow-[0px_4px_12px_rgba(16,24,40,0.04)]">
-          <p className="text-[24px] font-semibold text-[#101828]">Одоогоор асуулт алга</p>
-          <p className="mt-2 text-[15px] text-[#667085]">
-            Дээрх товчоор анхны асуултаа нэмнэ
-          </p>
-        </div>
-      ) : null}
+        <button
+          type="button"
+          className="flex h-[45.2px] items-center justify-center gap-2 rounded-[8px] bg-[#6F90FF] px-4 text-[14px] font-semibold leading-5 text-white"
+          onClick={openLibrary}
+        >
+          <PlusIcon solid />
+          Add Question from Bank
+        </button>
+      </div>
 
       {errors.selectedQuestions ? (
         <p className="text-[12px] text-[#B42318]">{errors.selectedQuestions}</p>
@@ -82,8 +85,9 @@ export function CreateExamQuestionCard({
           bankOptions={questionBankOptions}
           disabled={disabled}
           onOpenLibrary={openLibrary}
-          onQuestionCreated={(questionId) => {
+          onQuestionCreated={(questionId, points) => {
             onAddQuestion(questionId);
+            onPointsChange(questionId, points);
             setIsComposerOpen(false);
           }}
           onQuestionsRefresh={onQuestionsRefresh}
@@ -102,8 +106,8 @@ export function CreateExamQuestionCard({
 
       <CreateExamQuestionDrawer
         open={isLibraryOpen}
-        title="Сангаас асуулт нэмэх"
-        description="Шалгалтад оруулах асуултуудаа сонгоно."
+        title="Add Question from Bank"
+        description="Select questions to include in this exam."
         onClose={() => setIsLibraryOpen(false)}
       >
         <CreateExamQuestionLibrary

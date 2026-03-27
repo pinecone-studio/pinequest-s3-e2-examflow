@@ -20,42 +20,25 @@ type CreateExamQuestionAnswerFieldsProps = {
   onReferenceAnswerChange: (value: string) => void;
 };
 
-export function CreateExamQuestionAnswerFields({
-  questionType,
-  options,
-  correctIndex,
-  truthValue,
-  numericAnswer,
-  tolerance,
-  referenceAnswer,
-  disabled = false,
-  onPick,
-  onUpdate,
-  onRemove,
-  onAdd,
-  onTruthChange,
-  onNumericAnswerChange,
-  onToleranceChange,
-  onReferenceAnswerChange,
-}: CreateExamQuestionAnswerFieldsProps) {
-  if (questionType === QuestionType.TrueFalse) {
+const INPUT_CLASS =
+  "h-8 rounded-[6px] border border-[#DFE1E5] bg-white px-[11.8px] text-[14px] leading-[18px] text-[#101828] shadow-[0px_1px_2px_rgba(0,0,0,0.05)] outline-none placeholder:text-[#52555B]";
+
+export function CreateExamQuestionAnswerFields(props: CreateExamQuestionAnswerFieldsProps) {
+  if (props.questionType === QuestionType.TrueFalse) {
     return (
-      <div className="space-y-3">
-        <h3 className="text-[14px] font-semibold text-[#101828]">Хариултууд (зөвийг сонгоно)</h3>
-        <div className="flex flex-wrap gap-3">
-          {["Үнэн", "Худал"].map((option) => (
-            <label
-              key={option}
-              className="flex min-w-[150px] items-center gap-3 rounded-xl border border-[#E4E7EC] bg-[#FCFCFD] px-4 py-3"
-            >
+      <div className="space-y-3 border-t border-[#DFE1E5] pt-4">
+        <p className="text-[12px] font-medium leading-4 text-[#52555B]">Options (select correct answer)</p>
+        <div className="flex gap-3">
+          {["True", "False"].map((option) => (
+            <label key={option} className="flex items-center gap-2 text-[12px] text-[#52555B]">
               <input
                 type="radio"
-                checked={truthValue === option}
-                onChange={() => onTruthChange(option)}
-                disabled={disabled}
-                className="h-4 w-4 border-[#D0D5DD] text-[#163D99]"
+                checked={props.truthValue === option}
+                onChange={() => props.onTruthChange(option)}
+                disabled={props.disabled}
+                className="h-4 w-4 border border-[#DFE1E5] text-[#192230] shadow-[0px_1px_2px_rgba(0,0,0,0.05)]"
               />
-              <span className="text-[14px] font-medium text-[#344054]">{option}</span>
+              {option}
             </label>
           ))}
         </div>
@@ -63,71 +46,72 @@ export function CreateExamQuestionAnswerFields({
     );
   }
 
-  if (questionType === QuestionType.ShortAnswer) {
+  if (props.questionType === QuestionType.ShortAnswer) {
     return (
-      <div className="space-y-3">
-        <h3 className="text-[14px] font-semibold text-[#101828]">Хариулт</h3>
+      <div className="space-y-3 border-t border-[#DFE1E5] pt-4">
+        <p className="text-[12px] font-medium leading-4 text-[#52555B]">Correct answer</p>
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
           <input
-            value={numericAnswer}
-            onChange={(event) => onNumericAnswerChange(event.target.value)}
-            disabled={disabled}
-            placeholder="Зөв хариуг оруулна уу"
-            className="h-12 rounded-xl border border-[#D0D5DD] bg-white px-4 text-[14px] text-[#101828] outline-none placeholder:text-[#98A2B3] focus:border-[#98B7FF]"
+            value={props.numericAnswer}
+            onChange={(event) => props.onNumericAnswerChange(event.target.value)}
+            disabled={props.disabled}
+            placeholder="Enter correct answer"
+            className={INPUT_CLASS}
           />
           <input
-            value={tolerance}
-            onChange={(event) => onToleranceChange(event.target.value)}
-            disabled={disabled}
-            placeholder="Хүлцэл"
-            className="h-12 rounded-xl border border-[#D0D5DD] bg-white px-4 text-[14px] text-[#101828] outline-none placeholder:text-[#98A2B3] focus:border-[#98B7FF]"
+            value={props.tolerance}
+            onChange={(event) => props.onToleranceChange(event.target.value)}
+            disabled={props.disabled}
+            placeholder="Tolerance"
+            className={INPUT_CLASS}
           />
         </div>
       </div>
     );
   }
 
-  if (questionType === QuestionType.Essay) {
+  if (props.questionType === QuestionType.Essay) {
     return (
-      <div className="space-y-3">
-        <h3 className="text-[14px] font-semibold text-[#101828]">
-          Жишиг хариулт (заавал биш)
-        </h3>
+      <div className="space-y-3 border-t border-[#DFE1E5] pt-4">
+        <p className="text-[12px] font-medium leading-4 text-[#52555B]">Reference answer</p>
         <textarea
-          value={referenceAnswer}
-          onChange={(event) => onReferenceAnswerChange(event.target.value)}
-          disabled={disabled}
-          placeholder="Шалгахдаа ашиглах жишиг хариултыг оруулна уу..."
-          className="min-h-[120px] rounded-xl border border-[#D0D5DD] bg-white px-4 py-3 text-[14px] text-[#101828] outline-none placeholder:text-[#98A2B3] focus:border-[#98B7FF]"
+          value={props.referenceAnswer}
+          onChange={(event) => props.onReferenceAnswerChange(event.target.value)}
+          disabled={props.disabled}
+          placeholder="Add a reference answer..."
+          className="min-h-[96px] rounded-[6px] border border-[#DFE1E5] bg-white px-[11.8px] py-[8.8px] text-[14px] leading-5 text-[#101828] shadow-[0px_1px_2px_rgba(0,0,0,0.05)] outline-none placeholder:text-[#52555B]"
         />
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-[14px] font-semibold text-[#101828]">Хариултууд (зөвийг сонгоно)</h3>
-      <div className="space-y-3">
-        {options.map((option, index) => (
+    <div className="space-y-2 border-t border-[#DFE1E5] pt-4">
+      <p className="text-[12px] font-medium leading-4 text-[#52555B]">Options (select correct answer)</p>
+      <div className="space-y-2">
+        {props.options.map((option, index) => (
           <CreateExamAnswerOptionRow
             key={`${index}-${option}`}
             index={index}
             value={option}
-            checked={correctIndex === index}
-            disabled={disabled}
-            onPick={() => onPick(index)}
-            onChange={(value) => onUpdate(index, value)}
-            onRemove={() => onRemove(index)}
+            checked={props.correctIndex === index}
+            disabled={props.disabled}
+            onPick={() => props.onPick(index)}
+            onChange={(value) => props.onUpdate(index, value)}
+            onRemove={() => props.onRemove(index)}
           />
         ))}
       </div>
       <button
         type="button"
-        className="text-[14px] font-medium text-[#163D99] disabled:opacity-50"
-        onClick={onAdd}
-        disabled={disabled}
+        className="inline-flex h-8 items-center justify-center gap-[10px] rounded-[6px] px-[10px] text-[12px] font-medium leading-4 text-[#52555B] disabled:opacity-50"
+        onClick={props.onAdd}
+        disabled={props.disabled}
       >
-        + Сонголт нэмэх
+        <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none">
+          <path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" strokeWidth="1.333" strokeLinecap="round" />
+        </svg>
+        Add Option
       </button>
     </div>
   );
