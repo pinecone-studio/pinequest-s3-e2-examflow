@@ -1,4 +1,12 @@
 export const schemaRootTypes = /* GraphQL */ `
+  input ExamGenerationRuleInput {
+    label: String!
+    bankIds: [ID!]!
+    difficulty: Difficulty
+    count: Int!
+    points: Int!
+  }
+
   type Query {
     health: Health!
     hello(name: String): Hello!
@@ -46,6 +54,7 @@ export const schemaRootTypes = /* GraphQL */ `
       difficulty: Difficulty = MEDIUM
       tags: [String!]
     ): Question!
+    createQuestionVariants(sourceQuestionId: ID!, totalVariants: Int! = 4): [Question!]!
     deleteQuestion(id: ID!): Boolean!
     createExam(
       classId: ID!
@@ -56,6 +65,8 @@ export const schemaRootTypes = /* GraphQL */ `
       scheduledFor: String
       shuffleQuestions: Boolean = false
       shuffleAnswers: Boolean = false
+      generationMode: ExamGenerationMode = MANUAL
+      rules: [ExamGenerationRuleInput!]
       passingCriteriaType: PassingCriteriaType = PERCENTAGE
       passingThreshold: Int = 40
     ): Exam!

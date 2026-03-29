@@ -1,5 +1,7 @@
 import type {
   Difficulty,
+  ExamGenerationMode,
+  ExamGenerationRule,
   ExamMode,
   PassingCriteriaType,
   QuestionBankVisibility,
@@ -43,6 +45,11 @@ export type DeleteQuestionArgs = {
   id: string;
 };
 
+export type CreateQuestionVariantsArgs = {
+  sourceQuestionId: string;
+  totalVariants: number;
+};
+
 export type CreateExamArgs = {
   classId: string;
   title: string;
@@ -52,6 +59,8 @@ export type CreateExamArgs = {
   scheduledFor?: string;
   shuffleQuestions?: boolean;
   shuffleAnswers?: boolean;
+  generationMode?: ExamGenerationMode;
+  rules?: ExamGenerationRule[];
   passingCriteriaType?: PassingCriteriaType;
   passingThreshold?: number;
 };

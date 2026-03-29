@@ -1,4 +1,6 @@
+import { getCurriculumTopicGroupName } from "@/app/(teacher)/components/question-bank-curriculum";
 import type { CreateExamOptionsQuery } from "@/graphql/generated";
+import type { CreateExamRuleSourceOption } from "../create-exam-types";
 
 export const getQuestionBankOptions = (
   data: CreateExamOptionsQuery | undefined,
@@ -51,3 +53,70 @@ export const formatQuestionBankLabel = (
     "grade" | "subject" | "topic" | "title"
   >,
 ) => `${bank.grade}-р анги · ${bank.subject} · ${bank.topic || bank.title}`;
+
+export const getRuleSourceOptions = (
+  questionBanks: Array<{
+    id: string;
+    title: string;
+    subject: string;
+    grade: number;
+    topic: string;
+  }>,
+  questions: Array<{
+    difficulty: string;
+    bankId: string;
+  }>,
+  initialBankId: string,
+): CreateExamRuleSourceOption[] => {
+  const grouped = new Map<string, CreateExamRuleSourceOption>();
+
+  for (const bank of questionBanks) {
+    const topicGroup = getCurriculumTopicGroupName(
+      bank.grade,
+      bank.subject,
+      bank.topic || bank.title,
+    );
+    const key = `${bank.grade}:${bank.subject}:${topicGroup}`;
+    const current = grouped.get(key) ?? {
+      id: key,
+      label: `${bank.grade}-р анги · ${bank.subject} · ${topicGroup}`,
+      grade: bank.grade,
+      subject: bank.subject,
+      topicGroup,
+      bankIds: [],
+      totalQuestions: 0,
+      easyQuestions: 0,
+      mediumQuestions: 0,
+      hardQuestions: 0,
+    };
+    current.bankIds = [...new Set([...current.bankIds, bank.id])];
+    grouped.set(key, current);
+  }
+
+  for (const option of grouped.values()) {
+    const matchedQuestions = questions.filter((question) =>
+      option.bankIds.includes(question.bankId),
+    );
+    option.totalQuestions = matchedQuestions.length;
+    option.easyQuestions = matchedQuestions.filter(
+      (question) => question.difficulty === "EASY",
+    ).length;
+    option.mediumQuestions = matchedQuestions.filter(
+      (question) => question.difficulty === "MEDIUM",
+    ).length;
+    option.hardQuestions = matchedQuestions.filter(
+      (question) => question.difficulty === "HARD",
+    ).length;
+  }
+
+  const options = [...grouped.values()].sort((left, right) =>
+    left.label.localeCompare(right.label, "mn"),
+  );
+
+  if (!initialBankId.trim()) {
+    return options;
+  }
+
+  const selected = options.find((option) => option.bankIds.includes(initialBankId));
+  return selected ? [selected, ...options.filter((option) => option.id !== selected.id)] : options;
+};

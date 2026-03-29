@@ -2,9 +2,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { PassingCriteriaType } from "@/graphql/generated";
+import { ExamGenerationMode, PassingCriteriaType } from "@/graphql/generated";
 import type {
   CreateExamFieldErrors,
+  CreateExamGenerationRule,
   CreateExamFormValues,
   SelectedQuestionPoints,
 } from "./create-exam-types";
@@ -27,6 +28,13 @@ const totalFromPoints = (selectedQuestionPoints: SelectedQuestionPoints) =>
   Object.values(selectedQuestionPoints).reduce((sum, value) => {
     const points = Number(value);
     return Number.isFinite(points) ? sum + points : sum;
+  }, 0);
+
+const totalFromRules = (rules: CreateExamGenerationRule[]) =>
+  rules.reduce((sum, rule) => {
+    const count = Number(rule.count);
+    const points = Number(rule.points);
+    return Number.isFinite(count) && Number.isFinite(points) ? sum + count * points : sum;
   }, 0);
 
 function SectionIcon({ type }: { type: "chart" | "settings" }) {
@@ -82,8 +90,11 @@ export function CreateExamSettingsCard({
   onFieldChange,
 }: CreateExamSettingsCardProps) {
   const totalPoints = useMemo(
-    () => totalFromPoints(selectedQuestionPoints),
-    [selectedQuestionPoints],
+    () =>
+      values.generationMode === ExamGenerationMode.RuleBased
+        ? totalFromRules(values.generationRules)
+        : totalFromPoints(selectedQuestionPoints),
+    [selectedQuestionPoints, values.generationMode, values.generationRules],
   );
   const passingThreshold = Math.max(0, Number(values.passingThreshold) || 0);
   const requiredPercent =
@@ -183,6 +194,29 @@ export function CreateExamSettingsCard({
         <SectionIcon type="settings" />
         <h3 className="text-[14px] font-medium leading-5 text-[#0F1216]">Шалгалтын тохиргоо</h3>
       </div>
+
+      <label className="space-y-2">
+        <span className="block text-[12px] font-medium leading-4 text-[#52555B]">
+          Шалгалт бүрдүүлэх арга
+        </span>
+        <label className="relative block w-[220px]">
+          <select
+            value={values.generationMode}
+            onChange={(event) =>
+              onFieldChange(
+                "generationMode",
+                event.target.value as CreateExamFormValues["generationMode"],
+              )
+            }
+            disabled={disabled}
+            className="h-9 w-[220px] appearance-none rounded-[6px] border border-[#DFE1E5] px-3 pr-8 text-[14px] leading-5 text-[#0F1216] shadow-[0px_1px_2px_rgba(0,0,0,0.05)] outline-none"
+          >
+            <option value={ExamGenerationMode.Manual}>Гараар сонгох</option>
+            <option value={ExamGenerationMode.RuleBased}>Rule-based үүсгэх</option>
+          </select>
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#52555B] opacity-50">⌄</span>
+        </label>
+      </label>
 
       <div className="grid gap-3 md:grid-cols-2">
         <ToggleBox

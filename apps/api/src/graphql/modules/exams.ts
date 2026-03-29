@@ -16,6 +16,7 @@ import {
   type Role,
   type UserRow,
 } from "../types";
+import { findQuestionBankById } from "./questions";
 
 const examSelectFields = `id,
       class_id,
@@ -32,9 +33,129 @@ const examSelectFields = `id,
       scheduled_for,
       shuffle_questions,
       shuffle_answers,
+      generation_mode,
+      rules_json,
       passing_criteria_type,
       passing_threshold,
       created_at`;
+
+const hashString = (value: string) => {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+};
+
+const stableShuffle = <T,>(items: T[], seed: string, getKey: (item: T) => string) =>
+  items
+    .map((item, index) => ({
+      item,
+      index,
+      rank: hashString(`${seed}:${getKey(item)}:${index}`),
+    }))
+    .sort((left, right) => left.rank - right.rank || left.index - right.index)
+    .map(({ item }) => item);
+
+const normalizeExamRules = (rules: CreateExamArgs["rules"]) =>
+  (rules ?? []).map((rule) => ({
+    label: rule.label,
+    bankIds: rule.bankIds,
+    difficulty: rule.difficulty ?? null,
+    count: rule.count,
+    points: rule.points,
+  }));
+
+const insertExamQuestions = async (
+  db: D1DatabaseLike,
+  examId: string,
+  items: Array<{ questionId: string; points: number }>,
+) => {
+  for (const [index, item] of items.entries()) {
+    await run(
+      db,
+      `INSERT INTO exam_questions (id, exam_id, question_id, points, display_order)
+       VALUES (?, ?, ?, ?, ?)`,
+      [makeId("exam_question"), examId, item.questionId, item.points, index + 1],
+    );
+  }
+};
+
+const buildRuleBasedQuestions = async ({
+  actor,
+  db,
+  examId,
+  rules,
+}: {
+  actor: UserRow;
+  db: D1DatabaseLike;
+  examId: string;
+  rules: ReturnType<typeof normalizeExamRules>;
+}) => {
+  const usedQuestionIds = new Set<string>();
+  const selected: Array<{ questionId: string; points: number }> = [];
+
+  for (const [index, rule] of rules.entries()) {
+    invariant(rule.count > 0, "Rule бүрийн асуултын тоо 1-ээс их байна.");
+    invariant(rule.points > 0, "Rule бүрийн оноо 1-ээс их байна.");
+
+    invariant(rule.bankIds.length > 0, "Rule бүр дор хаяж нэг сантай байна.");
+
+    for (const bankId of rule.bankIds) {
+      const bank = await findQuestionBankById(db, bankId);
+      if (actor.role === "TEACHER") {
+        invariant(
+          bank.visibility === "PUBLIC" || bank.owner_id === actor.id,
+          "Зөвхөн өөрийн эсвэл нээлттэй сангаас rule ашиглана.",
+        );
+      }
+    }
+
+    const placeholders = rule.bankIds.map(() => "?").join(", ");
+    const rows = await all<QuestionRow>(
+      db,
+      `SELECT
+        id,
+        bank_id,
+        type,
+        title,
+        prompt,
+        options_json,
+        correct_answer,
+        difficulty,
+        tags_json,
+        created_by_id,
+        created_at
+      FROM questions
+      WHERE bank_id IN (${placeholders})
+        AND (? IS NULL OR difficulty = ?)
+      ORDER BY created_at DESC`,
+      [...rule.bankIds, rule.difficulty, rule.difficulty],
+    );
+
+    const availableRows = rows.filter((row) => !usedQuestionIds.has(row.id));
+    invariant(
+      availableRows.length >= rule.count,
+      `${rule.label} сэдвээс ${rule.count} асуулт бүрдүүлэхэд хүрэлцэхгүй байна.`,
+    );
+
+    const picked = stableShuffle(
+      availableRows,
+      `${examId}:${rule.bankIds.join("|")}:${rule.difficulty ?? "ALL"}:${index}`,
+      (row) => row.id,
+    ).slice(0, rule.count);
+
+    for (const row of picked) {
+      usedQuestionIds.add(row.id);
+      selected.push({ questionId: row.id, points: rule.points });
+    }
+  }
+
+  return selected;
+};
 
 const getExamEndTimestamp = (startedAt: string, durationMinutes: number): string => {
   const startedAtMs = Date.parse(startedAt);
@@ -165,6 +286,8 @@ export const createExamQueriesAndMutations = ({
       scheduledFor,
       shuffleQuestions,
       shuffleAnswers,
+      generationMode,
+      rules,
       passingCriteriaType,
       passingThreshold,
     }: CreateExamArgs,
@@ -180,6 +303,11 @@ export const createExamQueriesAndMutations = ({
     }
     const id = makeId("exam");
     const createdAt = now();
+    const normalizedRules = normalizeExamRules(rules);
+
+    if ((generationMode ?? "MANUAL") === "RULE_BASED") {
+      invariant(normalizedRules.length > 0, "Rule-based шалгалтад дор хаяж нэг rule хэрэгтэй.");
+    }
 
     await run(
       db,
@@ -199,11 +327,13 @@ export const createExamQueriesAndMutations = ({
         scheduled_for,
         shuffle_questions,
         shuffle_answers,
+        generation_mode,
+        rules_json,
         passing_criteria_type,
         passing_threshold,
         created_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         classId,
@@ -220,11 +350,23 @@ export const createExamQueriesAndMutations = ({
         scheduledFor ?? createdAt,
         shuffleQuestions ? 1 : 0,
         shuffleAnswers ? 1 : 0,
+        generationMode ?? "MANUAL",
+        JSON.stringify(normalizedRules),
         passingCriteriaType ?? "PERCENTAGE",
         passingThreshold ?? 40,
         createdAt,
       ],
     );
+
+    if ((generationMode ?? "MANUAL") === "RULE_BASED") {
+      const selectedQuestions = await buildRuleBasedQuestions({
+        actor,
+        db,
+        examId: id,
+        rules: normalizedRules,
+      });
+      await insertExamQuestions(db, id, selectedQuestions);
+    }
 
     return toExam(db, await findExamById(db, id));
   },
@@ -271,11 +413,13 @@ export const createExamQueriesAndMutations = ({
         scheduled_for,
         shuffle_questions,
         shuffle_answers,
+        generation_mode,
+        rules_json,
         passing_criteria_type,
         passing_threshold,
         created_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         nextExamId,
         classId,
@@ -292,6 +436,8 @@ export const createExamQueriesAndMutations = ({
         sourceExam.scheduled_for,
         sourceExam.shuffle_questions,
         sourceExam.shuffle_answers,
+        sourceExam.generation_mode,
+        sourceExam.rules_json,
         sourceExam.passing_criteria_type,
         sourceExam.passing_threshold,
         createdAt,

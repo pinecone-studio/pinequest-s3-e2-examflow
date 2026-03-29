@@ -1,8 +1,24 @@
-import { ExamMode, PassingCriteriaType } from "@/graphql/generated";
+import {
+  ExamGenerationMode,
+  ExamMode,
+  PassingCriteriaType,
+} from "@/graphql/generated";
 import type {
   CreateExamFieldErrors,
+  CreateExamGenerationRule,
   CreateExamFormValues,
 } from "../create-exam-types";
+
+const createRuleId = () =>
+  `rule_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+
+export const createEmptyGenerationRule = (bankId = ""): CreateExamGenerationRule => ({
+  id: createRuleId(),
+  sourceId: bankId,
+  difficulty: "ALL",
+  count: "5",
+  points: "1",
+});
 
 export const INITIAL_FORM_VALUES: CreateExamFormValues = {
   classId: "",
@@ -13,6 +29,8 @@ export const INITIAL_FORM_VALUES: CreateExamFormValues = {
   scheduledFor: "",
   shuffleQuestions: false,
   shuffleAnswers: false,
+  generationMode: ExamGenerationMode.Manual,
+  generationRules: [],
   passingCriteriaType: PassingCriteriaType.Percentage,
   passingThreshold: "40",
 };
@@ -29,6 +47,7 @@ export const hasValidationErrors = (errors: CreateExamFieldErrors): boolean =>
       errors.scheduledFor ||
       errors.passingThreshold ||
       errors.selectedQuestions ||
+      errors.generationRules ||
       Object.keys(errors.pointsByQuestionId).length,
   );
 

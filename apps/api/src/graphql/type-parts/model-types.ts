@@ -9,9 +9,18 @@ export type QuestionType =
 export type Difficulty = "EASY" | "MEDIUM" | "HARD";
 export type ExamMode = "SCHEDULED" | "OPEN_WINDOW";
 export type ExamStatus = "DRAFT" | "PUBLISHED" | "CLOSED";
+export type ExamGenerationMode = "MANUAL" | "RULE_BASED";
 export type AttemptStatus = "IN_PROGRESS" | "SUBMITTED" | "GRADED";
 export type ClassStudentStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
 export type PassingCriteriaType = "PERCENTAGE" | "POINTS";
+
+export type ExamGenerationRule = {
+  label: string;
+  bankIds: string[];
+  difficulty?: Difficulty | null;
+  count: number;
+  points: number;
+};
 
 export type UserRow = {
   id: string;
@@ -73,6 +82,8 @@ export type ExamRow = {
   scheduled_for: string | null;
   shuffle_questions: number;
   shuffle_answers: number;
+  generation_mode: ExamGenerationMode;
+  rules_json: string;
   passing_criteria_type: PassingCriteriaType;
   passing_threshold: number;
   created_at: string;
@@ -94,6 +105,7 @@ export type AttemptRow = {
   auto_score: number;
   manual_score: number;
   total_score: number;
+  generation_seed: string | null;
   started_at: string;
   submitted_at: string | null;
 };

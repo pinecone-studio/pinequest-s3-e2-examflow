@@ -1,8 +1,10 @@
+/* eslint-disable max-lines */
 "use client";
 
 import { useState } from "react";
 import { useMutation } from "@apollo/client/react";
 import {
+  CreateQuestionVariantsMutationDocument,
   DeleteQuestionMutationDocument,
   QuestionBankDetailQueryDocument,
 } from "@/graphql/generated";
@@ -33,7 +35,9 @@ export function QuestionBankDetailTable({
     null,
   );
   const [editingRow, setEditingRow] = useState<QuestionBankQuestionRow | null>(null);
+  const [generatingRowId, setGeneratingRowId] = useState<string | null>(null);
   const [deleteQuestion] = useMutation(DeleteQuestionMutationDocument);
+  const [createQuestionVariants] = useMutation(CreateQuestionVariantsMutationDocument);
 
   const handleDelete = async (row: QuestionBankQuestionRow) => {
     try {
@@ -55,8 +59,41 @@ export function QuestionBankDetailTable({
     }
   };
 
+  const handleCreateVariants = async (row: QuestionBankQuestionRow) => {
+    try {
+      const accepted = window.confirm(
+        "Энэ асуултаас 4 хувилбарын draft үүсгэх үү? Эхний асуулт нь A хувилбар болж, үлдсэн 3 нь шинэ draft байдлаар нэмэгдэнэ.",
+      );
+      if (!accepted) {
+        return;
+      }
+
+      setGeneratingRowId(row.id);
+      await createQuestionVariants({
+        variables: {
+          sourceQuestionId: row.id,
+          totalVariants: 4,
+        },
+        refetchQueries: [{ query: QuestionBankDetailQueryDocument, variables: { id: bankId } }],
+        awaitRefetchQueries: true,
+      });
+      setMenuRowId(null);
+      window.alert("4 хувилбарын draft амжилттай үүслээ.");
+    } catch (error) {
+      console.error("Failed to create question variants", error);
+      window.alert("Хувилбарын draft үүсгэх үед алдаа гарлаа.");
+    } finally {
+      setGeneratingRowId(null);
+    }
+  };
+
   const formatPreviewText = (text: string) =>
     text.length > 78 ? `${text.slice(0, 75)}...` : text;
+
+  const canGenerateVariants = (row: QuestionBankQuestionRow) =>
+    row.rawType !== "ESSAY" &&
+    row.rawType !== "IMAGE_UPLOAD" &&
+    row.variantLabel === null;
 
   return (
     <>
@@ -111,14 +148,28 @@ export function QuestionBankDetailTable({
                 {rows.map((row) => (
                   <tr key={row.id} className="border-b border-[#DFE1E5] last:border-b-0">
                     <td className="px-4 py-4 text-[14px] text-[#0F1216]">
-                      <button
-                        type="button"
-                        className="cursor-pointer text-left transition hover:text-[#00267F] hover:underline hover:underline-offset-4"
-                        title="Дарж дэлгэрэнгүй харах"
-                        onClick={() => setSelectedRow(row)}
-                      >
-                        {formatPreviewText(row.text)}
-                      </button>
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          className="cursor-pointer text-left transition hover:text-[#00267F] hover:underline hover:underline-offset-4"
+                          title="Дарж дэлгэрэнгүй харах"
+                          onClick={() => setSelectedRow(row)}
+                        >
+                          {formatPreviewText(row.text)}
+                        </button>
+                        {row.variantLabel ? (
+                          <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                            <span className="inline-flex rounded-md border border-[#B2DDFF] bg-[#EFF8FF] px-2 py-1 font-medium text-[#175CD3]">
+                              {`${row.variantLabel} хувилбар`}
+                            </span>
+                            {row.variantCount ? (
+                              <span className="text-[#667085]">
+                                {`Нийт ${row.variantCount} хувилбар`}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-4 py-4">
                       <span className="inline-flex whitespace-nowrap rounded-md border border-[#DFE1E5] px-2.5 py-1 text-[12px] font-medium text-[#0F1216]">
@@ -141,6 +192,18 @@ export function QuestionBankDetailTable({
                           {menuRowId === row.id ? (
                             <div className="absolute right-4 top-12 z-10 min-w-28 rounded-lg border border-[#DFE1E5] bg-white p-1 text-left shadow-[0px_10px_15px_-3px_rgba(0,0,0,0.1),0px_4px_6px_-4px_rgba(0,0,0,0.1)]">
                               <button type="button" className="block w-full cursor-pointer rounded-md px-3 py-2 text-[14px] text-[#0F1216] hover:bg-[#F6F9FC]" onClick={() => { setEditingRow(row); setMenuRowId(null); }}>Засах</button>
+                              {canGenerateVariants(row) ? (
+                                <button
+                                  type="button"
+                                  className="block w-full cursor-pointer rounded-md px-3 py-2 text-[14px] text-[#0F1216] hover:bg-[#F6F9FC]"
+                                  onClick={() => void handleCreateVariants(row)}
+                                  disabled={generatingRowId === row.id}
+                                >
+                                  {generatingRowId === row.id
+                                    ? "Үүсгэж байна..."
+                                    : "4 хувилбар үүсгэх"}
+                                </button>
+                              ) : null}
                               <button type="button" className="block w-full cursor-pointer rounded-md px-3 py-2 text-[14px] text-[#B42318] hover:bg-[#FEF3F2]" onClick={() => void handleDelete(row)}>Устгах</button>
                             </div>
                           ) : null}

@@ -1,0 +1,11 @@
+mutation CreateQuestionVariantsMutation(
+  $sourceQuestionId: ID!
+  $totalVariants: Int!
+) {
+  createQuestionVariants(
+    sourceQuestionId: $sourceQuestionId
+    totalVariants: $totalVariants
+  ) {
+    id
+  }
+}
