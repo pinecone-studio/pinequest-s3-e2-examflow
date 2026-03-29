@@ -94,7 +94,9 @@ export function CreateExamContent({
           onFieldChange={flow.setFieldValue}
         />
         <CreateExamQuestionCard
+          values={flow.formValues}
           questionBankOptions={flow.questionBankOptions}
+          ruleSourceOptions={flow.ruleSourceOptions}
           questionOptions={flow.questionOptions}
           selectedQuestionPoints={flow.selectedQuestionPoints}
           errors={flow.errors}
@@ -102,6 +104,9 @@ export function CreateExamContent({
           onToggleQuestion={flow.toggleQuestion}
           onAddQuestion={flow.addQuestion}
           onPointsChange={flow.setQuestionPoints}
+          onAddGenerationRule={flow.addGenerationRule}
+          onRemoveGenerationRule={flow.removeGenerationRule}
+          onUpdateGenerationRule={flow.updateGenerationRule}
           onQuestionsRefresh={flow.refetchOptions}
           initialBankId={initialBankId}
         />

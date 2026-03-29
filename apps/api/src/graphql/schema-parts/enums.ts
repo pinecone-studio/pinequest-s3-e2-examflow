@@ -35,6 +35,11 @@ export const schemaEnums = /* GraphQL */ `
     CLOSED
   }
 
+  enum ExamGenerationMode {
+    MANUAL
+    RULE_BASED
+  }
+
   enum AttemptStatus {
     IN_PROGRESS
     SUBMITTED

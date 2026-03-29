@@ -34,6 +34,7 @@ export type Attempt = {
   answers: Array<Answer>;
   autoScore: Scalars['Int']['output'];
   exam: Exam;
+  generationSeed?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   manualScore: Scalars['Int']['output'];
   startedAt: Scalars['String']['output'];
@@ -143,6 +144,8 @@ export type Exam = {
   description?: Maybe<Scalars['String']['output']>;
   durationMinutes: Scalars['Int']['output'];
   endsAt?: Maybe<Scalars['String']['output']>;
+  generationMode: ExamGenerationMode;
+  generationRules: Array<ExamGenerationRule>;
   id: Scalars['ID']['output'];
   isTemplate: Scalars['Boolean']['output'];
   mode: ExamMode;
@@ -156,6 +159,28 @@ export type Exam = {
   startedAt?: Maybe<Scalars['String']['output']>;
   status: ExamStatus;
   title: Scalars['String']['output'];
+};
+
+export enum ExamGenerationMode {
+  Manual = 'MANUAL',
+  RuleBased = 'RULE_BASED'
+}
+
+export type ExamGenerationRule = {
+  __typename?: 'ExamGenerationRule';
+  bankIds: Array<Scalars['ID']['output']>;
+  count: Scalars['Int']['output'];
+  difficulty?: Maybe<Difficulty>;
+  label: Scalars['String']['output'];
+  points: Scalars['Int']['output'];
+};
+
+export type ExamGenerationRuleInput = {
+  bankIds: Array<Scalars['ID']['input']>;
+  count: Scalars['Int']['input'];
+  difficulty?: InputMaybe<Difficulty>;
+  label: Scalars['String']['input'];
+  points: Scalars['Int']['input'];
 };
 
 export enum ExamMode {
@@ -198,6 +223,7 @@ export type Mutation = {
   createExam: Exam;
   createQuestion: Question;
   createQuestionBank: QuestionBank;
+  createQuestionVariants: Array<Question>;
   deleteQuestion: Scalars['Boolean']['output'];
   publishExam: Exam;
   saveAnswer: Attempt;
@@ -235,9 +261,11 @@ export type MutationCreateExamArgs = {
   classId: Scalars['ID']['input'];
   description?: InputMaybe<Scalars['String']['input']>;
   durationMinutes: Scalars['Int']['input'];
+  generationMode?: InputMaybe<ExamGenerationMode>;
   mode?: InputMaybe<ExamMode>;
   passingCriteriaType?: InputMaybe<PassingCriteriaType>;
   passingThreshold?: InputMaybe<Scalars['Int']['input']>;
+  rules?: InputMaybe<Array<ExamGenerationRuleInput>>;
   scheduledFor?: InputMaybe<Scalars['String']['input']>;
   shuffleAnswers?: InputMaybe<Scalars['Boolean']['input']>;
   shuffleQuestions?: InputMaybe<Scalars['Boolean']['input']>;
@@ -264,6 +292,12 @@ export type MutationCreateQuestionBankArgs = {
   title: Scalars['String']['input'];
   topic?: InputMaybe<Scalars['String']['input']>;
   visibility?: InputMaybe<QuestionBankVisibility>;
+};
+
+
+export type MutationCreateQuestionVariantsArgs = {
+  sourceQuestionId: Scalars['ID']['input'];
+  totalVariants?: Scalars['Int']['input'];
 };
 
 
@@ -452,12 +486,14 @@ export type CreateExamMutationVariables = Exact<{
   scheduledFor?: InputMaybe<Scalars['String']['input']>;
   shuffleQuestions: Scalars['Boolean']['input'];
   shuffleAnswers: Scalars['Boolean']['input'];
+  generationMode: ExamGenerationMode;
+  rules?: InputMaybe<Array<ExamGenerationRuleInput> | ExamGenerationRuleInput>;
   passingCriteriaType: PassingCriteriaType;
   passingThreshold: Scalars['Int']['input'];
 }>;
 
 
-export type CreateExamMutation = { __typename?: 'Mutation', createExam: { __typename?: 'Exam', id: string, title: string, status: ExamStatus, mode: ExamMode, durationMinutes: number, scheduledFor?: string | null, shuffleQuestions: boolean, shuffleAnswers: boolean, passingCriteriaType: PassingCriteriaType, passingThreshold: number, createdAt: string, class: { __typename?: 'Class', id: string, name: string } } };
+export type CreateExamMutation = { __typename?: 'Mutation', createExam: { __typename?: 'Exam', id: string, title: string, status: ExamStatus, mode: ExamMode, durationMinutes: number, scheduledFor?: string | null, shuffleQuestions: boolean, shuffleAnswers: boolean, generationMode: ExamGenerationMode, passingCriteriaType: PassingCriteriaType, passingThreshold: number, createdAt: string, generationRules: Array<{ __typename?: 'ExamGenerationRule', label: string, bankIds: Array<string>, difficulty?: Difficulty | null, count: number, points: number }>, class: { __typename?: 'Class', id: string, name: string } } };
 
 export type CreateQuestionBankMutationMutationVariables = Exact<{
   title: Scalars['String']['input'];
@@ -470,6 +506,14 @@ export type CreateQuestionBankMutationMutationVariables = Exact<{
 
 
 export type CreateQuestionBankMutationMutation = { __typename?: 'Mutation', createQuestionBank: { __typename?: 'QuestionBank', id: string, title: string, grade: number, subject: string, topic: string, visibility: QuestionBankVisibility } };
+
+export type CreateQuestionVariantsMutationMutationVariables = Exact<{
+  sourceQuestionId: Scalars['ID']['input'];
+  totalVariants: Scalars['Int']['input'];
+}>;
+
+
+export type CreateQuestionVariantsMutationMutation = { __typename?: 'Mutation', createQuestionVariants: Array<{ __typename?: 'Question', id: string }> };
 
 export type CreateQuestionMutationMutationVariables = Exact<{
   bankId: Scalars['ID']['input'];
@@ -586,7 +630,7 @@ export type StudentExamRoomQueryVariables = Exact<{
 }>;
 
 
-export type StudentExamRoomQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string, fullName: string } | null, exam?: { __typename?: 'Exam', id: string, title: string, description?: string | null, status: ExamStatus, durationMinutes: number, startedAt?: string | null, endsAt?: string | null, scheduledFor?: string | null, shuffleQuestions: boolean, shuffleAnswers: boolean, passingCriteriaType: PassingCriteriaType, passingThreshold: number, createdAt: string, class: { __typename?: 'Class', id: string, name: string, subject: string, grade: number, teacher: { __typename?: 'User', id: string, fullName: string } }, questions: Array<{ __typename?: 'ExamQuestion', id: string, order: number, points: number, question: { __typename?: 'Question', id: string, title: string, prompt: string, type: QuestionType, options: Array<string> } }> } | null, attempts: Array<{ __typename?: 'Attempt', id: string, status: AttemptStatus, totalScore: number, startedAt: string, submittedAt?: string | null, exam: { __typename?: 'Exam', id: string }, answers: Array<{ __typename?: 'Answer', id: string, value: string, question: { __typename?: 'Question', id: string } }> }> };
+export type StudentExamRoomQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string, fullName: string } | null, exam?: { __typename?: 'Exam', id: string, title: string, description?: string | null, status: ExamStatus, durationMinutes: number, startedAt?: string | null, endsAt?: string | null, scheduledFor?: string | null, shuffleQuestions: boolean, shuffleAnswers: boolean, passingCriteriaType: PassingCriteriaType, passingThreshold: number, createdAt: string, class: { __typename?: 'Class', id: string, name: string, subject: string, grade: number, teacher: { __typename?: 'User', id: string, fullName: string } }, questions: Array<{ __typename?: 'ExamQuestion', id: string, order: number, points: number, question: { __typename?: 'Question', id: string, title: string, prompt: string, type: QuestionType, options: Array<string> } }> } | null, attempts: Array<{ __typename?: 'Attempt', id: string, status: AttemptStatus, totalScore: number, generationSeed?: string | null, startedAt: string, submittedAt?: string | null, exam: { __typename?: 'Exam', id: string }, answers: Array<{ __typename?: 'Answer', id: string, value: string, question: { __typename?: 'Question', id: string } }> }> };
 
 export type StudentHomeQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -712,7 +756,7 @@ export type CloseExamMutationHookResult = ReturnType<typeof useCloseExamMutation
 export type CloseExamMutationResult = ApolloReactCommon.MutationResult<CloseExamMutation>;
 export type CloseExamMutationOptions = ApolloReactCommon.BaseMutationOptions<CloseExamMutation, CloseExamMutationVariables>;
 export const CreateExamDocument = gql`
-    mutation CreateExam($classId: ID!, $title: String!, $description: String, $mode: ExamMode!, $durationMinutes: Int!, $scheduledFor: String, $shuffleQuestions: Boolean!, $shuffleAnswers: Boolean!, $passingCriteriaType: PassingCriteriaType!, $passingThreshold: Int!) {
+    mutation CreateExam($classId: ID!, $title: String!, $description: String, $mode: ExamMode!, $durationMinutes: Int!, $scheduledFor: String, $shuffleQuestions: Boolean!, $shuffleAnswers: Boolean!, $generationMode: ExamGenerationMode!, $rules: [ExamGenerationRuleInput!], $passingCriteriaType: PassingCriteriaType!, $passingThreshold: Int!) {
   createExam(
     classId: $classId
     title: $title
@@ -722,6 +766,8 @@ export const CreateExamDocument = gql`
     scheduledFor: $scheduledFor
     shuffleQuestions: $shuffleQuestions
     shuffleAnswers: $shuffleAnswers
+    generationMode: $generationMode
+    rules: $rules
     passingCriteriaType: $passingCriteriaType
     passingThreshold: $passingThreshold
   ) {
@@ -733,6 +779,14 @@ export const CreateExamDocument = gql`
     scheduledFor
     shuffleQuestions
     shuffleAnswers
+    generationMode
+    generationRules {
+      label
+      bankIds
+      difficulty
+      count
+      points
+    }
     passingCriteriaType
     passingThreshold
     createdAt
@@ -766,6 +820,8 @@ export type CreateExamMutationFn = ApolloReactCommon.MutationFunction<CreateExam
  *      scheduledFor: // value for 'scheduledFor'
  *      shuffleQuestions: // value for 'shuffleQuestions'
  *      shuffleAnswers: // value for 'shuffleAnswers'
+ *      generationMode: // value for 'generationMode'
+ *      rules: // value for 'rules'
  *      passingCriteriaType: // value for 'passingCriteriaType'
  *      passingThreshold: // value for 'passingThreshold'
  *   },
@@ -828,6 +884,43 @@ export function useCreateQuestionBankMutationMutation(baseOptions?: ApolloReactH
 export type CreateQuestionBankMutationMutationHookResult = ReturnType<typeof useCreateQuestionBankMutationMutation>;
 export type CreateQuestionBankMutationMutationResult = ApolloReactCommon.MutationResult<CreateQuestionBankMutationMutation>;
 export type CreateQuestionBankMutationMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateQuestionBankMutationMutation, CreateQuestionBankMutationMutationVariables>;
+export const CreateQuestionVariantsMutationDocument = gql`
+    mutation CreateQuestionVariantsMutation($sourceQuestionId: ID!, $totalVariants: Int!) {
+  createQuestionVariants(
+    sourceQuestionId: $sourceQuestionId
+    totalVariants: $totalVariants
+  ) {
+    id
+  }
+}
+    `;
+export type CreateQuestionVariantsMutationMutationFn = ApolloReactCommon.MutationFunction<CreateQuestionVariantsMutationMutation, CreateQuestionVariantsMutationMutationVariables>;
+
+/**
+ * __useCreateQuestionVariantsMutationMutation__
+ *
+ * To run a mutation, you first call `useCreateQuestionVariantsMutationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateQuestionVariantsMutationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createQuestionVariantsMutationMutation, { data, loading, error }] = useCreateQuestionVariantsMutationMutation({
+ *   variables: {
+ *      sourceQuestionId: // value for 'sourceQuestionId'
+ *      totalVariants: // value for 'totalVariants'
+ *   },
+ * });
+ */
+export function useCreateQuestionVariantsMutationMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<CreateQuestionVariantsMutationMutation, CreateQuestionVariantsMutationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<CreateQuestionVariantsMutationMutation, CreateQuestionVariantsMutationMutationVariables>(CreateQuestionVariantsMutationDocument, options);
+      }
+export type CreateQuestionVariantsMutationMutationHookResult = ReturnType<typeof useCreateQuestionVariantsMutationMutation>;
+export type CreateQuestionVariantsMutationMutationResult = ApolloReactCommon.MutationResult<CreateQuestionVariantsMutationMutation>;
+export type CreateQuestionVariantsMutationMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateQuestionVariantsMutationMutation, CreateQuestionVariantsMutationMutationVariables>;
 export const CreateQuestionMutationDocument = gql`
     mutation CreateQuestionMutation($bankId: ID!, $type: QuestionType!, $title: String!, $prompt: String!, $options: [String!], $correctAnswer: String, $difficulty: Difficulty!, $tags: [String!]) {
   createQuestion(
@@ -1707,6 +1800,7 @@ export const StudentExamRoomDocument = gql`
     id
     status
     totalScore
+    generationSeed
     startedAt
     submittedAt
     exam {

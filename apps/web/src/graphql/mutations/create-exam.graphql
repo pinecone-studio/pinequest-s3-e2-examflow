@@ -7,6 +7,8 @@ mutation CreateExam(
   $scheduledFor: String
   $shuffleQuestions: Boolean!
   $shuffleAnswers: Boolean!
+  $generationMode: ExamGenerationMode!
+  $rules: [ExamGenerationRuleInput!]
   $passingCriteriaType: PassingCriteriaType!
   $passingThreshold: Int!
 ) {
@@ -19,6 +21,8 @@ mutation CreateExam(
     scheduledFor: $scheduledFor
     shuffleQuestions: $shuffleQuestions
     shuffleAnswers: $shuffleAnswers
+    generationMode: $generationMode
+    rules: $rules
     passingCriteriaType: $passingCriteriaType
     passingThreshold: $passingThreshold
   ) {
@@ -30,6 +34,14 @@ mutation CreateExam(
     scheduledFor
     shuffleQuestions
     shuffleAnswers
+    generationMode
+    generationRules {
+      label
+      bankIds
+      difficulty
+      count
+      points
+    }
     passingCriteriaType
     passingThreshold
     createdAt

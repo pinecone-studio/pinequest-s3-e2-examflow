@@ -1,4 +1,17 @@
-import type { ExamMode, PassingCriteriaType } from "@/graphql/generated";
+import type {
+  Difficulty,
+  ExamGenerationMode,
+  ExamMode,
+  PassingCriteriaType,
+} from "@/graphql/generated";
+
+export type CreateExamGenerationRule = {
+  id: string;
+  sourceId: string;
+  difficulty: Difficulty | "ALL";
+  count: string;
+  points: string;
+};
 
 export type CreateExamFormValues = {
   classId: string;
@@ -9,6 +22,8 @@ export type CreateExamFormValues = {
   scheduledFor: string;
   shuffleQuestions: boolean;
   shuffleAnswers: boolean;
+  generationMode: ExamGenerationMode;
+  generationRules: CreateExamGenerationRule[];
   passingCriteriaType: PassingCriteriaType;
   passingThreshold: string;
 };
@@ -22,6 +37,7 @@ export type CreateExamFieldErrors = {
   scheduledFor?: string;
   passingThreshold?: string;
   selectedQuestions?: string;
+  generationRules?: string;
   pointsByQuestionId: Record<string, string>;
 };
 
@@ -49,6 +65,19 @@ export type CreateExamQuestionBankOption = {
   subject: string;
   grade: number;
   topic: string;
+};
+
+export type CreateExamRuleSourceOption = {
+  id: string;
+  label: string;
+  grade: number;
+  subject: string;
+  topicGroup: string;
+  bankIds: string[];
+  totalQuestions: number;
+  easyQuestions: number;
+  mediumQuestions: number;
+  hardQuestions: number;
 };
 
 export type CreateExamSubmitState =

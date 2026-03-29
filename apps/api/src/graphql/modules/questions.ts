@@ -1,9 +1,11 @@
 import { all, first, invariant, run, type D1DatabaseLike } from "../../lib/d1";
 import type { RequestContext } from "../../auth";
 import {
+  type CreateQuestionVariantsArgs,
   type DeleteQuestionArgs,
   makeId,
   now,
+  parseJsonArray,
   toJsonArray,
   type ByIdArgs,
   type CreateQuestionArgs,
@@ -60,6 +62,74 @@ const normalizeQuestionOptions = (
   options?: string[],
 ) =>
   type === "TRUE_FALSE" ? ["True", "False"] : type === "MCQ" ? options ?? [] : [];
+
+const VARIANT_LABELS = ["A", "B", "C", "D"];
+const VARIANT_GROUP_TAG = "variant_group:";
+const VARIANT_LABEL_TAG = "variant_label:";
+const VARIANT_COUNT_TAG = "variant_count:";
+
+const stripVariantTags = (tags: string[]) =>
+  tags.filter(
+    (tag) =>
+      !tag.startsWith(VARIANT_GROUP_TAG) &&
+      !tag.startsWith(VARIANT_LABEL_TAG) &&
+      !tag.startsWith(VARIANT_COUNT_TAG),
+  );
+
+const toVariantTags = (tags: string[], groupId: string, label: string, totalVariants: number) => [
+  ...stripVariantTags(tags),
+  `${VARIANT_GROUP_TAG}${groupId}`,
+  `${VARIANT_LABEL_TAG}${label}`,
+  `${VARIANT_COUNT_TAG}${totalVariants}`,
+];
+
+const toVariantTitle = (value: string, label: string) =>
+  `${value.replace(/\s+\([A-D]\)$/u, "").trim()} (${label})`;
+
+const transformNumericText = (value: string, offsetSeed: number) =>
+  value.replace(/-?\d+(\.\d+)?/g, (match, _decimal, index) => {
+    const parsed = Number(match);
+    if (!Number.isFinite(parsed)) {
+      return match;
+    }
+    const offset = offsetSeed + (typeof index === "number" ? index % 3 : 0);
+    const nextValue = parsed + offset;
+    return Number.isInteger(parsed) ? String(nextValue) : nextValue.toFixed(1);
+  });
+
+const buildVariantDraft = (
+  question: QuestionRow,
+  label: string,
+  offsetSeed: number,
+): {
+  title: string;
+  prompt: string;
+  options: string[];
+  correctAnswer: string | null;
+} => {
+  const originalOptions = parseJsonArray(question.options_json);
+  const titleBase = question.title.trim() || question.prompt.trim();
+  const nextPrompt = transformNumericText(question.prompt, offsetSeed);
+  const nextOptions = originalOptions.map((option, optionIndex) =>
+    transformNumericText(option, offsetSeed + optionIndex + 1),
+  );
+  const correctIndex = originalOptions.findIndex(
+    (option) => option === (question.correct_answer ?? ""),
+  );
+
+  return {
+    title: toVariantTitle(titleBase, label),
+    prompt:
+      nextPrompt && nextPrompt !== question.prompt
+        ? nextPrompt
+        : `${question.prompt} (${label})`,
+    options: normalizeQuestionOptions(question.type, nextOptions),
+    correctAnswer:
+      correctIndex >= 0 && nextOptions[correctIndex]
+        ? nextOptions[correctIndex]
+        : question.correct_answer,
+  };
+};
 
 const questionBankSelectFields =
   "id, title, description, grade, subject, topic, visibility, owner_id, created_at";
@@ -282,6 +352,89 @@ export const createQuestionQueriesAndMutations = ({
     );
 
     return toQuestion(db, await findQuestionById(db, id));
+  },
+  createQuestionVariants: async (
+    { sourceQuestionId, totalVariants }: CreateQuestionVariantsArgs,
+    context: RequestContext,
+  ) => {
+    const actor = await requireActor(context, ["ADMIN", "TEACHER"]);
+    invariant(
+      Number.isInteger(totalVariants) && totalVariants >= 2 && totalVariants <= 4,
+      "Variant тоо 2-4 хооронд байна.",
+    );
+
+    const question = await findQuestionById(db, sourceQuestionId);
+    const bank = await findQuestionBankById(db, question.bank_id);
+    if (actor.role === "TEACHER") {
+      invariant(
+        bank.owner_id === actor.id,
+        "You can only generate variants from your own question banks.",
+      );
+    }
+
+    invariant(
+      question.type !== "ESSAY" && question.type !== "IMAGE_UPLOAD",
+      "Энэ төрлийн асуултад draft variant автоматаар үүсгэх боломжгүй.",
+    );
+
+    const existingTags = parseJsonArray(question.tags_json);
+    const groupId =
+      existingTags.find((tag) => tag.startsWith(VARIANT_GROUP_TAG))?.replace(VARIANT_GROUP_TAG, "") ??
+      makeId("variant_group");
+
+    await run(
+      db,
+      `UPDATE questions
+       SET title = ?, prompt = ?, tags_json = ?
+       WHERE id = ?`,
+      [
+        toVariantTitle(question.title.trim() || question.prompt.trim(), "A"),
+        question.prompt,
+        toJsonArray(toVariantTags(existingTags, groupId, "A", totalVariants)),
+        sourceQuestionId,
+      ],
+    );
+
+    const createdIds = [sourceQuestionId];
+
+    for (let index = 1; index < totalVariants; index += 1) {
+      const label = VARIANT_LABELS[index] ?? `V${index + 1}`;
+      const nextId = makeId("question");
+      const draft = buildVariantDraft(question, label, index * 2);
+      await run(
+        db,
+        `INSERT INTO questions (
+          id,
+          bank_id,
+          type,
+          title,
+          prompt,
+          options_json,
+          correct_answer,
+          difficulty,
+          tags_json,
+          created_by_id,
+          created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          nextId,
+          question.bank_id,
+          question.type,
+          draft.title,
+          draft.prompt,
+          toJsonArray(draft.options),
+          draft.correctAnswer ?? null,
+          question.difficulty,
+          toJsonArray(toVariantTags(existingTags, groupId, label, totalVariants)),
+          actor.id,
+          now(),
+        ],
+      );
+      createdIds.push(nextId);
+    }
+
+    return Promise.all(createdIds.map(async (id) => toQuestion(db, await findQuestionById(db, id))));
   },
   updateQuestion: async (
     {

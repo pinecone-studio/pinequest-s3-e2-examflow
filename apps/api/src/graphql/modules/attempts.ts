@@ -31,6 +31,7 @@ export const findAttemptById = async (
       auto_score,
       manual_score,
       total_score,
+      generation_seed,
       started_at,
       submitted_at
     FROM attempts
@@ -56,6 +57,7 @@ const findLatestAttemptForExamStudent = async (
       auto_score,
       manual_score,
       total_score,
+      generation_seed,
       started_at,
       submitted_at
     FROM attempts
@@ -86,6 +88,9 @@ const scoreAnswer = (
     ? examQuestion.points
     : 0;
 };
+
+const buildAttemptSeed = (examId: string, studentId: string) =>
+  `${examId}:${studentId}`;
 
 export const recalculateAttemptScores = async (
   db: D1DatabaseLike,
@@ -177,11 +182,19 @@ export const createAttemptMutations = ({
         auto_score,
         manual_score,
         total_score,
+        generation_seed,
         started_at,
         submitted_at
       )
-      VALUES (?, ?, ?, ?, 0, 0, 0, ?, NULL)`,
-      [id, examId, effectiveStudentId, "IN_PROGRESS", startedAt],
+      VALUES (?, ?, ?, ?, 0, 0, 0, ?, ?, NULL)`,
+      [
+        id,
+        examId,
+        effectiveStudentId,
+        "IN_PROGRESS",
+        buildAttemptSeed(examId, effectiveStudentId),
+        startedAt,
+      ],
     );
 
     return toAttempt(db, await findAttemptById(db, id));

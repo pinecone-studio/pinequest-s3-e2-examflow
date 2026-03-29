@@ -3,7 +3,7 @@ import {
   type CreateExamFormValues,
   type SelectedQuestionPoints,
 } from "./create-exam-types";
-import { PassingCriteriaType } from "@/graphql/generated";
+import { ExamGenerationMode, PassingCriteriaType } from "@/graphql/generated";
 
 const MIN_DURATION_MINUTES = 5;
 const MAX_DURATION_MINUTES = 360;
@@ -98,6 +98,26 @@ export const validateCreateExamForm = (
     }
   } else if (passingThreshold > Math.max(totalPoints, 1)) {
     errors.passingThreshold = "Тэнцэх оноо нь нийт онооноос их байж болохгүй.";
+  }
+
+  if (values.generationMode === ExamGenerationMode.RuleBased) {
+    if (!values.generationRules.length) {
+      errors.generationRules = "Дор хаяж нэг rule нэмнэ үү.";
+      return errors;
+    }
+
+    const hasInvalidRule = values.generationRules.some((rule) => {
+      const count = parsePositiveInteger(rule.count);
+      const points = parsePositiveInteger(rule.points);
+      return !rule.sourceId.trim() || !count || !points;
+    });
+
+    if (hasInvalidRule) {
+      errors.generationRules =
+        "Rule бүр дээр сан, асуултын тоо, нэг асуултын оноог зөв оруулна уу.";
+    }
+
+    return errors;
   }
 
   const selectedEntries = Object.entries(selectedQuestionPoints);

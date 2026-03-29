@@ -2,7 +2,17 @@ import { all, first, type D1DatabaseLike } from "../lib/d1";
 import { getClassSelectFields } from "./class-schema";
 import { createClassAnalytics } from "./modules/classes";
 import { closeExpiredExams } from "./modules/exams";
-import type { AnswerRow, AttemptRow, ClassRow, ExamQuestionRow, ExamRow, QuestionBankRow, QuestionRow, UserRow } from "./types";
+import type {
+  AnswerRow,
+  AttemptRow,
+  ClassRow,
+  ExamGenerationRule,
+  ExamQuestionRow,
+  ExamRow,
+  QuestionBankRow,
+  QuestionRow,
+  UserRow,
+} from "./types";
 import { parseJsonArray } from "./types";
 
 type MapperDependencies = {
@@ -17,6 +27,54 @@ type MapperDependencies = {
 export const createEntityMappers = ({
   db, findClass, findExam, findQuestion, findQuestionBank, findUser,
 }: MapperDependencies) => {
+  const parseExamRules = (value: string): ExamGenerationRule[] => {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+      const normalizedRules = parsed
+        .map((entry): ExamGenerationRule | null => {
+          if (!entry || typeof entry !== "object") {
+            return null;
+          }
+          const candidate = entry as {
+            label?: unknown;
+            bankIds?: unknown;
+            difficulty?: unknown;
+            count?: unknown;
+            points?: unknown;
+          };
+          if (
+            typeof candidate.label !== "string" ||
+            !Array.isArray(candidate.bankIds) ||
+            !candidate.bankIds.every((item) => typeof item === "string") ||
+            typeof candidate.count !== "number" ||
+            typeof candidate.points !== "number"
+          ) {
+            return null;
+          }
+          return {
+            label: candidate.label,
+            bankIds: candidate.bankIds,
+            difficulty:
+              candidate.difficulty === "EASY" ||
+              candidate.difficulty === "MEDIUM" ||
+              candidate.difficulty === "HARD"
+                ? candidate.difficulty
+                : null,
+            count: candidate.count,
+            points: candidate.points,
+          };
+        });
+      return normalizedRules.filter(
+        (rule): rule is ExamGenerationRule => rule !== null,
+      );
+    } catch {
+      return [];
+    }
+  };
+
   const deriveBankTopics = async (bank: QuestionBankRow): Promise<string[]> => {
     if (bank.topic !== "Ерөнхий") {
       return [bank.topic];
@@ -78,7 +136,7 @@ export const createEntityMappers = ({
         await closeExpiredExams(db),
         await all<ExamRow>(
           db,
-          `SELECT id, class_id, is_template, source_exam_id, title, description, mode, status, duration_minutes, started_at, ends_at, created_by_id, scheduled_for, shuffle_questions, shuffle_answers, passing_criteria_type, passing_threshold, created_at
+          `SELECT id, class_id, is_template, source_exam_id, title, description, mode, status, duration_minutes, started_at, ends_at, created_by_id, scheduled_for, shuffle_questions, shuffle_answers, generation_mode, rules_json, passing_criteria_type, passing_threshold, created_at
            FROM exams
            WHERE class_id = ? AND COALESCE(is_template, 0) = 0
            ORDER BY created_at DESC`,
@@ -148,6 +206,7 @@ export const createEntityMappers = ({
     autoScore: attempt.auto_score,
     manualScore: attempt.manual_score,
     totalScore: attempt.total_score,
+    generationSeed: attempt.generation_seed,
     startedAt: attempt.started_at,
     submittedAt: attempt.submitted_at,
     exam: async () => toExam(await findExam(db, attempt.exam_id)),
@@ -177,6 +236,8 @@ export const createEntityMappers = ({
     scheduledFor: exam.scheduled_for,
     shuffleQuestions: Boolean(exam.shuffle_questions),
     shuffleAnswers: Boolean(exam.shuffle_answers),
+    generationMode: exam.generation_mode,
+    generationRules: parseExamRules(exam.rules_json),
     passingCriteriaType: exam.passing_criteria_type,
     passingThreshold: exam.passing_threshold,
     createdAt: exam.created_at,
@@ -195,7 +256,7 @@ export const createEntityMappers = ({
       (
         await all<AttemptRow>(
           db,
-          `SELECT id, exam_id, student_id, status, auto_score, manual_score, total_score, started_at, submitted_at
+          `SELECT id, exam_id, student_id, status, auto_score, manual_score, total_score, generation_seed, started_at, submitted_at
            FROM attempts WHERE exam_id = ? ORDER BY started_at DESC`,
           [exam.id],
         )

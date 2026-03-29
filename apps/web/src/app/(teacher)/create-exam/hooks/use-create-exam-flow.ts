@@ -3,11 +3,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  ExamGenerationMode,
   useAddQuestionToExamMutation,
   useAssignExamToClassMutation,
   useCreateExamMutation,
   useCreateExamOptionsQuery,
 } from "@/graphql/generated";
+import type { Difficulty } from "@/graphql/generated";
 import {
   parseDurationMinutes,
   validateCreateExamForm,
@@ -15,6 +17,7 @@ import {
   toSelectedQuestionsPayload,
 } from "../create-exam-validation";
 import {
+  createEmptyGenerationRule,
   EMPTY_ERRORS,
   hasValidationErrors,
   INITIAL_FORM_VALUES,
@@ -23,10 +26,12 @@ import {
 import {
   getQuestionBankOptions,
   getQuestionOptions,
+  getRuleSourceOptions,
 } from "./create-exam-option-data";
 import {
   type CreateExamFieldErrors,
   type CreateExamFormValues,
+  type CreateExamGenerationRule,
   type CreateExamSubmitState,
   type SelectedQuestionPoints,
 } from "../create-exam-types";
@@ -64,6 +69,15 @@ export const useCreateExamFlow = (
     () => getQuestionOptions(optionsQuery.data, initialBankId),
     [initialBankId, optionsQuery.data],
   );
+  const ruleSourceOptions = useMemo(
+    () =>
+      getRuleSourceOptions(
+        optionsQuery.data?.questionBanks ?? [],
+        getQuestionOptions(optionsQuery.data, ""),
+        initialBankId,
+      ),
+    [initialBankId, optionsQuery.data],
+  );
   useEffect(() => {
     if (formValues.classId || !classOptions.length) {
       return;
@@ -74,12 +88,71 @@ export const useCreateExamFlow = (
     setFormValues((previous) => ({ ...previous, classId: nextClassId }));
   }, [classOptions, formValues.classId, initialClassId]);
 
+  const getDefaultRuleSourceId = () =>
+    ruleSourceOptions.find((option) => initialBankId && option.bankIds.includes(initialBankId))?.id ??
+    ruleSourceOptions[0]?.id ??
+    "";
+
   const setFieldValue = <K extends keyof CreateExamFormValues>(
     field: K,
     value: CreateExamFormValues[K],
   ) => {
-    setFormValues((previous) => ({ ...previous, [field]: value }));
+    setFormValues((previous) => {
+      const nextValues = { ...previous, [field]: value };
+
+      if (field === "generationMode") {
+        const nextMode = value as CreateExamFormValues["generationMode"];
+        if (
+          nextMode === ExamGenerationMode.RuleBased &&
+          previous.generationRules.length === 0
+        ) {
+          nextValues.generationRules = [
+            createEmptyGenerationRule(getDefaultRuleSourceId()),
+          ];
+        }
+      }
+
+      return nextValues;
+    });
     setErrors((previous) => ({ ...previous, [field]: undefined }));
+    setSubmitState({ status: "idle" });
+  };
+
+  const addGenerationRule = () => {
+    setFormValues((previous) => ({
+      ...previous,
+      generationRules: [
+        ...previous.generationRules,
+        createEmptyGenerationRule(getDefaultRuleSourceId()),
+      ],
+    }));
+    setErrors((previous) => ({ ...previous, generationRules: undefined }));
+    setSubmitState({ status: "idle" });
+  };
+
+  const removeGenerationRule = (ruleId: string) => {
+    setFormValues((previous) => ({
+      ...previous,
+      generationRules: previous.generationRules.filter((rule) => rule.id !== ruleId),
+    }));
+    setErrors((previous) => ({ ...previous, generationRules: undefined }));
+    setSubmitState({ status: "idle" });
+  };
+
+  const updateGenerationRule = <
+    K extends keyof CreateExamGenerationRule,
+  >(
+    ruleId: string,
+    field: K,
+    value: CreateExamGenerationRule[K],
+  ) => {
+    setFormValues((previous) => ({
+      ...previous,
+      generationRules: previous.generationRules.map((rule) =>
+        rule.id === ruleId ? { ...rule, [field]: value } : rule,
+      ),
+    }));
+    setErrors((previous) => ({ ...previous, generationRules: undefined }));
     setSubmitState({ status: "idle" });
   };
   const toggleQuestion = (questionId: string) => {
@@ -138,6 +211,48 @@ export const useCreateExamFlow = (
       return null;
     }
     const selectedQuestions = toSelectedQuestionsPayload(selectedQuestionPoints);
+    const generationRules =
+      formValues.generationMode === ExamGenerationMode.RuleBased
+        ? formValues.generationRules.map((rule) => ({
+            sourceId: rule.sourceId,
+            difficulty:
+              rule.difficulty === "ALL"
+                ? null
+                : (rule.difficulty as Difficulty),
+            count: Number.parseInt(rule.count.trim(), 10),
+            points: Number.parseInt(rule.points.trim(), 10),
+          }))
+        : null;
+    const resolvedGenerationRules =
+      formValues.generationMode === ExamGenerationMode.RuleBased
+        ? generationRules
+            ?.map((rule) => {
+              const source = ruleSourceOptions.find(
+                (option) => option.id === rule.sourceId,
+              );
+              if (!source) {
+                return null;
+              }
+              return {
+                label: source.label,
+                bankIds: source.bankIds,
+                difficulty: rule.difficulty,
+                count: rule.count,
+                points: rule.points,
+              };
+            })
+            .filter(
+              (
+                rule,
+              ): rule is {
+                label: string;
+                bankIds: string[];
+                difficulty: Difficulty | null;
+                count: number;
+                points: number;
+              } => Boolean(rule),
+            ) ?? []
+        : null;
     const passingThreshold = Number.parseInt(formValues.passingThreshold.trim(), 10);
     setErrors(EMPTY_ERRORS);
     setSubmitState({ status: "idle" });
@@ -152,6 +267,8 @@ export const useCreateExamFlow = (
           scheduledFor,
           shuffleQuestions: formValues.shuffleQuestions,
           shuffleAnswers: formValues.shuffleAnswers,
+          generationMode: formValues.generationMode,
+          rules: resolvedGenerationRules,
           passingCriteriaType: formValues.passingCriteriaType,
           passingThreshold,
         },
@@ -161,14 +278,16 @@ export const useCreateExamFlow = (
         throw new Error("Шалгалт үүсгэгдсэн мэдээлэл ирсэнгүй.");
       }
       setIsAddingQuestions(true);
-      for (const selectedQuestion of selectedQuestions) {
-        await runAddQuestionToExam({
-          variables: {
-            examId: createdExam.id,
-            questionId: selectedQuestion.questionId,
-            points: selectedQuestion.points,
-          },
-        });
+      if (formValues.generationMode === ExamGenerationMode.Manual) {
+        for (const selectedQuestion of selectedQuestions) {
+          await runAddQuestionToExam({
+            variables: {
+              examId: createdExam.id,
+              questionId: selectedQuestion.questionId,
+              points: selectedQuestion.points,
+            },
+          });
+        }
       }
       const resolvedAssignedExamId =
         assignmentClassId.trim().length > 0
@@ -185,7 +304,10 @@ export const useCreateExamFlow = (
         status: "success",
         examId: createdExam.id,
         title: createdExam.title,
-        questionCount: selectedQuestions.length,
+        questionCount:
+          formValues.generationMode === ExamGenerationMode.RuleBased
+            ? resolvedGenerationRules?.reduce((sum, rule) => sum + rule.count, 0) ?? 0
+            : selectedQuestions.length,
       });
       setFormValues((previous) => ({
         ...INITIAL_FORM_VALUES,
@@ -193,6 +315,11 @@ export const useCreateExamFlow = (
         mode: previous.mode,
         shuffleQuestions: previous.shuffleQuestions,
         shuffleAnswers: previous.shuffleAnswers,
+        generationMode: previous.generationMode,
+        generationRules:
+          previous.generationMode === ExamGenerationMode.RuleBased
+            ? [createEmptyGenerationRule(getDefaultRuleSourceId())]
+            : [],
       }));
       setSelectedQuestionPoints({});
       await optionsQuery.refetch();
@@ -207,6 +334,7 @@ export const useCreateExamFlow = (
   return {
     classOptions,
     questionBankOptions,
+    ruleSourceOptions,
     questionOptions,
     formValues,
     selectedQuestionPoints,
@@ -221,6 +349,9 @@ export const useCreateExamFlow = (
     toggleQuestion,
     addQuestion,
     setQuestionPoints,
+    addGenerationRule,
+    removeGenerationRule,
+    updateGenerationRule,
     submitForm,
     refetchOptions: optionsQuery.refetch,
   };

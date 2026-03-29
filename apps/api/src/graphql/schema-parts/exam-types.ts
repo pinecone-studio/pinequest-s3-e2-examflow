@@ -1,4 +1,12 @@
 export const schemaExamTypes = /* GraphQL */ `
+  type ExamGenerationRule {
+    label: String!
+    bankIds: [ID!]!
+    difficulty: Difficulty
+    count: Int!
+    points: Int!
+  }
+
   type ExamQuestion {
     id: ID!
     question: Question!
@@ -21,6 +29,8 @@ export const schemaExamTypes = /* GraphQL */ `
     scheduledFor: String
     shuffleQuestions: Boolean!
     shuffleAnswers: Boolean!
+    generationMode: ExamGenerationMode!
+    generationRules: [ExamGenerationRule!]!
     passingCriteriaType: PassingCriteriaType!
     passingThreshold: Int!
     questions: [ExamQuestion!]!
@@ -44,6 +54,7 @@ export const schemaExamTypes = /* GraphQL */ `
     exam: Exam!
     student: User!
     status: AttemptStatus!
+    generationSeed: String
     answers: [Answer!]!
     autoScore: Int!
     manualScore: Int!

@@ -113,7 +113,7 @@ export const createRootValue = ({ db, env }: CreateRootValueArgs) => {
         actor.role === "ADMIN"
           ? await all<AttemptRow>(
               db,
-              `SELECT id, exam_id, student_id, status, auto_score, manual_score, total_score, started_at, submitted_at
+              `SELECT id, exam_id, student_id, status, auto_score, manual_score, total_score, generation_seed, started_at, submitted_at
                FROM attempts
                ORDER BY started_at DESC`,
             )
@@ -128,6 +128,7 @@ export const createRootValue = ({ db, env }: CreateRootValueArgs) => {
                   a.auto_score,
                   a.manual_score,
                   a.total_score,
+                  a.generation_seed,
                   a.started_at,
                   a.submitted_at
                  FROM attempts a
@@ -139,7 +140,7 @@ export const createRootValue = ({ db, env }: CreateRootValueArgs) => {
               )
             : await all<AttemptRow>(
                 db,
-                `SELECT id, exam_id, student_id, status, auto_score, manual_score, total_score, started_at, submitted_at
+                `SELECT id, exam_id, student_id, status, auto_score, manual_score, total_score, generation_seed, started_at, submitted_at
                  FROM attempts
                  WHERE student_id = ?
                  ORDER BY started_at DESC`,
@@ -153,7 +154,7 @@ export const createRootValue = ({ db, env }: CreateRootValueArgs) => {
         actor.role === "ADMIN"
           ? await first<AttemptRow>(
               db,
-              `SELECT id, exam_id, student_id, status, auto_score, manual_score, total_score, started_at, submitted_at
+              `SELECT id, exam_id, student_id, status, auto_score, manual_score, total_score, generation_seed, started_at, submitted_at
                FROM attempts WHERE id = ?`,
               [id],
             )
@@ -168,6 +169,7 @@ export const createRootValue = ({ db, env }: CreateRootValueArgs) => {
                   a.auto_score,
                   a.manual_score,
                   a.total_score,
+                  a.generation_seed,
                   a.started_at,
                   a.submitted_at
                  FROM attempts a
@@ -178,7 +180,7 @@ export const createRootValue = ({ db, env }: CreateRootValueArgs) => {
               )
             : await first<AttemptRow>(
                 db,
-                `SELECT id, exam_id, student_id, status, auto_score, manual_score, total_score, started_at, submitted_at
+                `SELECT id, exam_id, student_id, status, auto_score, manual_score, total_score, generation_seed, started_at, submitted_at
                  FROM attempts
                  WHERE id = ? AND student_id = ?`,
                 [id, actor.id],

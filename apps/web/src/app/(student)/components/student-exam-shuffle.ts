@@ -26,6 +26,14 @@ const shouldShuffleOptions = (type: QuestionType) =>
   type === QuestionType.Mcq || type === QuestionType.TrueFalse;
 
 export const applyStudentExamShuffle = (exam: StudentExamData): StudentExamData => {
+  return applyStudentExamShuffleWithSeed(exam, null);
+};
+
+export const applyStudentExamShuffleWithSeed = (
+  exam: StudentExamData,
+  attemptSeed: string | null,
+): StudentExamData => {
+  const questionSeed = attemptSeed ? `${attemptSeed}:questions` : `${exam.id}:questions`;
   const questions = exam.questions.map((item) => ({
     ...item,
     question:
@@ -34,7 +42,9 @@ export const applyStudentExamShuffle = (exam: StudentExamData): StudentExamData 
             ...item.question,
             options: stableShuffle(
               item.question.options,
-              `${exam.id}:${item.question.id}:answers`,
+              attemptSeed
+                ? `${attemptSeed}:${item.question.id}:answers`
+                : `${exam.id}:${item.question.id}:answers`,
               (option) => option,
             ),
           }
@@ -44,7 +54,7 @@ export const applyStudentExamShuffle = (exam: StudentExamData): StudentExamData 
   return {
     ...exam,
     questions: exam.shuffleQuestions
-      ? stableShuffle(questions, `${exam.id}:questions`, (item) => item.question.id)
+      ? stableShuffle(questions, questionSeed, (item) => item.question.id)
       : questions,
   };
 };
