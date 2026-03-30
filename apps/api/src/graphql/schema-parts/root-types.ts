@@ -7,6 +7,26 @@ export const schemaRootTypes = /* GraphQL */ `
     points: Int!
   }
 
+  input UpdateExamDraftQuestionInput {
+    questionId: ID!
+    points: Int!
+  }
+
+  input ExamImportQuestionReviewInput {
+    id: ID!
+    order: Int!
+    type: QuestionType!
+    title: String!
+    prompt: String!
+    options: [String!]!
+    answers: [String!]!
+    score: Int!
+    difficulty: Difficulty!
+    sourcePage: Int
+    confidence: Float!
+    needsReview: Boolean!
+  }
+
   type Query {
     health: Health!
     hello(name: String): Hello!
@@ -19,6 +39,8 @@ export const schemaRootTypes = /* GraphQL */ `
     questions(bankId: ID): [Question!]!
     exams: [Exam!]!
     exam(id: ID!): Exam
+    examImportJobs: [ExamImportJob!]!
+    examImportJob(id: ID!): ExamImportJob
     attempts: [Attempt!]!
     attempt(id: ID!): Attempt
     dashboardOverview: DashboardOverview!
@@ -74,8 +96,30 @@ export const schemaRootTypes = /* GraphQL */ `
     ): Exam!
     assignExamToClass(examId: ID!, classId: ID!): Exam!
     addQuestionToExam(examId: ID!, questionId: ID!, points: Int!): Exam!
+    updateExamDraft(
+      examId: ID!
+      classId: ID!
+      title: String!
+      description: String
+      mode: ExamMode = SCHEDULED
+      durationMinutes: Int!
+      scheduledFor: String
+      shuffleQuestions: Boolean = false
+      shuffleAnswers: Boolean = false
+      generationMode: ExamGenerationMode = MANUAL
+      rules: [ExamGenerationRuleInput!]
+      passingCriteriaType: PassingCriteriaType = PERCENTAGE
+      passingThreshold: Int = 40
+      questionItems: [UpdateExamDraftQuestionInput!]
+    ): Exam!
     publishExam(examId: ID!): Exam!
     closeExam(examId: ID!): Exam!
+    createExamImportJob(fileName: String!, fileSizeBytes: Int!, extractedText: String!): ExamImportJob!
+    approveExamImportJob(
+      id: ID!
+      classId: ID!
+      questions: [ExamImportQuestionReviewInput!]!
+    ): ExamImportJob!
     startAttempt(examId: ID!, studentId: ID!): Attempt!
     saveAnswer(attemptId: ID!, questionId: ID!, value: String!): Attempt!
     submitAttempt(attemptId: ID!): Attempt!

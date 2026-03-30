@@ -1,0 +1,41 @@
+mutation ApproveExamImportJobMutation(
+  $id: ID!
+  $classId: ID!
+  $questions: [ExamImportQuestionReviewInput!]!
+) {
+  approveExamImportJob(id: $id, classId: $classId, questions: $questions) {
+    id
+    fileName
+    status
+    title
+    totalQuestions
+    reviewCount
+    questionBank {
+      id
+      title
+    }
+    exam {
+      id
+      title
+      class {
+        id
+        name
+      }
+    }
+    questions {
+      id
+      order
+      type
+      title
+      prompt
+      options
+      answers
+      score
+      difficulty
+      sourcePage
+      confidence
+      needsReview
+      createdAt
+    }
+  }
+}

@@ -20,11 +20,11 @@ export type Scalars = {
 
 export type Answer = {
   __typename?: 'Answer';
-  autoScore?: Maybe<Scalars['Int']['output']>;
+  autoScore?: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['String']['output'];
   feedback?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
-  manualScore?: Maybe<Scalars['Int']['output']>;
+  manualScore?: Maybe<Scalars['Float']['output']>;
   question: Question;
   value: Scalars['String']['output'];
 };
@@ -32,16 +32,16 @@ export type Answer = {
 export type Attempt = {
   __typename?: 'Attempt';
   answers: Array<Answer>;
-  autoScore: Scalars['Int']['output'];
+  autoScore: Scalars['Float']['output'];
   exam: Exam;
   generationSeed?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
-  manualScore: Scalars['Int']['output'];
+  manualScore: Scalars['Float']['output'];
   startedAt: Scalars['String']['output'];
   status: AttemptStatus;
   student: User;
   submittedAt?: Maybe<Scalars['String']['output']>;
-  totalScore: Scalars['Int']['output'];
+  totalScore: Scalars['Float']['output'];
 };
 
 export enum AttemptStatus {
@@ -184,6 +184,70 @@ export type ExamGenerationRuleInput = {
   points: Scalars['Int']['input'];
 };
 
+export type ExamImportJob = {
+  __typename?: 'ExamImportJob';
+  createdAt: Scalars['String']['output'];
+  createdBy: User;
+  errorMessage?: Maybe<Scalars['String']['output']>;
+  exam?: Maybe<Exam>;
+  extractedText?: Maybe<Scalars['String']['output']>;
+  fileName: Scalars['String']['output'];
+  fileSizeBytes: Scalars['Int']['output'];
+  id: Scalars['ID']['output'];
+  questionBank?: Maybe<QuestionBank>;
+  questions: Array<ExamImportQuestion>;
+  reviewCount: Scalars['Int']['output'];
+  sourceType: ExamImportSourceType;
+  status: ExamImportJobStatus;
+  title: Scalars['String']['output'];
+  totalQuestions: Scalars['Int']['output'];
+  updatedAt: Scalars['String']['output'];
+};
+
+export enum ExamImportJobStatus {
+  Failed = 'FAILED',
+  Processing = 'PROCESSING',
+  Published = 'PUBLISHED',
+  Review = 'REVIEW',
+  Uploaded = 'UPLOADED'
+}
+
+export type ExamImportQuestion = {
+  __typename?: 'ExamImportQuestion';
+  answers: Array<Scalars['String']['output']>;
+  confidence: Scalars['Float']['output'];
+  createdAt: Scalars['String']['output'];
+  difficulty: Difficulty;
+  id: Scalars['ID']['output'];
+  needsReview: Scalars['Boolean']['output'];
+  options: Array<Scalars['String']['output']>;
+  order: Scalars['Int']['output'];
+  prompt: Scalars['String']['output'];
+  score: Scalars['Int']['output'];
+  sourcePage?: Maybe<Scalars['Int']['output']>;
+  title: Scalars['String']['output'];
+  type: QuestionType;
+};
+
+export type ExamImportQuestionReviewInput = {
+  answers: Array<Scalars['String']['input']>;
+  confidence: Scalars['Float']['input'];
+  difficulty: Difficulty;
+  id: Scalars['ID']['input'];
+  needsReview: Scalars['Boolean']['input'];
+  options: Array<Scalars['String']['input']>;
+  order: Scalars['Int']['input'];
+  prompt: Scalars['String']['input'];
+  score: Scalars['Int']['input'];
+  sourcePage?: InputMaybe<Scalars['Int']['input']>;
+  title: Scalars['String']['input'];
+  type: QuestionType;
+};
+
+export enum ExamImportSourceType {
+  Pdf = 'PDF'
+}
+
 export enum ExamMode {
   OpenWindow = 'OPEN_WINDOW',
   Scheduled = 'SCHEDULED'
@@ -218,11 +282,13 @@ export type Hello = {
 export type Mutation = {
   __typename?: 'Mutation';
   addQuestionToExam: Exam;
+  approveExamImportJob: ExamImportJob;
   assignExamToClass: Exam;
   closeExam: Exam;
   createClass: Class;
   createExam: Exam;
   createExamDraftVariants: Array<Question>;
+  createExamImportJob: ExamImportJob;
   createQuestion: Question;
   createQuestionBank: QuestionBank;
   createQuestionVariants: Array<Question>;
@@ -232,6 +298,7 @@ export type Mutation = {
   saveAnswer: Attempt;
   startAttempt: Attempt;
   submitAttempt: Attempt;
+  updateExamDraft: Exam;
   updateQuestion: Question;
 };
 
@@ -240,6 +307,13 @@ export type MutationAddQuestionToExamArgs = {
   examId: Scalars['ID']['input'];
   points: Scalars['Int']['input'];
   questionId: Scalars['ID']['input'];
+};
+
+
+export type MutationApproveExamImportJobArgs = {
+  classId: Scalars['ID']['input'];
+  id: Scalars['ID']['input'];
+  questions: Array<ExamImportQuestionReviewInput>;
 };
 
 
@@ -279,6 +353,13 @@ export type MutationCreateExamArgs = {
 export type MutationCreateExamDraftVariantsArgs = {
   sourceQuestionId: Scalars['ID']['input'];
   totalVariants?: Scalars['Int']['input'];
+};
+
+
+export type MutationCreateExamImportJobArgs = {
+  extractedText: Scalars['String']['input'];
+  fileName: Scalars['String']['input'];
+  fileSizeBytes: Scalars['Int']['input'];
 };
 
 
@@ -343,6 +424,24 @@ export type MutationSubmitAttemptArgs = {
 };
 
 
+export type MutationUpdateExamDraftArgs = {
+  classId: Scalars['ID']['input'];
+  description?: InputMaybe<Scalars['String']['input']>;
+  durationMinutes: Scalars['Int']['input'];
+  examId: Scalars['ID']['input'];
+  generationMode?: InputMaybe<ExamGenerationMode>;
+  mode?: InputMaybe<ExamMode>;
+  passingCriteriaType?: InputMaybe<PassingCriteriaType>;
+  passingThreshold?: InputMaybe<Scalars['Int']['input']>;
+  questionItems?: InputMaybe<Array<UpdateExamDraftQuestionInput>>;
+  rules?: InputMaybe<Array<ExamGenerationRuleInput>>;
+  scheduledFor?: InputMaybe<Scalars['String']['input']>;
+  shuffleAnswers?: InputMaybe<Scalars['Boolean']['input']>;
+  shuffleQuestions?: InputMaybe<Scalars['Boolean']['input']>;
+  title: Scalars['String']['input'];
+};
+
+
 export type MutationUpdateQuestionArgs = {
   correctAnswer?: InputMaybe<Scalars['String']['input']>;
   difficulty?: InputMaybe<Difficulty>;
@@ -367,6 +466,8 @@ export type Query = {
   classes: Array<Class>;
   dashboardOverview: DashboardOverview;
   exam?: Maybe<Exam>;
+  examImportJob?: Maybe<ExamImportJob>;
+  examImportJobs: Array<ExamImportJob>;
   exams: Array<Exam>;
   health: Health;
   hello: Hello;
@@ -389,6 +490,11 @@ export type QueryClassArgs = {
 
 
 export type QueryExamArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryExamImportJobArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -457,6 +563,11 @@ export enum Role {
   Teacher = 'TEACHER'
 }
 
+export type UpdateExamDraftQuestionInput = {
+  points: Scalars['Int']['input'];
+  questionId: Scalars['ID']['input'];
+};
+
 export type User = {
   __typename?: 'User';
   classes: Array<Class>;
@@ -475,6 +586,15 @@ export type AddQuestionToExamMutationVariables = Exact<{
 
 
 export type AddQuestionToExamMutation = { __typename?: 'Mutation', addQuestionToExam: { __typename?: 'Exam', id: string, questions: Array<{ __typename?: 'ExamQuestion', id: string, points: number, order: number, question: { __typename?: 'Question', id: string } }> } };
+
+export type ApproveExamImportJobMutationMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  classId: Scalars['ID']['input'];
+  questions: Array<ExamImportQuestionReviewInput> | ExamImportQuestionReviewInput;
+}>;
+
+
+export type ApproveExamImportJobMutationMutation = { __typename?: 'Mutation', approveExamImportJob: { __typename?: 'ExamImportJob', id: string, fileName: string, status: ExamImportJobStatus, title: string, totalQuestions: number, reviewCount: number, questionBank?: { __typename?: 'QuestionBank', id: string, title: string } | null, exam?: { __typename?: 'Exam', id: string, title: string, class: { __typename?: 'Class', id: string, name: string } } | null, questions: Array<{ __typename?: 'ExamImportQuestion', id: string, order: number, type: QuestionType, title: string, prompt: string, options: Array<string>, answers: Array<string>, score: number, difficulty: Difficulty, sourcePage?: number | null, confidence: number, needsReview: boolean, createdAt: string }> } };
 
 export type AssignExamToClassMutationVariables = Exact<{
   examId: Scalars['ID']['input'];
@@ -498,6 +618,15 @@ export type CreateExamDraftVariantsMutationMutationVariables = Exact<{
 
 
 export type CreateExamDraftVariantsMutationMutation = { __typename?: 'Mutation', createExamDraftVariants: Array<{ __typename?: 'Question', id: string, title: string, prompt: string, type: QuestionType, difficulty: Difficulty, options: Array<string>, correctAnswer?: string | null, tags: Array<string> }> };
+
+export type CreateExamImportJobMutationMutationVariables = Exact<{
+  fileName: Scalars['String']['input'];
+  fileSizeBytes: Scalars['Int']['input'];
+  extractedText: Scalars['String']['input'];
+}>;
+
+
+export type CreateExamImportJobMutationMutation = { __typename?: 'Mutation', createExamImportJob: { __typename?: 'ExamImportJob', id: string, fileName: string, fileSizeBytes: number, sourceType: ExamImportSourceType, status: ExamImportJobStatus, title: string, errorMessage?: string | null, totalQuestions: number, reviewCount: number, createdAt: string, updatedAt: string, questions: Array<{ __typename?: 'ExamImportQuestion', id: string, order: number, type: QuestionType, title: string, prompt: string, options: Array<string>, answers: Array<string>, score: number, difficulty: Difficulty, sourcePage?: number | null, confidence: number, needsReview: boolean, createdAt: string }> } };
 
 export type CreateExamMutationVariables = Exact<{
   classId: Scalars['ID']['input'];
@@ -596,6 +725,26 @@ export type SubmitAttemptMutationVariables = Exact<{
 
 export type SubmitAttemptMutation = { __typename?: 'Mutation', submitAttempt: { __typename?: 'Attempt', id: string, status: AttemptStatus, totalScore: number, startedAt: string, submittedAt?: string | null } };
 
+export type UpdateExamDraftMutationVariables = Exact<{
+  examId: Scalars['ID']['input'];
+  classId: Scalars['ID']['input'];
+  title: Scalars['String']['input'];
+  description?: InputMaybe<Scalars['String']['input']>;
+  mode: ExamMode;
+  durationMinutes: Scalars['Int']['input'];
+  scheduledFor?: InputMaybe<Scalars['String']['input']>;
+  shuffleQuestions: Scalars['Boolean']['input'];
+  shuffleAnswers: Scalars['Boolean']['input'];
+  generationMode: ExamGenerationMode;
+  rules?: InputMaybe<Array<ExamGenerationRuleInput> | ExamGenerationRuleInput>;
+  passingCriteriaType: PassingCriteriaType;
+  passingThreshold: Scalars['Int']['input'];
+  questionItems?: InputMaybe<Array<UpdateExamDraftQuestionInput> | UpdateExamDraftQuestionInput>;
+}>;
+
+
+export type UpdateExamDraftMutation = { __typename?: 'Mutation', updateExamDraft: { __typename?: 'Exam', id: string, title: string, status: ExamStatus, mode: ExamMode, durationMinutes: number, scheduledFor?: string | null, shuffleQuestions: boolean, shuffleAnswers: boolean, generationMode: ExamGenerationMode, passingCriteriaType: PassingCriteriaType, passingThreshold: number, createdAt: string, generationRules: Array<{ __typename?: 'ExamGenerationRule', label: string, bankIds: Array<string>, difficulty?: Difficulty | null, count: number, points: number }>, class: { __typename?: 'Class', id: string, name: string } } };
+
 export type UpdateQuestionMutationMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   type: QuestionType;
@@ -632,10 +781,29 @@ export type DashboardOverviewQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type DashboardOverviewQuery = { __typename?: 'Query', dashboardOverview: { __typename?: 'DashboardOverview', teacherName: string, summary: { __typename?: 'DashboardMetricSummary', pendingReviewCount: number, draftExamCount: number, ongoingExamCount: number, scheduledExamCount: number }, upcomingExams: Array<{ __typename?: 'DashboardUpcomingExam', id: string, title: string, scheduledFor: string, questionCount: number, status: ExamStatus }>, recentResults: Array<{ __typename?: 'DashboardRecentResult', id: string, title: string, passCount: number, failCount: number, progressPercent: number, averageScorePercent: number }> } };
 
+export type EditExamDraftQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type EditExamDraftQuery = { __typename?: 'Query', exam?: { __typename?: 'Exam', id: string, title: string, description?: string | null, mode: ExamMode, status: ExamStatus, durationMinutes: number, scheduledFor?: string | null, shuffleQuestions: boolean, shuffleAnswers: boolean, generationMode: ExamGenerationMode, passingCriteriaType: PassingCriteriaType, passingThreshold: number, generationRules: Array<{ __typename?: 'ExamGenerationRule', label: string, bankIds: Array<string>, difficulty?: Difficulty | null, count: number, points: number }>, class: { __typename?: 'Class', id: string, name: string }, questions: Array<{ __typename?: 'ExamQuestion', id: string, order: number, points: number, question: { __typename?: 'Question', id: string, bank: { __typename?: 'QuestionBank', id: string } } }> } | null };
+
 export type HealthQueryQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type HealthQueryQuery = { __typename?: 'Query', health: { __typename?: 'Health', ok: boolean, service: string, runtime: string } };
+
+export type MyExamDetailQueryQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type MyExamDetailQueryQuery = { __typename?: 'Query', exam?: { __typename?: 'Exam', id: string, isTemplate: boolean, sourceExamId?: string | null, title: string, status: ExamStatus, durationMinutes: number, passingCriteriaType: PassingCriteriaType, passingThreshold: number, createdAt: string, startedAt?: string | null, endsAt?: string | null, createdBy: { __typename?: 'User', id: string }, class: { __typename?: 'Class', id: string, name: string, subject: string, grade: number, studentCount: number }, questions: Array<{ __typename?: 'ExamQuestion', id: string, points: number, order: number, question: { __typename?: 'Question', id: string, title: string, prompt: string, type: QuestionType, options: Array<string>, correctAnswer?: string | null, bank: { __typename?: 'QuestionBank', id: string, topic: string } } }>, attempts: Array<{ __typename?: 'Attempt', id: string, status: AttemptStatus, autoScore: number, manualScore: number, totalScore: number, startedAt: string, submittedAt?: string | null, student: { __typename?: 'User', id: string, fullName: string }, answers: Array<{ __typename?: 'Answer', id: string, value: string, autoScore?: number | null, manualScore?: number | null, feedback?: string | null, createdAt: string, question: { __typename?: 'Question', id: string, title: string, prompt: string, type: QuestionType } }> }> } | null };
+
+export type MyExamsSectionQueryQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyExamsSectionQueryQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string, classes: Array<{ __typename?: 'Class', id: string }> } | null, exams: Array<{ __typename?: 'Exam', id: string, isTemplate: boolean, sourceExamId?: string | null, title: string, status: ExamStatus, durationMinutes: number, passingCriteriaType: PassingCriteriaType, passingThreshold: number, createdAt: string, startedAt?: string | null, endsAt?: string | null, createdBy: { __typename?: 'User', id: string }, class: { __typename?: 'Class', id: string, name: string, subject: string, grade: number, studentCount: number }, questions: Array<{ __typename?: 'ExamQuestion', id: string, points: number, order: number }>, attempts: Array<{ __typename?: 'Attempt', id: string, status: AttemptStatus, totalScore: number }> }> };
 
 export type MyExamsQueryQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -710,6 +878,73 @@ export function useAddQuestionToExamMutation(baseOptions?: ApolloReactHooks.Muta
 export type AddQuestionToExamMutationHookResult = ReturnType<typeof useAddQuestionToExamMutation>;
 export type AddQuestionToExamMutationResult = ApolloReactCommon.MutationResult<AddQuestionToExamMutation>;
 export type AddQuestionToExamMutationOptions = ApolloReactCommon.BaseMutationOptions<AddQuestionToExamMutation, AddQuestionToExamMutationVariables>;
+export const ApproveExamImportJobMutationDocument = gql`
+    mutation ApproveExamImportJobMutation($id: ID!, $classId: ID!, $questions: [ExamImportQuestionReviewInput!]!) {
+  approveExamImportJob(id: $id, classId: $classId, questions: $questions) {
+    id
+    fileName
+    status
+    title
+    totalQuestions
+    reviewCount
+    questionBank {
+      id
+      title
+    }
+    exam {
+      id
+      title
+      class {
+        id
+        name
+      }
+    }
+    questions {
+      id
+      order
+      type
+      title
+      prompt
+      options
+      answers
+      score
+      difficulty
+      sourcePage
+      confidence
+      needsReview
+      createdAt
+    }
+  }
+}
+    `;
+export type ApproveExamImportJobMutationMutationFn = ApolloReactCommon.MutationFunction<ApproveExamImportJobMutationMutation, ApproveExamImportJobMutationMutationVariables>;
+
+/**
+ * __useApproveExamImportJobMutationMutation__
+ *
+ * To run a mutation, you first call `useApproveExamImportJobMutationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApproveExamImportJobMutationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [approveExamImportJobMutationMutation, { data, loading, error }] = useApproveExamImportJobMutationMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      classId: // value for 'classId'
+ *      questions: // value for 'questions'
+ *   },
+ * });
+ */
+export function useApproveExamImportJobMutationMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<ApproveExamImportJobMutationMutation, ApproveExamImportJobMutationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<ApproveExamImportJobMutationMutation, ApproveExamImportJobMutationMutationVariables>(ApproveExamImportJobMutationDocument, options);
+      }
+export type ApproveExamImportJobMutationMutationHookResult = ReturnType<typeof useApproveExamImportJobMutationMutation>;
+export type ApproveExamImportJobMutationMutationResult = ApolloReactCommon.MutationResult<ApproveExamImportJobMutationMutation>;
+export type ApproveExamImportJobMutationMutationOptions = ApolloReactCommon.BaseMutationOptions<ApproveExamImportJobMutationMutation, ApproveExamImportJobMutationMutationVariables>;
 export const AssignExamToClassDocument = gql`
     mutation AssignExamToClass($examId: ID!, $classId: ID!) {
   assignExamToClass(examId: $examId, classId: $classId) {
@@ -828,6 +1063,70 @@ export function useCreateExamDraftVariantsMutationMutation(baseOptions?: ApolloR
 export type CreateExamDraftVariantsMutationMutationHookResult = ReturnType<typeof useCreateExamDraftVariantsMutationMutation>;
 export type CreateExamDraftVariantsMutationMutationResult = ApolloReactCommon.MutationResult<CreateExamDraftVariantsMutationMutation>;
 export type CreateExamDraftVariantsMutationMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateExamDraftVariantsMutationMutation, CreateExamDraftVariantsMutationMutationVariables>;
+export const CreateExamImportJobMutationDocument = gql`
+    mutation CreateExamImportJobMutation($fileName: String!, $fileSizeBytes: Int!, $extractedText: String!) {
+  createExamImportJob(
+    fileName: $fileName
+    fileSizeBytes: $fileSizeBytes
+    extractedText: $extractedText
+  ) {
+    id
+    fileName
+    fileSizeBytes
+    sourceType
+    status
+    title
+    errorMessage
+    totalQuestions
+    reviewCount
+    createdAt
+    updatedAt
+    questions {
+      id
+      order
+      type
+      title
+      prompt
+      options
+      answers
+      score
+      difficulty
+      sourcePage
+      confidence
+      needsReview
+      createdAt
+    }
+  }
+}
+    `;
+export type CreateExamImportJobMutationMutationFn = ApolloReactCommon.MutationFunction<CreateExamImportJobMutationMutation, CreateExamImportJobMutationMutationVariables>;
+
+/**
+ * __useCreateExamImportJobMutationMutation__
+ *
+ * To run a mutation, you first call `useCreateExamImportJobMutationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateExamImportJobMutationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createExamImportJobMutationMutation, { data, loading, error }] = useCreateExamImportJobMutationMutation({
+ *   variables: {
+ *      fileName: // value for 'fileName'
+ *      fileSizeBytes: // value for 'fileSizeBytes'
+ *      extractedText: // value for 'extractedText'
+ *   },
+ * });
+ */
+export function useCreateExamImportJobMutationMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<CreateExamImportJobMutationMutation, CreateExamImportJobMutationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<CreateExamImportJobMutationMutation, CreateExamImportJobMutationMutationVariables>(CreateExamImportJobMutationDocument, options);
+      }
+export type CreateExamImportJobMutationMutationHookResult = ReturnType<typeof useCreateExamImportJobMutationMutation>;
+export type CreateExamImportJobMutationMutationResult = ApolloReactCommon.MutationResult<CreateExamImportJobMutationMutation>;
+export type CreateExamImportJobMutationMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateExamImportJobMutationMutation, CreateExamImportJobMutationMutationVariables>;
 export const CreateExamDocument = gql`
     mutation CreateExam($classId: ID!, $title: String!, $description: String, $mode: ExamMode!, $durationMinutes: Int!, $scheduledFor: String, $shuffleQuestions: Boolean!, $shuffleAnswers: Boolean!, $generationMode: ExamGenerationMode!, $rules: [ExamGenerationRuleInput!], $passingCriteriaType: PassingCriteriaType!, $passingThreshold: Int!) {
   createExam(
@@ -1274,6 +1573,89 @@ export function useSubmitAttemptMutation(baseOptions?: ApolloReactHooks.Mutation
 export type SubmitAttemptMutationHookResult = ReturnType<typeof useSubmitAttemptMutation>;
 export type SubmitAttemptMutationResult = ApolloReactCommon.MutationResult<SubmitAttemptMutation>;
 export type SubmitAttemptMutationOptions = ApolloReactCommon.BaseMutationOptions<SubmitAttemptMutation, SubmitAttemptMutationVariables>;
+export const UpdateExamDraftDocument = gql`
+    mutation UpdateExamDraft($examId: ID!, $classId: ID!, $title: String!, $description: String, $mode: ExamMode!, $durationMinutes: Int!, $scheduledFor: String, $shuffleQuestions: Boolean!, $shuffleAnswers: Boolean!, $generationMode: ExamGenerationMode!, $rules: [ExamGenerationRuleInput!], $passingCriteriaType: PassingCriteriaType!, $passingThreshold: Int!, $questionItems: [UpdateExamDraftQuestionInput!]) {
+  updateExamDraft(
+    examId: $examId
+    classId: $classId
+    title: $title
+    description: $description
+    mode: $mode
+    durationMinutes: $durationMinutes
+    scheduledFor: $scheduledFor
+    shuffleQuestions: $shuffleQuestions
+    shuffleAnswers: $shuffleAnswers
+    generationMode: $generationMode
+    rules: $rules
+    passingCriteriaType: $passingCriteriaType
+    passingThreshold: $passingThreshold
+    questionItems: $questionItems
+  ) {
+    id
+    title
+    status
+    mode
+    durationMinutes
+    scheduledFor
+    shuffleQuestions
+    shuffleAnswers
+    generationMode
+    generationRules {
+      label
+      bankIds
+      difficulty
+      count
+      points
+    }
+    passingCriteriaType
+    passingThreshold
+    createdAt
+    class {
+      id
+      name
+    }
+  }
+}
+    `;
+export type UpdateExamDraftMutationFn = ApolloReactCommon.MutationFunction<UpdateExamDraftMutation, UpdateExamDraftMutationVariables>;
+
+/**
+ * __useUpdateExamDraftMutation__
+ *
+ * To run a mutation, you first call `useUpdateExamDraftMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateExamDraftMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateExamDraftMutation, { data, loading, error }] = useUpdateExamDraftMutation({
+ *   variables: {
+ *      examId: // value for 'examId'
+ *      classId: // value for 'classId'
+ *      title: // value for 'title'
+ *      description: // value for 'description'
+ *      mode: // value for 'mode'
+ *      durationMinutes: // value for 'durationMinutes'
+ *      scheduledFor: // value for 'scheduledFor'
+ *      shuffleQuestions: // value for 'shuffleQuestions'
+ *      shuffleAnswers: // value for 'shuffleAnswers'
+ *      generationMode: // value for 'generationMode'
+ *      rules: // value for 'rules'
+ *      passingCriteriaType: // value for 'passingCriteriaType'
+ *      passingThreshold: // value for 'passingThreshold'
+ *      questionItems: // value for 'questionItems'
+ *   },
+ * });
+ */
+export function useUpdateExamDraftMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<UpdateExamDraftMutation, UpdateExamDraftMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<UpdateExamDraftMutation, UpdateExamDraftMutationVariables>(UpdateExamDraftDocument, options);
+      }
+export type UpdateExamDraftMutationHookResult = ReturnType<typeof useUpdateExamDraftMutation>;
+export type UpdateExamDraftMutationResult = ApolloReactCommon.MutationResult<UpdateExamDraftMutation>;
+export type UpdateExamDraftMutationOptions = ApolloReactCommon.BaseMutationOptions<UpdateExamDraftMutation, UpdateExamDraftMutationVariables>;
 export const UpdateQuestionMutationDocument = gql`
     mutation UpdateQuestionMutation($id: ID!, $type: QuestionType!, $title: String!, $prompt: String!, $options: [String!], $correctAnswer: String, $difficulty: Difficulty!, $tags: [String!]) {
   updateQuestion(
@@ -1583,6 +1965,82 @@ export type DashboardOverviewQueryHookResult = ReturnType<typeof useDashboardOve
 export type DashboardOverviewLazyQueryHookResult = ReturnType<typeof useDashboardOverviewLazyQuery>;
 export type DashboardOverviewSuspenseQueryHookResult = ReturnType<typeof useDashboardOverviewSuspenseQuery>;
 export type DashboardOverviewQueryResult = ApolloReactCommon.QueryResult<DashboardOverviewQuery, DashboardOverviewQueryVariables>;
+export const EditExamDraftDocument = gql`
+    query EditExamDraft($id: ID!) {
+  exam(id: $id) {
+    id
+    title
+    description
+    mode
+    status
+    durationMinutes
+    scheduledFor
+    shuffleQuestions
+    shuffleAnswers
+    generationMode
+    generationRules {
+      label
+      bankIds
+      difficulty
+      count
+      points
+    }
+    passingCriteriaType
+    passingThreshold
+    class {
+      id
+      name
+    }
+    questions {
+      id
+      order
+      points
+      question {
+        id
+        bank {
+          id
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useEditExamDraftQuery__
+ *
+ * To run a query within a React component, call `useEditExamDraftQuery` and pass it any options that fit your needs.
+ * When your component renders, `useEditExamDraftQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useEditExamDraftQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useEditExamDraftQuery(baseOptions: ApolloReactHooks.QueryHookOptions<EditExamDraftQuery, EditExamDraftQueryVariables> & ({ variables: EditExamDraftQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<EditExamDraftQuery, EditExamDraftQueryVariables>(EditExamDraftDocument, options);
+      }
+export function useEditExamDraftLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<EditExamDraftQuery, EditExamDraftQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<EditExamDraftQuery, EditExamDraftQueryVariables>(EditExamDraftDocument, options);
+        }
+// @ts-ignore
+export function useEditExamDraftSuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<EditExamDraftQuery, EditExamDraftQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<EditExamDraftQuery, EditExamDraftQueryVariables>;
+export function useEditExamDraftSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<EditExamDraftQuery, EditExamDraftQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<EditExamDraftQuery | undefined, EditExamDraftQueryVariables>;
+export function useEditExamDraftSuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<EditExamDraftQuery, EditExamDraftQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<EditExamDraftQuery, EditExamDraftQueryVariables>(EditExamDraftDocument, options);
+        }
+export type EditExamDraftQueryHookResult = ReturnType<typeof useEditExamDraftQuery>;
+export type EditExamDraftLazyQueryHookResult = ReturnType<typeof useEditExamDraftLazyQuery>;
+export type EditExamDraftSuspenseQueryHookResult = ReturnType<typeof useEditExamDraftSuspenseQuery>;
+export type EditExamDraftQueryResult = ApolloReactCommon.QueryResult<EditExamDraftQuery, EditExamDraftQueryVariables>;
 export const HealthQueryDocument = gql`
     query HealthQuery {
   health {
@@ -1627,6 +2085,191 @@ export type HealthQueryQueryHookResult = ReturnType<typeof useHealthQueryQuery>;
 export type HealthQueryLazyQueryHookResult = ReturnType<typeof useHealthQueryLazyQuery>;
 export type HealthQuerySuspenseQueryHookResult = ReturnType<typeof useHealthQuerySuspenseQuery>;
 export type HealthQueryQueryResult = ApolloReactCommon.QueryResult<HealthQueryQuery, HealthQueryQueryVariables>;
+export const MyExamDetailQueryDocument = gql`
+    query MyExamDetailQuery($id: ID!) {
+  exam(id: $id) {
+    id
+    isTemplate
+    sourceExamId
+    title
+    status
+    durationMinutes
+    passingCriteriaType
+    passingThreshold
+    createdAt
+    startedAt
+    endsAt
+    createdBy {
+      id
+    }
+    class {
+      id
+      name
+      subject
+      grade
+      studentCount
+    }
+    questions {
+      id
+      points
+      order
+      question {
+        id
+        title
+        prompt
+        type
+        options
+        correctAnswer
+        bank {
+          id
+          topic
+        }
+      }
+    }
+    attempts {
+      id
+      status
+      autoScore
+      manualScore
+      totalScore
+      startedAt
+      submittedAt
+      student {
+        id
+        fullName
+      }
+      answers {
+        id
+        value
+        autoScore
+        manualScore
+        feedback
+        createdAt
+        question {
+          id
+          title
+          prompt
+          type
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useMyExamDetailQueryQuery__
+ *
+ * To run a query within a React component, call `useMyExamDetailQueryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMyExamDetailQueryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyExamDetailQueryQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useMyExamDetailQueryQuery(baseOptions: ApolloReactHooks.QueryHookOptions<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables> & ({ variables: MyExamDetailQueryQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>(MyExamDetailQueryDocument, options);
+      }
+export function useMyExamDetailQueryLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>(MyExamDetailQueryDocument, options);
+        }
+// @ts-ignore
+export function useMyExamDetailQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>;
+export function useMyExamDetailQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<MyExamDetailQueryQuery | undefined, MyExamDetailQueryQueryVariables>;
+export function useMyExamDetailQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>(MyExamDetailQueryDocument, options);
+        }
+export type MyExamDetailQueryQueryHookResult = ReturnType<typeof useMyExamDetailQueryQuery>;
+export type MyExamDetailQueryLazyQueryHookResult = ReturnType<typeof useMyExamDetailQueryLazyQuery>;
+export type MyExamDetailQuerySuspenseQueryHookResult = ReturnType<typeof useMyExamDetailQuerySuspenseQuery>;
+export type MyExamDetailQueryQueryResult = ApolloReactCommon.QueryResult<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>;
+export const MyExamsSectionQueryDocument = gql`
+    query MyExamsSectionQuery {
+  me {
+    id
+    classes {
+      id
+    }
+  }
+  exams {
+    id
+    isTemplate
+    sourceExamId
+    title
+    status
+    durationMinutes
+    passingCriteriaType
+    passingThreshold
+    createdAt
+    startedAt
+    endsAt
+    createdBy {
+      id
+    }
+    class {
+      id
+      name
+      subject
+      grade
+      studentCount
+    }
+    questions {
+      id
+      points
+      order
+    }
+    attempts {
+      id
+      status
+      totalScore
+    }
+  }
+}
+    `;
+
+/**
+ * __useMyExamsSectionQueryQuery__
+ *
+ * To run a query within a React component, call `useMyExamsSectionQueryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMyExamsSectionQueryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyExamsSectionQueryQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useMyExamsSectionQueryQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>(MyExamsSectionQueryDocument, options);
+      }
+export function useMyExamsSectionQueryLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>(MyExamsSectionQueryDocument, options);
+        }
+// @ts-ignore
+export function useMyExamsSectionQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>;
+export function useMyExamsSectionQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<MyExamsSectionQueryQuery | undefined, MyExamsSectionQueryQueryVariables>;
+export function useMyExamsSectionQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>(MyExamsSectionQueryDocument, options);
+        }
+export type MyExamsSectionQueryQueryHookResult = ReturnType<typeof useMyExamsSectionQueryQuery>;
+export type MyExamsSectionQueryLazyQueryHookResult = ReturnType<typeof useMyExamsSectionQueryLazyQuery>;
+export type MyExamsSectionQuerySuspenseQueryHookResult = ReturnType<typeof useMyExamsSectionQuerySuspenseQuery>;
+export type MyExamsSectionQueryQueryResult = ApolloReactCommon.QueryResult<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>;
 export const MyExamsQueryDocument = gql`
     query MyExamsQuery {
   me {

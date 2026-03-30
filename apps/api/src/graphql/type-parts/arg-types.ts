@@ -80,6 +80,28 @@ export type AddQuestionToExamArgs = {
   points: number;
 };
 
+export type UpdateExamDraftQuestionArgs = {
+  questionId: string;
+  points: number;
+};
+
+export type UpdateExamDraftArgs = {
+  examId: string;
+  classId: string;
+  title: string;
+  description?: string;
+  mode?: ExamMode;
+  durationMinutes: number;
+  scheduledFor?: string;
+  shuffleQuestions?: boolean;
+  shuffleAnswers?: boolean;
+  generationMode?: ExamGenerationMode;
+  rules?: ExamGenerationRule[];
+  passingCriteriaType?: PassingCriteriaType;
+  passingThreshold?: number;
+  questionItems?: UpdateExamDraftQuestionArgs[];
+};
+
 export type AssignExamToClassArgs = {
   examId: string;
   classId: string;
@@ -90,5 +112,29 @@ export type CloseExamArgs = { examId: string };
 export type StartAttemptArgs = { examId: string; studentId: string };
 export type SaveAnswerArgs = { attemptId: string; questionId: string; value: string };
 export type SubmitAttemptArgs = { attemptId: string };
+export type CreateExamImportJobArgs = {
+  fileName: string;
+  fileSizeBytes: number;
+  extractedText: string;
+};
+export type ReviewedExamImportQuestionInput = {
+  id: string;
+  order: number;
+  type: QuestionType;
+  title: string;
+  prompt: string;
+  options: string[];
+  answers: string[];
+  score: number;
+  difficulty: Difficulty;
+  sourcePage?: number | null;
+  confidence: number;
+  needsReview: boolean;
+};
+export type ApproveExamImportJobArgs = {
+  id: string;
+  classId: string;
+  questions: ReviewedExamImportQuestionInput[];
+};
 export type QuestionsArgs = { bankId?: string };
 export type ByIdArgs = { id: string };

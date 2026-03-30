@@ -1,0 +1,57 @@
+mutation UpdateExamDraft(
+  $examId: ID!
+  $classId: ID!
+  $title: String!
+  $description: String
+  $mode: ExamMode!
+  $durationMinutes: Int!
+  $scheduledFor: String
+  $shuffleQuestions: Boolean!
+  $shuffleAnswers: Boolean!
+  $generationMode: ExamGenerationMode!
+  $rules: [ExamGenerationRuleInput!]
+  $passingCriteriaType: PassingCriteriaType!
+  $passingThreshold: Int!
+  $questionItems: [UpdateExamDraftQuestionInput!]
+) {
+  updateExamDraft(
+    examId: $examId
+    classId: $classId
+    title: $title
+    description: $description
+    mode: $mode
+    durationMinutes: $durationMinutes
+    scheduledFor: $scheduledFor
+    shuffleQuestions: $shuffleQuestions
+    shuffleAnswers: $shuffleAnswers
+    generationMode: $generationMode
+    rules: $rules
+    passingCriteriaType: $passingCriteriaType
+    passingThreshold: $passingThreshold
+    questionItems: $questionItems
+  ) {
+    id
+    title
+    status
+    mode
+    durationMinutes
+    scheduledFor
+    shuffleQuestions
+    shuffleAnswers
+    generationMode
+    generationRules {
+      label
+      bankIds
+      difficulty
+      count
+      points
+    }
+    passingCriteriaType
+    passingThreshold
+    createdAt
+    class {
+      id
+      name
+    }
+  }
+}

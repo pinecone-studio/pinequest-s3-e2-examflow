@@ -8,6 +8,8 @@ import {
   useAssignExamToClassMutation,
   useCreateExamMutation,
   useCreateExamOptionsQuery,
+  useEditExamDraftQuery,
+  useUpdateExamDraftMutation,
 } from "@/graphql/generated";
 import { useLiveQuestionBankEvents } from "@/lib/use-live-question-bank-events";
 import type { Difficulty } from "@/graphql/generated";
@@ -30,21 +32,35 @@ import {
   getRuleSourceOptions,
 } from "./create-exam-option-data";
 import {
+  toDraftFormValues,
+  toDraftInitialBankId,
+  toDraftSelectedQuestionPoints,
+} from "./create-exam-edit-helpers";
+import {
   type CreateExamFieldErrors,
   type CreateExamFormValues,
   type CreateExamGenerationRule,
   type CreateExamSubmitState,
   type SelectedQuestionPoints,
 } from "../create-exam-types";
+
 export const useCreateExamFlow = (
   initialClassId = "",
   assignmentClassId = "",
   initialBankId = "",
+  examId = "",
 ) => {
+  const isEditMode = Boolean(examId);
   const optionsQuery = useCreateExamOptionsQuery({
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
     ssr: false,
+  });
+  const draftQuery = useEditExamDraftQuery({
+    variables: { id: examId },
+    fetchPolicy: "cache-and-network",
+    ssr: false,
+    skip: !isEditMode,
   });
   useLiveQuestionBankEvents({
     teacherId: optionsQuery.data?.me?.id ?? null,
@@ -55,6 +71,7 @@ export const useCreateExamFlow = (
     },
   });
   const [runCreateExam, createExamState] = useCreateExamMutation();
+  const [runUpdateExamDraft, updateExamDraftState] = useUpdateExamDraftMutation();
   const [runAddQuestionToExam] = useAddQuestionToExamMutation();
   const [runAssignExamToClass, assignExamState] = useAssignExamToClassMutation();
   const [formValues, setFormValues] = useState(INITIAL_FORM_VALUES);
@@ -62,6 +79,14 @@ export const useCreateExamFlow = (
   const [errors, setErrors] = useState<CreateExamFieldErrors>(EMPTY_ERRORS);
   const [submitState, setSubmitState] = useState<CreateExamSubmitState>({ status: "idle" });
   const [isAddingQuestions, setIsAddingQuestions] = useState(false);
+  const [hasHydratedDraft, setHasHydratedDraft] = useState(false);
+
+  const draftExam = draftQuery.data?.exam ?? null;
+  const resolvedBankId = useMemo(
+    () => (draftExam ? toDraftInitialBankId(draftExam, initialBankId) : initialBankId),
+    [draftExam, initialBankId],
+  );
+
   const classOptions = useMemo(
     () =>
       (optionsQuery.data?.classes ?? []).map((classroom) => ({
@@ -71,34 +96,48 @@ export const useCreateExamFlow = (
     [optionsQuery.data?.classes],
   );
   const questionBankOptions = useMemo(
-    () => getQuestionBankOptions(optionsQuery.data, initialBankId),
-    [initialBankId, optionsQuery.data],
+    () => getQuestionBankOptions(optionsQuery.data, resolvedBankId),
+    [optionsQuery.data, resolvedBankId],
   );
   const questionOptions = useMemo(
-    () => getQuestionOptions(optionsQuery.data, initialBankId),
-    [initialBankId, optionsQuery.data],
+    () => getQuestionOptions(optionsQuery.data, resolvedBankId),
+    [optionsQuery.data, resolvedBankId],
   );
   const ruleSourceOptions = useMemo(
     () =>
       getRuleSourceOptions(
         optionsQuery.data?.questionBanks ?? [],
         getQuestionOptions(optionsQuery.data, ""),
-        initialBankId,
+        resolvedBankId,
       ),
-    [initialBankId, optionsQuery.data],
+    [optionsQuery.data, resolvedBankId],
   );
+
   useEffect(() => {
-    if (formValues.classId || !classOptions.length) {
+    if (hasHydratedDraft || !draftExam || !optionsQuery.data) {
       return;
     }
+
+    setFormValues(toDraftFormValues(draftExam, ruleSourceOptions));
+    setSelectedQuestionPoints(toDraftSelectedQuestionPoints(draftExam));
+    setErrors(EMPTY_ERRORS);
+    setSubmitState({ status: "idle" });
+    setHasHydratedDraft(true);
+  }, [draftExam, hasHydratedDraft, optionsQuery.data, ruleSourceOptions]);
+
+  useEffect(() => {
+    if (isEditMode || formValues.classId || !classOptions.length) {
+      return;
+    }
+
     const nextClassId =
-      classOptions.find((item) => item.id === initialClassId)?.id ??
-      classOptions[0].id;
+      classOptions.find((item) => item.id === initialClassId)?.id ?? classOptions[0].id;
     setFormValues((previous) => ({ ...previous, classId: nextClassId }));
-  }, [classOptions, formValues.classId, initialClassId]);
+  }, [classOptions, formValues.classId, initialClassId, isEditMode]);
 
   const getDefaultRuleSourceId = () =>
-    ruleSourceOptions.find((option) => initialBankId && option.bankIds.includes(initialBankId))?.id ??
+    ruleSourceOptions.find((option) => resolvedBankId && option.bankIds.includes(resolvedBankId))
+      ?.id ??
     ruleSourceOptions[0]?.id ??
     "";
 
@@ -111,13 +150,8 @@ export const useCreateExamFlow = (
 
       if (field === "generationMode") {
         const nextMode = value as CreateExamFormValues["generationMode"];
-        if (
-          nextMode === ExamGenerationMode.RuleBased &&
-          previous.generationRules.length === 0
-        ) {
-          nextValues.generationRules = [
-            createEmptyGenerationRule(getDefaultRuleSourceId()),
-          ];
+        if (nextMode === ExamGenerationMode.RuleBased && previous.generationRules.length === 0) {
+          nextValues.generationRules = [createEmptyGenerationRule(getDefaultRuleSourceId())];
         }
       }
 
@@ -148,9 +182,7 @@ export const useCreateExamFlow = (
     setSubmitState({ status: "idle" });
   };
 
-  const updateGenerationRule = <
-    K extends keyof CreateExamGenerationRule,
-  >(
+  const updateGenerationRule = <K extends keyof CreateExamGenerationRule>(
     ruleId: string,
     field: K,
     value: CreateExamGenerationRule[K],
@@ -164,6 +196,7 @@ export const useCreateExamFlow = (
     setErrors((previous) => ({ ...previous, generationRules: undefined }));
     setSubmitState({ status: "idle" });
   };
+
   const toggleQuestion = (questionId: string) => {
     setSelectedQuestionPoints((previous) => {
       if (previous[questionId]) {
@@ -179,6 +212,7 @@ export const useCreateExamFlow = (
     });
     setSubmitState({ status: "idle" });
   };
+
   const addQuestion = (questionId: string) => {
     setSelectedQuestionPoints((previous) =>
       previous[questionId] ? previous : { ...previous, [questionId]: "1" },
@@ -186,6 +220,7 @@ export const useCreateExamFlow = (
     setErrors((previous) => ({ ...previous, selectedQuestions: undefined }));
     setSubmitState({ status: "idle" });
   };
+
   const replaceSelectedQuestions = (questionIds: string[]) => {
     const nextPoints: SelectedQuestionPoints = {};
     for (const questionId of questionIds) {
@@ -195,6 +230,7 @@ export const useCreateExamFlow = (
     setErrors((previous) => ({ ...previous, selectedQuestions: undefined }));
     setSubmitState({ status: "idle" });
   };
+
   const setQuestionPoints = (questionId: string, value: string) => {
     setSelectedQuestionPoints((previous) => ({ ...previous, [questionId]: value }));
     setErrors((previous) => {
@@ -204,6 +240,7 @@ export const useCreateExamFlow = (
     });
     setSubmitState({ status: "idle" });
   };
+
   const submitForm = async (): Promise<string | null> => {
     const nextErrors = validateCreateExamForm(formValues, selectedQuestionPoints);
     if (hasValidationErrors(nextErrors)) {
@@ -214,29 +251,22 @@ export const useCreateExamFlow = (
 
     const durationMinutes = parseDurationMinutes(formValues.durationMinutes);
     if (!durationMinutes) {
-      setErrors((previous) => ({
-        ...previous,
-        durationMinutes: "Хугацааны утга буруу байна.",
-      }));
+      setErrors((previous) => ({ ...previous, durationMinutes: "Хугацааны утга буруу байна." }));
       return null;
     }
+
     const scheduledFor = toScheduledForIso(formValues.scheduledFor);
     if (formValues.scheduledFor.trim().length && !scheduledFor) {
-      setErrors((previous) => ({
-        ...previous,
-        scheduledFor: "Товлох огноо буруу байна.",
-      }));
+      setErrors((previous) => ({ ...previous, scheduledFor: "Товлох огноо буруу байна." }));
       return null;
     }
+
     const selectedQuestions = toSelectedQuestionsPayload(selectedQuestionPoints);
     const generationRules =
       formValues.generationMode === ExamGenerationMode.RuleBased
         ? formValues.generationRules.map((rule) => ({
             sourceId: rule.sourceId,
-            difficulty:
-              rule.difficulty === "ALL"
-                ? null
-                : (rule.difficulty as Difficulty),
+            difficulty: rule.difficulty === "ALL" ? null : (rule.difficulty as Difficulty),
             count: Number.parseInt(rule.count.trim(), 10),
             points: Number.parseInt(rule.points.trim(), 10),
           }))
@@ -245,9 +275,7 @@ export const useCreateExamFlow = (
       formValues.generationMode === ExamGenerationMode.RuleBased
         ? generationRules
             ?.map((rule) => {
-              const source = ruleSourceOptions.find(
-                (option) => option.id === rule.sourceId,
-              );
+              const source = ruleSourceOptions.find((option) => option.id === rule.sourceId);
               if (!source) {
                 return null;
               }
@@ -272,9 +300,49 @@ export const useCreateExamFlow = (
             ) ?? []
         : null;
     const passingThreshold = Number.parseInt(formValues.passingThreshold.trim(), 10);
+
     setErrors(EMPTY_ERRORS);
     setSubmitState({ status: "idle" });
+
     try {
+      if (isEditMode) {
+        const updateResult = await runUpdateExamDraft({
+          variables: {
+            examId,
+            classId: formValues.classId,
+            title: formValues.title.trim(),
+            description: formValues.description.trim() || null,
+            mode: formValues.mode,
+            durationMinutes,
+            scheduledFor,
+            shuffleQuestions: formValues.shuffleQuestions,
+            shuffleAnswers: formValues.shuffleAnswers,
+            generationMode: formValues.generationMode,
+            rules: resolvedGenerationRules,
+            passingCriteriaType: formValues.passingCriteriaType,
+            passingThreshold,
+            questionItems:
+              formValues.generationMode === ExamGenerationMode.Manual ? selectedQuestions : [],
+          },
+        });
+        const updatedExam = updateResult.data?.updateExamDraft;
+        if (!updatedExam) {
+          throw new Error("Шалгалтын шинэчлэгдсэн мэдээлэл ирсэнгүй.");
+        }
+        setSubmitState({
+          status: "success",
+          action: "updated",
+          examId: updatedExam.id,
+          title: updatedExam.title,
+          questionCount:
+            formValues.generationMode === ExamGenerationMode.RuleBased
+              ? resolvedGenerationRules?.reduce((sum, rule) => sum + rule.count, 0) ?? 0
+              : selectedQuestions.length,
+        });
+        await Promise.all([optionsQuery.refetch(), draftQuery.refetch()]);
+        return updatedExam.id;
+      }
+
       const createResult = await runCreateExam({
         variables: {
           classId: formValues.classId,
@@ -295,6 +363,7 @@ export const useCreateExamFlow = (
       if (!createdExam) {
         throw new Error("Шалгалт үүсгэгдсэн мэдээлэл ирсэнгүй.");
       }
+
       setIsAddingQuestions(true);
       if (formValues.generationMode === ExamGenerationMode.Manual) {
         for (const selectedQuestion of selectedQuestions) {
@@ -307,6 +376,7 @@ export const useCreateExamFlow = (
           });
         }
       }
+
       const resolvedAssignedExamId =
         assignmentClassId.trim().length > 0
           ? (
@@ -318,8 +388,10 @@ export const useCreateExamFlow = (
       if (assignmentClassId.trim().length > 0 && !resolvedAssignedExamId) {
         throw new Error("Шалгалтыг ангид холбоход алдаа гарлаа.");
       }
+
       setSubmitState({
         status: "success",
+        action: "created",
         examId: createdExam.id,
         title: createdExam.title,
         questionCount:
@@ -349,19 +421,25 @@ export const useCreateExamFlow = (
       setIsAddingQuestions(false);
     }
   };
+
   return {
     classOptions,
     questionBankOptions,
     ruleSourceOptions,
     questionOptions,
+    resolvedBankId,
     formValues,
     selectedQuestionPoints,
     errors,
     submitState,
-    isOptionsLoading: optionsQuery.loading,
-    optionsError: optionsQuery.error,
+    isEditMode,
+    isOptionsLoading: optionsQuery.loading || (isEditMode && draftQuery.loading && !hasHydratedDraft),
+    optionsError: optionsQuery.error ?? draftQuery.error,
     isSubmitting:
-      createExamState.loading || assignExamState.loading || isAddingQuestions,
+      createExamState.loading ||
+      updateExamDraftState.loading ||
+      assignExamState.loading ||
+      isAddingQuestions,
     isClassSelectionLocked: Boolean(initialClassId),
     setFieldValue,
     toggleQuestion,
@@ -372,6 +450,6 @@ export const useCreateExamFlow = (
     removeGenerationRule,
     updateGenerationRule,
     submitForm,
-    refetchOptions: optionsQuery.refetch,
+    refetchOptions: async () => Promise.all([optionsQuery.refetch(), isEditMode ? draftQuery.refetch() : Promise.resolve()]),
   };
 };

@@ -88,6 +88,7 @@ export type CreateExamSubmitState =
   | { status: "idle" }
   | {
       status: "success";
+      action: "created" | "updated";
       examId: string;
       title: string;
       questionCount: number;

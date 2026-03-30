@@ -6,10 +6,11 @@ import { ExamResultsReportDialog } from "./exam-results-report-dialog";
 import { ExamResultsStudentDetailDialog } from "./exam-results-student-detail-dialog";
 import { ExamResultsStudents } from "./exam-results-students";
 import { ExamResultsSummary } from "./exam-results-summary";
-import type { MyExamStudentRow, MyExamView } from "./my-exams-types";
+import type { MyExamListView, MyExamStudentRow } from "./my-exams-types";
+import { useMyExamDetail } from "./use-my-exam-detail";
 
 type ExamResultsDialogProps = {
-  exam: MyExamView | null;
+  exam: MyExamListView | null;
   open: boolean;
   onClose: () => void;
 };
@@ -26,6 +27,7 @@ export function ExamResultsDialog({
   const [selectedStudent, setSelectedStudent] = useState<MyExamStudentRow | null>(
     null,
   );
+  const { detailExam, loading, error } = useMyExamDetail(exam, open);
 
   if (!open || !exam) {
     return null;
@@ -59,7 +61,7 @@ export function ExamResultsDialog({
         <div className="space-y-6">
           <div className="space-y-2">
             <h2 className="text-[18px] font-semibold text-[#0F1216]">
-              Үр дүн: {exam.title}
+              Үр дүн: {detailExam?.title ?? exam.title}
             </h2>
             <p className="text-[14px] text-[#52555B]">
               Сурагчдын гүйцэтгэлийн дэлгэрэнгүй мэдээлэл
@@ -91,28 +93,43 @@ export function ExamResultsDialog({
             </button>
           </div>
 
-          {activeTab === "summary" ? (
-            <ExamResultsSummary
-              footer={exam.footer}
-              onOpenReport={() => setIsReportOpen(true)}
-            />
-          ) : (
-            <ExamResultsStudents
-              rows={exam.students}
-              onSelectStudent={setSelectedStudent}
-            />
-          )}
+          {loading && !detailExam ? (
+            <div className="flex items-center gap-3 rounded-lg border border-[#DFE1E5] bg-white px-4 py-3 text-[14px] text-[#52555B]">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#D0D5DD] border-t-[#155EEF]" />
+              Үр дүнгийн мэдээлэл ачаалж байна...
+            </div>
+          ) : null}
+
+          {error && !detailExam ? (
+            <div className="rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-[14px] text-[#B42318]">
+              Үр дүнгийн мэдээлэл ачаалж чадсангүй.
+            </div>
+          ) : null}
+
+          {detailExam ? (
+            activeTab === "summary" ? (
+              <ExamResultsSummary
+                footer={detailExam.footer}
+                onOpenReport={() => setIsReportOpen(true)}
+              />
+            ) : (
+              <ExamResultsStudents
+                rows={detailExam.students}
+                onSelectStudent={setSelectedStudent}
+              />
+            )
+          ) : null}
         </div>
       </div>
       <ExamResultsStudentDetailDialog
         open={Boolean(selectedStudent)}
         student={selectedStudent}
-        exam={exam}
+        exam={detailExam}
         onClose={() => setSelectedStudent(null)}
       />
       <ExamResultsReportDialog
         open={isReportOpen}
-        exam={exam}
+        exam={detailExam}
         onClose={() => setIsReportOpen(false)}
       />
     </div>

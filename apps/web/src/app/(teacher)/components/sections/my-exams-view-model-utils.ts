@@ -8,6 +8,16 @@ import { getCurriculumTopicGroupName } from "../question-bank-curriculum";
 import { CalendarIcon, ClipboardIcon, ClockIcon } from "../icons";
 import type { ExamMetaItem, MyExamQuestionPreview, QueryExam } from "./my-exams-types";
 
+type ExamMetaSource = {
+  questions: Array<{ points: number }>;
+  durationMinutes: number;
+  class: { name: string };
+  startedAt?: string | null;
+  endsAt?: string | null;
+  createdAt: string;
+  status: ExamStatus;
+};
+
 export const formatDate = (value: string | null | undefined) => {
   if (!value) return "Хугацаа байхгүй";
   const date = new Date(value);
@@ -119,7 +129,7 @@ export const buildPreviewQuestions = (exam: QueryExam): MyExamQuestionPreview[] 
       ),
     }));
 
-export const buildExamMeta = (exam: QueryExam): ExamMetaItem[] => {
+export const buildExamMeta = (exam: ExamMetaSource): ExamMetaItem[] => {
   const meta: ExamMetaItem[] = [
     { icon: ClipboardIcon, text: `${exam.questions.length} асуулт` },
     { icon: ClockIcon, text: `${exam.durationMinutes} минут` },

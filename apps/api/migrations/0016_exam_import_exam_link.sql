@@ -1,0 +1,1 @@
+ALTER TABLE exam_import_jobs ADD COLUMN exam_id TEXT REFERENCES exams(id) ON DELETE SET NULL;
