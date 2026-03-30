@@ -1,4 +1,4 @@
-import { all, first, invariant, run, type D1DatabaseLike } from "../../lib/d1";
+import { all, first, invariant, run, runMany, type D1DatabaseLike } from "../../lib/d1";
 import type { RequestContext } from "../../auth";
 import { parseImportedExamText, type ParsedImportQuestion } from "./imports-parser";
 import {
@@ -84,10 +84,10 @@ const insertImportQuestions = async (
   createdAt: string,
   questions: ParsedImportQuestion[],
 ) => {
-  for (const [index, question] of questions.entries()) {
-    await run(
-      db,
-      `INSERT INTO exam_import_questions (
+  await runMany(
+    db,
+    questions.map((question, index) => ({
+      sql: `INSERT INTO exam_import_questions (
         id,
         job_id,
         display_order,
@@ -104,7 +104,7 @@ const insertImportQuestions = async (
         created_at
       )
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
+      params: [
         makeId("import_question"),
         jobId,
         index + 1,
@@ -120,8 +120,8 @@ const insertImportQuestions = async (
         question.needsReview ? 1 : 0,
         createdAt,
       ],
-    );
-  }
+    })),
+  );
 };
 
 const normalizeReviewedQuestion = (

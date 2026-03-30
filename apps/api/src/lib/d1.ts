@@ -13,6 +13,9 @@ export type D1PreparedStatementLike = {
 
 export type D1DatabaseLike = {
   prepare(query: string): D1PreparedStatementLike;
+  batch?<T = unknown>(
+    statements: D1PreparedStatementLike[],
+  ): Promise<Array<D1Result<T>>>;
 };
 
 export function invariant(
@@ -54,4 +57,24 @@ export const run = async (
   params: unknown[] = [],
 ): Promise<void> => {
   await statement(db, sql, params).run();
+};
+
+export const runMany = async (
+  db: D1DatabaseLike,
+  statements: Array<{ sql: string; params?: unknown[] }>,
+): Promise<void> => {
+  if (statements.length === 0) {
+    return;
+  }
+
+  if (db.batch) {
+    await db.batch(
+      statements.map(({ sql, params = [] }) => statement(db, sql, params)),
+    );
+    return;
+  }
+
+  for (const { sql, params = [] } of statements) {
+    await run(db, sql, params);
+  }
 };
