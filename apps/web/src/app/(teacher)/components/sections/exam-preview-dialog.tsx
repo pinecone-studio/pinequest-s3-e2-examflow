@@ -4,11 +4,12 @@ import {
   PreviewPencilIcon,
   PreviewTrashIcon,
 } from "../icons";
-import type { MyExamView } from "./my-exams-types";
+import type { MyExamListView } from "./my-exams-types";
 import { ExamPreviewQuestionCard } from "./exam-preview-question-card";
+import { useMyExamDetail } from "./use-my-exam-detail";
 
 type ExamPreviewDialogProps = {
-  exam: MyExamView | null;
+  exam: MyExamListView | null;
   open: boolean;
   onClose: () => void;
 };
@@ -18,9 +19,13 @@ export function ExamPreviewDialog({
   open,
   onClose,
 }: ExamPreviewDialogProps) {
+  const { detailExam, loading, error } = useMyExamDetail(exam, open);
+
   if (!open || !exam) {
     return null;
   }
+
+  const resolvedExam = detailExam;
 
   return (
     <div
@@ -36,12 +41,28 @@ export function ExamPreviewDialog({
         <div className="mx-[26px] mt-[30px] w-[620px] max-w-[calc(100%-52px)]">
           <div className="space-y-2">
             <h2 className="text-[18px] font-semibold leading-[18px] text-[#101828]">
-              {exam.title}
+              {resolvedExam?.title ?? exam.title}
             </h2>
             <p className="text-[14px] leading-5 text-[#667085]">
               Шалгалтын дэлгэрэнгүй мэдээлэл
             </p>
           </div>
+
+          {loading && !resolvedExam ? (
+            <div className="mt-6 flex items-center gap-3 rounded-[12px] border border-[#D0D5DD] bg-white px-4 py-3 text-[14px] text-[#52555B]">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#D0D5DD] border-t-[#155EEF]" />
+              Шалгалтын дэлгэрэнгүйг ачаалж байна...
+            </div>
+          ) : null}
+
+          {error && !resolvedExam ? (
+            <div className="mt-6 rounded-[12px] border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-[14px] text-[#B42318]">
+              Шалгалтын дэлгэрэнгүй мэдээлэл ачаалж чадсангүй.
+            </div>
+          ) : null}
+
+          {resolvedExam ? (
+            <>
 
           <section className="mt-4">
             <div className="flex items-center gap-2 text-[#161616]">
@@ -53,25 +74,25 @@ export function ExamPreviewDialog({
               <div className="w-[146px]">
                 <p className="text-[14px] leading-5 text-[#667085]">Хичээл:</p>
                 <p className="text-[14px] font-medium leading-5 text-[#161616]">
-                  {exam.subjectName || exam.subject}
+                  {resolvedExam.subjectName || resolvedExam.subject}
                 </p>
               </div>
               <div className="w-[146px]">
                 <p className="text-[14px] leading-5 text-[#667085]">Үүсгэсэн:</p>
                 <p className="text-[14px] font-medium leading-5 text-[#161616]">
-                  {exam.createdDateLabel}
+                  {resolvedExam.createdDateLabel}
                 </p>
               </div>
               <div className="w-[146px]">
                 <p className="text-[14px] leading-5 text-[#667085]">Асуултын тоо:</p>
                 <p className="text-[14px] font-medium leading-5 text-[#161616]">
-                  {exam.questionCount}
+                  {resolvedExam.questionCount}
                 </p>
               </div>
               <div className="w-[146px]">
                 <p className="text-[14px] leading-5 text-[#667085]">Нийт оноо:</p>
                 <p className="text-[14px] font-medium leading-5 text-[#161616]">
-                  {exam.totalPoints}
+                  {resolvedExam.totalPoints}
                 </p>
               </div>
             </div>
@@ -83,12 +104,12 @@ export function ExamPreviewDialog({
             <div className="flex items-center gap-2 text-[#161616]">
               <PreviewFileIcon className="h-4 w-4 shrink-0" />
               <h3 className="text-[16px] font-medium leading-5">
-                Асуултууд ({exam.previewQuestions.length})
+                Асуултууд ({resolvedExam.previewQuestions.length})
               </h3>
             </div>
 
             <div className="mt-3 space-y-3">
-              {exam.previewQuestions.map((question, index) => (
+              {resolvedExam.previewQuestions.map((question, index) => (
                 <ExamPreviewQuestionCard
                   key={question.id}
                   index={index}
@@ -114,6 +135,8 @@ export function ExamPreviewDialog({
               <PreviewTrashIcon className="h-4 w-4 shrink-0" />
             </button>
           </div>
+            </>
+          ) : null}
         </div>
       </div>
     </div>

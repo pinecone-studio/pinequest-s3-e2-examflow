@@ -1,7 +1,11 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useQuery } from "@apollo/client/react";
-import { ExamStatus, MyExamsQueryDocument, type MyExamsQueryQuery } from "@/graphql/generated";
+import {
+  ExamStatus,
+  MyExamsSectionQueryDocument,
+  type MyExamsSectionQueryQuery,
+} from "@/graphql/generated";
 import { useLiveExamEvents } from "@/lib/use-live-exam-events";
 import { ExamPreviewDialog } from "./exam-preview-dialog";
 import { MyExamsLoadingList } from "./my-exams-loading-list";
@@ -11,13 +15,13 @@ import {
   getMyExamsSectionContent,
   type MyExamsSectionMode,
 } from "./my-exams-section-config";
-import type { MyExamView } from "./my-exams-types";
+import type { MyExamListView } from "./my-exams-types";
 import { MyExamsToolbar } from "./my-exams-toolbar";
-import { buildMyExamViews } from "./my-exams-view-model";
+import { buildMyExamListViews } from "./my-exams-view-model";
 
 type MyExamsSectionProps = { mode?: MyExamsSectionMode };
 
-const isLibraryExam = (exam: MyExamsQueryQuery["exams"][number]) =>
+const isLibraryExam = (exam: MyExamsSectionQueryQuery["exams"][number]) =>
   exam.isTemplate || (!exam.sourceExamId && exam.status === ExamStatus.Draft);
 
 export function MyExamsSection({ mode = "library" }: MyExamsSectionProps) {
@@ -25,12 +29,15 @@ export function MyExamsSection({ mode = "library" }: MyExamsSectionProps) {
   const [status, setStatus] = useState("Бүх төлөв");
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isResultsOpen, setIsResultsOpen] = useState(false);
-  const [selectedExam, setSelectedExam] = useState<MyExamView | null>(null);
-  const { data, loading, error, refetch } = useQuery<MyExamsQueryQuery>(MyExamsQueryDocument, {
-    fetchPolicy: "network-only",
-    nextFetchPolicy: "cache-first",
-    notifyOnNetworkStatusChange: true,
-  });
+  const [selectedExam, setSelectedExam] = useState<MyExamListView | null>(null);
+  const { data, loading, error, refetch } = useQuery<MyExamsSectionQueryQuery>(
+    MyExamsSectionQueryDocument,
+    {
+      fetchPolicy: "network-only",
+      nextFetchPolicy: "cache-first",
+      notifyOnNetworkStatusChange: true,
+    },
+  );
 
   useLiveExamEvents({
     classIds: data?.me?.classes.map((classroom) => classroom.id) ?? [],
@@ -49,7 +56,7 @@ export function MyExamsSection({ mode = "library" }: MyExamsSectionProps) {
           ? ownExams.filter((exam) => !isLibraryExam(exam))
           : ownExams.filter(isLibraryExam);
       return {
-        exams: buildMyExamViews(scopedExams),
+        exams: buildMyExamListViews(scopedExams),
         errorMessage: error
           ? "Шалгалтын мэдээлэл уншихад алдаа гарлаа."
           : null,
@@ -57,7 +64,7 @@ export function MyExamsSection({ mode = "library" }: MyExamsSectionProps) {
     } catch (mappingError) {
       console.error("Failed to map my exams", mappingError);
       return {
-        exams: [] as MyExamView[],
+        exams: [] as MyExamListView[],
         errorMessage: "Шалгалтын өгөгдлийг боловсруулахад алдаа гарлаа.",
       };
     }

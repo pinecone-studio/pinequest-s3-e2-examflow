@@ -1,0 +1,41 @@
+query MyExamsSectionQuery {
+  me {
+    id
+    classes {
+      id
+    }
+  }
+  exams {
+    id
+    isTemplate
+    sourceExamId
+    title
+    status
+    durationMinutes
+    passingCriteriaType
+    passingThreshold
+    createdAt
+    startedAt
+    endsAt
+    createdBy {
+      id
+    }
+    class {
+      id
+      name
+      subject
+      grade
+      studentCount
+    }
+    questions {
+      id
+      points
+      order
+    }
+    attempts {
+      id
+      status
+      totalScore
+    }
+  }
+}

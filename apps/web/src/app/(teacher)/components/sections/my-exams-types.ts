@@ -1,9 +1,11 @@
 import type { PassingCriteriaType } from "@/graphql/generated";
-import type { MyExamsQueryQuery } from "@/graphql/generated";
+import type { MyExamDetailQueryQuery, MyExamsSectionQueryQuery } from "@/graphql/generated";
 
 type IconComponent = (props: { className?: string }) => React.JSX.Element;
 
-export type QueryExam = MyExamsQueryQuery["exams"][number];
+export type QueryExamList = MyExamsSectionQueryQuery["exams"][number];
+export type QueryExamDetail = NonNullable<MyExamDetailQueryQuery["exam"]>;
+export type QueryExam = QueryExamDetail;
 
 export type ExamMetaItem = { icon?: IconComponent; text: string; tone?: string };
 
@@ -57,7 +59,7 @@ export type MyExamStudentRow = {
   answers: MyExamStudentAnswer[];
 };
 
-export type MyExamView = {
+export type MyExamListView = {
   id: string;
   title: string;
   subject: string;
@@ -77,6 +79,9 @@ export type MyExamView = {
   actions: { view: boolean; results: boolean };
   footer?: ExamFooterData;
   highlight?: boolean;
+};
+
+export type MyExamView = MyExamListView & {
   previewQuestions: MyExamQuestionPreview[];
   students: MyExamStudentRow[];
 };

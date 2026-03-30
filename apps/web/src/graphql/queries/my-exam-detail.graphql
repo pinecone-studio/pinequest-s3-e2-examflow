@@ -1,0 +1,69 @@
+query MyExamDetailQuery($id: ID!) {
+  exam(id: $id) {
+    id
+    isTemplate
+    sourceExamId
+    title
+    status
+    durationMinutes
+    passingCriteriaType
+    passingThreshold
+    createdAt
+    startedAt
+    endsAt
+    createdBy {
+      id
+    }
+    class {
+      id
+      name
+      subject
+      grade
+      studentCount
+    }
+    questions {
+      id
+      points
+      order
+      question {
+        id
+        title
+        prompt
+        type
+        options
+        correctAnswer
+        bank {
+          id
+          topic
+        }
+      }
+    }
+    attempts {
+      id
+      status
+      autoScore
+      manualScore
+      totalScore
+      startedAt
+      submittedAt
+      student {
+        id
+        fullName
+      }
+      answers {
+        id
+        value
+        autoScore
+        manualScore
+        feedback
+        createdAt
+        question {
+          id
+          title
+          prompt
+          type
+        }
+      }
+    }
+  }
+}

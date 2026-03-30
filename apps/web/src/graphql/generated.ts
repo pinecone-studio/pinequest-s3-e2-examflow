@@ -793,6 +793,18 @@ export type HealthQueryQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type HealthQueryQuery = { __typename?: 'Query', health: { __typename?: 'Health', ok: boolean, service: string, runtime: string } };
 
+export type MyExamDetailQueryQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type MyExamDetailQueryQuery = { __typename?: 'Query', exam?: { __typename?: 'Exam', id: string, isTemplate: boolean, sourceExamId?: string | null, title: string, status: ExamStatus, durationMinutes: number, passingCriteriaType: PassingCriteriaType, passingThreshold: number, createdAt: string, startedAt?: string | null, endsAt?: string | null, createdBy: { __typename?: 'User', id: string }, class: { __typename?: 'Class', id: string, name: string, subject: string, grade: number, studentCount: number }, questions: Array<{ __typename?: 'ExamQuestion', id: string, points: number, order: number, question: { __typename?: 'Question', id: string, title: string, prompt: string, type: QuestionType, options: Array<string>, correctAnswer?: string | null, bank: { __typename?: 'QuestionBank', id: string, topic: string } } }>, attempts: Array<{ __typename?: 'Attempt', id: string, status: AttemptStatus, autoScore: number, manualScore: number, totalScore: number, startedAt: string, submittedAt?: string | null, student: { __typename?: 'User', id: string, fullName: string }, answers: Array<{ __typename?: 'Answer', id: string, value: string, autoScore?: number | null, manualScore?: number | null, feedback?: string | null, createdAt: string, question: { __typename?: 'Question', id: string, title: string, prompt: string, type: QuestionType } }> }> } | null };
+
+export type MyExamsSectionQueryQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyExamsSectionQueryQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string, classes: Array<{ __typename?: 'Class', id: string }> } | null, exams: Array<{ __typename?: 'Exam', id: string, isTemplate: boolean, sourceExamId?: string | null, title: string, status: ExamStatus, durationMinutes: number, passingCriteriaType: PassingCriteriaType, passingThreshold: number, createdAt: string, startedAt?: string | null, endsAt?: string | null, createdBy: { __typename?: 'User', id: string }, class: { __typename?: 'Class', id: string, name: string, subject: string, grade: number, studentCount: number }, questions: Array<{ __typename?: 'ExamQuestion', id: string, points: number, order: number }>, attempts: Array<{ __typename?: 'Attempt', id: string, status: AttemptStatus, totalScore: number }> }> };
+
 export type MyExamsQueryQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -2073,6 +2085,191 @@ export type HealthQueryQueryHookResult = ReturnType<typeof useHealthQueryQuery>;
 export type HealthQueryLazyQueryHookResult = ReturnType<typeof useHealthQueryLazyQuery>;
 export type HealthQuerySuspenseQueryHookResult = ReturnType<typeof useHealthQuerySuspenseQuery>;
 export type HealthQueryQueryResult = ApolloReactCommon.QueryResult<HealthQueryQuery, HealthQueryQueryVariables>;
+export const MyExamDetailQueryDocument = gql`
+    query MyExamDetailQuery($id: ID!) {
+  exam(id: $id) {
+    id
+    isTemplate
+    sourceExamId
+    title
+    status
+    durationMinutes
+    passingCriteriaType
+    passingThreshold
+    createdAt
+    startedAt
+    endsAt
+    createdBy {
+      id
+    }
+    class {
+      id
+      name
+      subject
+      grade
+      studentCount
+    }
+    questions {
+      id
+      points
+      order
+      question {
+        id
+        title
+        prompt
+        type
+        options
+        correctAnswer
+        bank {
+          id
+          topic
+        }
+      }
+    }
+    attempts {
+      id
+      status
+      autoScore
+      manualScore
+      totalScore
+      startedAt
+      submittedAt
+      student {
+        id
+        fullName
+      }
+      answers {
+        id
+        value
+        autoScore
+        manualScore
+        feedback
+        createdAt
+        question {
+          id
+          title
+          prompt
+          type
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useMyExamDetailQueryQuery__
+ *
+ * To run a query within a React component, call `useMyExamDetailQueryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMyExamDetailQueryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyExamDetailQueryQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useMyExamDetailQueryQuery(baseOptions: ApolloReactHooks.QueryHookOptions<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables> & ({ variables: MyExamDetailQueryQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>(MyExamDetailQueryDocument, options);
+      }
+export function useMyExamDetailQueryLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>(MyExamDetailQueryDocument, options);
+        }
+// @ts-ignore
+export function useMyExamDetailQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>;
+export function useMyExamDetailQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<MyExamDetailQueryQuery | undefined, MyExamDetailQueryQueryVariables>;
+export function useMyExamDetailQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>(MyExamDetailQueryDocument, options);
+        }
+export type MyExamDetailQueryQueryHookResult = ReturnType<typeof useMyExamDetailQueryQuery>;
+export type MyExamDetailQueryLazyQueryHookResult = ReturnType<typeof useMyExamDetailQueryLazyQuery>;
+export type MyExamDetailQuerySuspenseQueryHookResult = ReturnType<typeof useMyExamDetailQuerySuspenseQuery>;
+export type MyExamDetailQueryQueryResult = ApolloReactCommon.QueryResult<MyExamDetailQueryQuery, MyExamDetailQueryQueryVariables>;
+export const MyExamsSectionQueryDocument = gql`
+    query MyExamsSectionQuery {
+  me {
+    id
+    classes {
+      id
+    }
+  }
+  exams {
+    id
+    isTemplate
+    sourceExamId
+    title
+    status
+    durationMinutes
+    passingCriteriaType
+    passingThreshold
+    createdAt
+    startedAt
+    endsAt
+    createdBy {
+      id
+    }
+    class {
+      id
+      name
+      subject
+      grade
+      studentCount
+    }
+    questions {
+      id
+      points
+      order
+    }
+    attempts {
+      id
+      status
+      totalScore
+    }
+  }
+}
+    `;
+
+/**
+ * __useMyExamsSectionQueryQuery__
+ *
+ * To run a query within a React component, call `useMyExamsSectionQueryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMyExamsSectionQueryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyExamsSectionQueryQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useMyExamsSectionQueryQuery(baseOptions?: ApolloReactHooks.QueryHookOptions<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useQuery<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>(MyExamsSectionQueryDocument, options);
+      }
+export function useMyExamsSectionQueryLazyQuery(baseOptions?: ApolloReactHooks.LazyQueryHookOptions<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useLazyQuery<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>(MyExamsSectionQueryDocument, options);
+        }
+// @ts-ignore
+export function useMyExamsSectionQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>;
+export function useMyExamsSectionQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>): ApolloReactHooks.UseSuspenseQueryResult<MyExamsSectionQueryQuery | undefined, MyExamsSectionQueryQueryVariables>;
+export function useMyExamsSectionQuerySuspenseQuery(baseOptions?: ApolloReactHooks.SkipToken | ApolloReactHooks.SuspenseQueryHookOptions<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>) {
+          const options = baseOptions === ApolloReactHooks.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return ApolloReactHooks.useSuspenseQuery<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>(MyExamsSectionQueryDocument, options);
+        }
+export type MyExamsSectionQueryQueryHookResult = ReturnType<typeof useMyExamsSectionQueryQuery>;
+export type MyExamsSectionQueryLazyQueryHookResult = ReturnType<typeof useMyExamsSectionQueryLazyQuery>;
+export type MyExamsSectionQuerySuspenseQueryHookResult = ReturnType<typeof useMyExamsSectionQuerySuspenseQuery>;
+export type MyExamsSectionQueryQueryResult = ApolloReactCommon.QueryResult<MyExamsSectionQueryQuery, MyExamsSectionQueryQueryVariables>;
 export const MyExamsQueryDocument = gql`
     query MyExamsQuery {
   me {

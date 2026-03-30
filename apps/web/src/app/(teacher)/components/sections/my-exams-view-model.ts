@@ -2,11 +2,13 @@
 import { AttemptStatus, ExamStatus, QuestionType } from "@/graphql/generated";
 import { getCurriculumTopicGroupName } from "../question-bank-curriculum";
 import type {
+  MyExamListView,
   MyExamQuestionPreview,
   MyExamStudentAnswer,
   MyExamStudentRow,
   MyExamView,
-  QueryExam,
+  QueryExamDetail,
+  QueryExamList,
 } from "./my-exams-types";
 import {
   buildExamMeta,
@@ -47,7 +49,7 @@ const getPreviewAnswerText = (
   return null;
 };
 
-const buildPreviewQuestions = (exam: QueryExam): MyExamQuestionPreview[] =>
+const buildPreviewQuestions = (exam: QueryExamDetail): MyExamQuestionPreview[] =>
   [...exam.questions]
     .sort((first, second) => first.order - second.order)
     .map((item) => ({
@@ -76,123 +78,133 @@ const buildPreviewQuestions = (exam: QueryExam): MyExamQuestionPreview[] =>
       ),
     }));
 
-export const buildMyExamViews = (exams: QueryExam[]): MyExamView[] =>
+const buildBaseExamView = (
+  exam: QueryExamList | QueryExamDetail,
+): MyExamListView => {
+  const totalStudents = exam.class.studentCount;
+  const totalPoints = exam.questions.reduce((sum, question) => sum + question.points, 0);
+  const questionCountLabel = `${exam.questions.length} асуулт`;
+  const durationLabel = `${exam.durationMinutes} минут`;
+  const totalPointsLabel = `${totalPoints} оноо`;
+  const submittedAttempts = exam.attempts.filter(
+    (attempt) => attempt.status !== AttemptStatus.InProgress,
+  );
+  const passed = submittedAttempts.filter((attempt) =>
+    hasPassedExam(
+      attempt.totalScore,
+      totalPoints,
+      exam.passingCriteriaType,
+      exam.passingThreshold,
+    ),
+  ).length;
+
+  const average = submittedAttempts.length
+    ? Math.round(
+        (submittedAttempts.reduce((sum, attempt) => sum + attempt.totalScore, 0) /
+          submittedAttempts.length /
+          Math.max(totalPoints, 1)) *
+          100,
+      )
+    : 0;
+
+  const footer =
+    exam.status === ExamStatus.Closed
+      ? {
+          type: "summary" as const,
+          students: totalStudents,
+          submitted: submittedAttempts.length,
+          passRate: submittedAttempts.length
+            ? Math.round((passed / submittedAttempts.length) * 100)
+            : 0,
+          passed,
+          failed: Math.max(submittedAttempts.length - passed, 0),
+          average,
+        }
+      : {
+          type: "counts" as const,
+          students: totalStudents,
+          submitted: submittedAttempts.length,
+        };
+
+  return {
+    id: exam.id,
+    title: exam.title,
+    subject: exam.class.name,
+    subjectName: exam.class.subject,
+    classGrade: exam.class.grade,
+    createdDateLabel: formatDateOnly(exam.createdAt),
+    questionCount: exam.questions.length,
+    totalPoints,
+    passingCriteriaType: exam.passingCriteriaType,
+    passingThreshold: exam.passingThreshold,
+    secondaryLabel:
+      exam.status === ExamStatus.Draft
+        ? "Хувийн сан"
+        : `${getExamStatus(exam.status).label} • ${submittedAttempts.length}/${totalStudents} илгээсэн`,
+    questionCountLabel,
+    durationLabel,
+    totalPointsLabel,
+    status: getExamStatus(exam.status),
+    meta: buildExamMeta(exam),
+    actions: { view: true, results: exam.attempts.length > 0 },
+    footer,
+    highlight: exam.status === ExamStatus.Published,
+  };
+};
+
+export const buildMyExamListViews = (exams: QueryExamList[]): MyExamListView[] =>
   [...exams]
     .sort(
       (first, second) =>
         new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime(),
     )
-    .map((exam) => {
-      const totalStudents = exam.class.students.length;
-      const totalPoints = exam.questions.reduce((sum, question) => sum + question.points, 0);
-      const questionCountLabel = `${exam.questions.length} асуулт`;
-      const durationLabel = `${exam.durationMinutes} минут`;
-      const totalPointsLabel = `${totalPoints} оноо`;
-      const submittedAttempts = exam.attempts.filter(
-        (attempt) => attempt.status !== AttemptStatus.InProgress,
-      );
-      const questionOrderMap = new Map(
-        exam.questions.map((item) => [item.question.id, item.order]),
-      );
-      const questionPointsMap = new Map(
-        exam.questions.map((item) => [item.question.id, item.points]),
-      );
+    .map((exam) => buildBaseExamView(exam));
 
-      const studentRows: MyExamStudentRow[] = exam.attempts.map((attempt) => {
-        const answers: MyExamStudentAnswer[] = [...attempt.answers]
-          .sort(
-            (first, second) =>
-              (questionOrderMap.get(first.question.id) ?? Number.MAX_SAFE_INTEGER) -
-              (questionOrderMap.get(second.question.id) ?? Number.MAX_SAFE_INTEGER),
-          )
-          .map((answer) => ({
-            id: answer.id,
-            questionId: answer.question.id,
-            prompt: answer.question.prompt || answer.question.title,
-            value: formatAnswerValue(answer.question.type, answer.value),
-            type: answer.question.type,
-            score: (answer.autoScore ?? 0) + (answer.manualScore ?? 0),
-            total: questionPointsMap.get(answer.question.id) ?? 0,
-            feedback: answer.feedback ?? null,
-            submitted: formatDate(answer.createdAt),
-          }));
+export const buildMyExamDetailView = (exam: QueryExamDetail): MyExamView => {
+  const base = buildBaseExamView(exam);
+  const questionOrderMap = new Map(
+    exam.questions.map((item) => [item.question.id, item.order]),
+  );
+  const questionPointsMap = new Map(
+    exam.questions.map((item) => [item.question.id, item.points]),
+  );
 
-        return {
-          id: attempt.id,
-          name: attempt.student.fullName,
-          subject: exam.class.name,
-          score: attempt.totalScore,
-          total: totalPoints,
-          percent: calculatePercent(attempt.totalScore, totalPoints),
-          statusLabel: getAttemptLabel(attempt.status),
-          statusTone: getAttemptStatus(attempt.status),
-          submitted: formatDate(attempt.submittedAt ?? attempt.startedAt),
-          answers,
-        };
-      });
+  const studentRows: MyExamStudentRow[] = exam.attempts.map((attempt) => {
+    const answers: MyExamStudentAnswer[] = [...attempt.answers]
+      .sort(
+        (first, second) =>
+          (questionOrderMap.get(first.question.id) ?? Number.MAX_SAFE_INTEGER) -
+          (questionOrderMap.get(second.question.id) ?? Number.MAX_SAFE_INTEGER),
+      )
+      .map((answer) => ({
+        id: answer.id,
+        questionId: answer.question.id,
+        prompt: answer.question.prompt || answer.question.title,
+        value: formatAnswerValue(answer.question.type, answer.value),
+        type: answer.question.type,
+        score: (answer.autoScore ?? 0) + (answer.manualScore ?? 0),
+        total: questionPointsMap.get(answer.question.id) ?? 0,
+        feedback: answer.feedback ?? null,
+        submitted: formatDate(answer.createdAt),
+      }));
 
-      const passed = submittedAttempts.filter(
-        (attempt) =>
-          hasPassedExam(
-            attempt.totalScore,
-            totalPoints,
-            exam.passingCriteriaType,
-            exam.passingThreshold,
-          ),
-      ).length;
+    return {
+      id: attempt.id,
+      name: attempt.student.fullName,
+      subject: exam.class.name,
+      score: attempt.totalScore,
+      total: base.totalPoints,
+      percent: calculatePercent(attempt.totalScore, base.totalPoints),
+      statusLabel: getAttemptLabel(attempt.status),
+      statusTone: getAttemptStatus(attempt.status),
+      submitted: formatDate(attempt.submittedAt ?? attempt.startedAt),
+      answers,
+    };
+  });
 
-      const average = submittedAttempts.length
-        ? Math.round(
-            (submittedAttempts.reduce((sum, attempt) => sum + attempt.totalScore, 0) /
-              submittedAttempts.length /
-              Math.max(totalPoints, 1)) *
-              100,
-          )
-        : 0;
-
-      const footer =
-        exam.status === ExamStatus.Closed
-          ? {
-              type: "summary" as const,
-              students: totalStudents,
-              submitted: submittedAttempts.length,
-              passRate: submittedAttempts.length
-                ? Math.round((passed / submittedAttempts.length) * 100)
-                : 0,
-              passed,
-              failed: Math.max(submittedAttempts.length - passed, 0),
-              average,
-            }
-          : {
-              type: "counts" as const,
-              students: totalStudents,
-              submitted: submittedAttempts.length,
-            };
-
-      return {
-        id: exam.id,
-        title: exam.title,
-        subject: exam.class.name,
-        subjectName: exam.class.subject,
-        classGrade: exam.class.grade,
-        createdDateLabel: formatDateOnly(exam.createdAt),
-        questionCount: exam.questions.length,
-        totalPoints,
-        passingCriteriaType: exam.passingCriteriaType,
-        passingThreshold: exam.passingThreshold,
-        secondaryLabel:
-          exam.status === ExamStatus.Draft
-            ? "Хувийн сан"
-            : `${getExamStatus(exam.status).label} • ${submittedAttempts.length}/${totalStudents} илгээсэн`,
-        questionCountLabel,
-        durationLabel,
-        totalPointsLabel,
-        status: getExamStatus(exam.status),
-        meta: buildExamMeta(exam),
-        actions: { view: true, results: exam.attempts.length > 0 },
-        footer,
-        highlight: exam.status === ExamStatus.Published,
-        previewQuestions: buildPreviewQuestions(exam),
-        students: studentRows,
-      };
-    });
+  return {
+    ...base,
+    previewQuestions: buildPreviewQuestions(exam),
+    students: studentRows,
+  };
+};

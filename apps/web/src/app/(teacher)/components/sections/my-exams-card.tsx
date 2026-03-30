@@ -1,7 +1,7 @@
 import CastForEducationIcon from "../icons/CastForEducationIcon";
 import HuggingkidsIcon from "../icons/HuggingkidsIcon";
 import type { MyExamsSectionMode } from "./my-exams-section-config";
-import type { MyExamView } from "./my-exams-types";
+import type { MyExamListView } from "./my-exams-types";
 
 const cardClassName =
   "flex h-[216px] w-[352px] max-w-full flex-none flex-col gap-3 rounded-[16px] border border-[#F1F2F3] bg-white px-[10px] pb-[16px] pt-[10px] shadow-[0px_4px_8px_-2px_rgba(0,0,0,0.1),0px_2px_4px_-2px_rgba(0,0,0,0.06)]";
@@ -10,7 +10,7 @@ const actionButtonClassName =
   "inline-flex h-[36px] items-center justify-center rounded-[8px] border border-[#52555B] px-3 py-2 text-center text-[12px] font-semibold leading-5 text-[#52555B] transition-colors hover:bg-[#F8FAFC]";
 
 type MyExamCardProps = {
-  exam: MyExamView;
+  exam: MyExamListView;
   mode: MyExamsSectionMode;
   onView: () => void;
   onResults: () => void;
