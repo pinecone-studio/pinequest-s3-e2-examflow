@@ -14,6 +14,7 @@ import {
   type PublishExamArgs,
   type QuestionRow,
   type Role,
+  type UpdateExamDraftArgs,
   type UserRow,
 } from "../types";
 import { findQuestionBankById } from "./questions";
@@ -82,6 +83,15 @@ const insertExamQuestions = async (
       [makeId("exam_question"), examId, item.questionId, item.points, index + 1],
     );
   }
+};
+
+const replaceExamQuestions = async (
+  db: D1DatabaseLike,
+  examId: string,
+  items: Array<{ questionId: string; points: number }>,
+) => {
+  await run(db, "DELETE FROM exam_questions WHERE exam_id = ?", [examId]);
+  await insertExamQuestions(db, examId, items);
 };
 
 const buildRuleBasedQuestions = async ({
@@ -509,6 +519,102 @@ export const createExamQueriesAndMutations = ({
        VALUES (?, ?, ?, ?, ?)`,
       [makeId("exam_question"), examId, questionId, points, nextOrder],
     );
+
+    return toExam(db, await findExamById(db, examId));
+  },
+  updateExamDraft: async (
+    {
+      examId,
+      classId,
+      title,
+      description,
+      mode,
+      durationMinutes,
+      scheduledFor,
+      shuffleQuestions,
+      shuffleAnswers,
+      generationMode,
+      rules,
+      passingCriteriaType,
+      passingThreshold,
+      questionItems,
+    }: UpdateExamDraftArgs,
+    context: RequestContext,
+  ) => {
+    const actor = await requireActor(context, ["ADMIN", "TEACHER"]);
+    const exam = await findExamById(db, examId);
+    invariant(exam.status === "DRAFT", "Зөвхөн draft шалгалтыг засварлаж болно.");
+
+    const currentClass = await findClass(db, exam.class_id);
+    const nextClass = await findClass(db, classId);
+    if (actor.role === "TEACHER") {
+      invariant(
+        currentClass.teacher_id === actor.id && nextClass.teacher_id === actor.id,
+        "You can only edit draft exams for your own classes.",
+      );
+    }
+
+    const normalizedRules = normalizeExamRules(rules);
+    if ((generationMode ?? "MANUAL") === "RULE_BASED") {
+      invariant(normalizedRules.length > 0, "Rule-based шалгалтад дор хаяж нэг rule хэрэгтэй.");
+    } else {
+      invariant((questionItems?.length ?? 0) > 0, "Гараар сонгосон дор хаяж нэг асуулт байна.");
+      const seenQuestionIds = new Set<string>();
+      for (const item of questionItems ?? []) {
+        invariant(item.points > 0, "Асуултын оноо 1-ээс их байна.");
+        invariant(!seenQuestionIds.has(item.questionId), "Давхардсан асуулт илэрлээ.");
+        seenQuestionIds.add(item.questionId);
+        await findQuestion(db, item.questionId);
+      }
+    }
+
+    await run(
+      db,
+      `UPDATE exams
+       SET class_id = ?,
+           title = ?,
+           description = ?,
+           mode = ?,
+           duration_minutes = ?,
+           scheduled_for = ?,
+           shuffle_questions = ?,
+           shuffle_answers = ?,
+           generation_mode = ?,
+           rules_json = ?,
+           passing_criteria_type = ?,
+           passing_threshold = ?
+       WHERE id = ?`,
+      [
+        classId,
+        title,
+        description ?? null,
+        mode ?? "SCHEDULED",
+        durationMinutes,
+        scheduledFor ?? now(),
+        shuffleQuestions ? 1 : 0,
+        shuffleAnswers ? 1 : 0,
+        generationMode ?? "MANUAL",
+        JSON.stringify(normalizedRules),
+        passingCriteriaType ?? "PERCENTAGE",
+        passingThreshold ?? 40,
+        examId,
+      ],
+    );
+
+    const nextItems =
+      (generationMode ?? "MANUAL") === "RULE_BASED"
+        ? await buildRuleBasedQuestions({
+            actor,
+            db,
+            examId,
+            rules: normalizedRules,
+          })
+        : (questionItems ?? []).map((item) => ({
+            questionId: item.questionId,
+            points: item.points,
+          }));
+
+    await replaceExamQuestions(db, examId, nextItems);
 
     return toExam(db, await findExamById(db, examId));
   },

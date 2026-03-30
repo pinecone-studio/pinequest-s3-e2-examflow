@@ -1,0 +1,38 @@
+query EditExamDraft($id: ID!) {
+  exam(id: $id) {
+    id
+    title
+    description
+    mode
+    status
+    durationMinutes
+    scheduledFor
+    shuffleQuestions
+    shuffleAnswers
+    generationMode
+    generationRules {
+      label
+      bankIds
+      difficulty
+      count
+      points
+    }
+    passingCriteriaType
+    passingThreshold
+    class {
+      id
+      name
+    }
+    questions {
+      id
+      order
+      points
+      question {
+        id
+        bank {
+          id
+        }
+      }
+    }
+  }
+}

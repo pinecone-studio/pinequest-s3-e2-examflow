@@ -1,4 +1,23 @@
-import { QuestionType, type ApproveExamImportJobMutationMutation, type CreateExamImportJobMutationMutation } from "@/graphql/generated";
+import {
+  QuestionType,
+  type ApproveExamImportJobMutationMutation,
+  type CreateExamImportJobMutationMutation,
+} from "@/graphql/generated";
+
+export type ImportQuestionView = {
+  id: string;
+  order: number;
+  type: QuestionType;
+  title: string;
+  prompt: string;
+  options: string[];
+  answers: string[];
+  score: number;
+  difficulty: string;
+  sourcePage?: number | null;
+  confidence: number;
+  needsReview: boolean;
+};
 
 export type ImportJobView = {
   id: string;
@@ -7,20 +26,8 @@ export type ImportJobView = {
   totalQuestions: number;
   reviewCount: number;
   questionBank?: { id: string; title: string } | null;
-  questions: Array<{
-    id: string;
-    order: number;
-    type: QuestionType;
-    title: string;
-    prompt: string;
-    options: string[];
-    answers: string[];
-    score: number;
-    difficulty: string;
-    sourcePage?: number | null;
-    confidence: number;
-    needsReview: boolean;
-  }>;
+  exam?: { id: string; title: string; classId: string; className: string } | null;
+  questions: ImportQuestionView[];
 };
 
 export const questionTypeLabels: Record<QuestionType, string> = {
@@ -42,6 +49,15 @@ export const buildImportJobView = (
   totalQuestions: job.totalQuestions,
   reviewCount: job.reviewCount,
   questionBank: "questionBank" in job ? job.questionBank : null,
+  exam:
+    "exam" in job && job.exam
+      ? {
+          id: job.exam.id,
+          title: job.exam.title,
+          classId: job.exam.class.id,
+          className: job.exam.class.name,
+        }
+      : null,
   questions: job.questions.map((question) => ({
     id: question.id,
     order: question.order,

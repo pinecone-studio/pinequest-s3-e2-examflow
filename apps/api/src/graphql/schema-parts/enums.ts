@@ -59,8 +59,9 @@ export const schemaEnums = /* GraphQL */ `
 
   enum ExamImportJobStatus {
     UPLOADED
+    PROCESSING
     REVIEW
-    APPROVED
+    PUBLISHED
     FAILED
   }
 

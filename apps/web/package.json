@@ -21,8 +21,10 @@
     "@opennextjs/cloudflare": "^1.17.3",
     "@pinequest/ui": "file:../../packages/ui",
     "next": "^16.2.1",
+    "pdfjs-dist": "^5.6.205",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^6.2.1",

@@ -6,6 +6,7 @@ type CreateExamPageProps = {
   searchParams: Promise<{
     bankId?: string;
     classId?: string;
+    examId?: string;
     returnTo?: string;
   }>;
 };
@@ -21,6 +22,7 @@ export default async function CreateExamPage({
         <CreateExamContent
           initialBankId={params.bankId}
           initialClassId={params.classId}
+          examId={params.examId}
           returnTo={params.returnTo}
         />
       </AppShell>

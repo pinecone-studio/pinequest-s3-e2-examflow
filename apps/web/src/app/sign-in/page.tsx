@@ -1,8 +1,16 @@
 import { Suspense } from "react";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { AuthShell } from "@/app/components/auth-shell";
 import { CustomEmailOtpSignInForm } from "@/app/sign-in/[[...sign-in]]/custom-email-otp-sign-in-form";
 
-export default function SignInPage() {
+export default async function SignInPage() {
+  const { userId } = await auth();
+
+  if (userId) {
+    redirect("/");
+  }
+
   return (
     <AuthShell
       badge="Pinequest Team 9"

@@ -1,5 +1,9 @@
-mutation ApproveExamImportJobMutation($id: ID!) {
-  approveExamImportJob(id: $id) {
+mutation ApproveExamImportJobMutation(
+  $id: ID!
+  $classId: ID!
+  $questions: [ExamImportQuestionReviewInput!]!
+) {
+  approveExamImportJob(id: $id, classId: $classId, questions: $questions) {
     id
     fileName
     status
@@ -9,6 +13,14 @@ mutation ApproveExamImportJobMutation($id: ID!) {
     questionBank {
       id
       title
+    }
+    exam {
+      id
+      title
+      class {
+        id
+        name
+      }
     }
     questions {
       id

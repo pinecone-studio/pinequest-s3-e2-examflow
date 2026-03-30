@@ -1,5 +1,13 @@
-mutation CreateExamImportJobMutation($fileName: String!, $fileSizeBytes: Int!) {
-  createExamImportJob(fileName: $fileName, fileSizeBytes: $fileSizeBytes) {
+mutation CreateExamImportJobMutation(
+  $fileName: String!
+  $fileSizeBytes: Int!
+  $extractedText: String!
+) {
+  createExamImportJob(
+    fileName: $fileName
+    fileSizeBytes: $fileSizeBytes
+    extractedText: $extractedText
+  ) {
     id
     fileName
     fileSizeBytes

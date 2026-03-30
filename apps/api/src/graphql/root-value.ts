@@ -231,8 +231,11 @@ export const createRootValue = ({ db, env }: CreateRootValueArgs) => {
     ...createImportQueriesAndMutations({
       db,
       requireActor,
+      findClass,
+      findExam: findExamById,
       findQuestionBank: findQuestionBankById,
       findUser,
+      toExam: (_, exam) => toExam(exam),
       toQuestionBank: (_, bank) => toQuestionBank(bank),
       toUser,
     }),

@@ -1,16 +1,28 @@
 import Link from "next/link";
 import { PdfImportDialogQuestionCard } from "./pdf-import-dialog-question-card";
-import type { ImportJobView } from "./pdf-import-dialog-utils";
+import type { ImportJobView, ImportQuestionView } from "./pdf-import-dialog-utils";
 
 export function PdfImportDialogReviewPane({
+  examEditHref,
   errorMessage,
+  infoMessage,
   jobView,
+  onQuestionReject,
+  onQuestionUpdate,
+  reviewQuestions,
   reviewSummary,
 }: {
+  examEditHref: string | null;
   errorMessage: string | null;
+  infoMessage: string | null;
   jobView: ImportJobView | null;
+  onQuestionReject: (questionId: string) => void;
+  onQuestionUpdate: (questionId: string, nextQuestion: ImportQuestionView) => void;
+  reviewQuestions: ImportQuestionView[];
   reviewSummary: string | null;
 }) {
+  const isEditable = Boolean(jobView && !jobView.questionBank);
+
   return (
     <div className="flex min-h-0 flex-col">
       <div className="border-b border-[#EAECF0] px-6 py-4">
@@ -28,6 +40,12 @@ export function PdfImportDialogReviewPane({
         {errorMessage ? (
           <div className="mb-4 rounded-2xl border border-[#FDA29B] bg-[#FEF3F2] px-4 py-3 text-[14px] text-[#B42318]">
             {errorMessage}
+          </div>
+        ) : null}
+
+        {infoMessage ? (
+          <div className="mb-4 rounded-2xl border border-[#B2DDFF] bg-[#F0F9FF] px-4 py-3 text-[14px] text-[#175CD3]">
+            {infoMessage}
           </div>
         ) : null}
 
@@ -49,12 +67,35 @@ export function PdfImportDialogReviewPane({
                 >
                   {jobView.questionBank.title}
                 </Link>
+                {jobView.exam ? ` болон ${jobView.exam.className} ангид ноорог шалгалт үүслээ.` : null}
+                {examEditHref ? (
+                  <>
+                    {" "}
+                    <Link href={examEditHref} className="font-semibold underline">
+                      Шалгалтыг засах руу очих
+                    </Link>
+                  </>
+                ) : null}
               </div>
             ) : null}
 
-            {jobView.questions.map((question) => (
-              <PdfImportDialogQuestionCard key={question.id} question={question} />
-            ))}
+            {reviewQuestions.length ? (
+              reviewQuestions.map((question) => (
+                <PdfImportDialogQuestionCard
+                  key={question.id}
+                  question={question}
+                  isEditable={isEditable}
+                  onReject={isEditable ? () => onQuestionReject(question.id) : undefined}
+                  onUpdate={
+                    isEditable ? (nextQuestion) => onQuestionUpdate(question.id, nextQuestion) : undefined
+                  }
+                />
+              ))
+            ) : (
+              <div className="rounded-[20px] border border-dashed border-[#D0D5DD] bg-white px-4 py-5 text-[14px] text-[#475467]">
+                Бүх draft асуултыг reject хийсэн байна. Approve хийхийн өмнө дор хаяж нэг асуулт үлдээнэ.
+              </div>
+            )}
           </div>
         )}
       </div>

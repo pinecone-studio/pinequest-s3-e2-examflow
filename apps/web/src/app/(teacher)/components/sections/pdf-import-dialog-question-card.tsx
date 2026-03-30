@@ -1,11 +1,19 @@
-import { questionTypeLabels, type ImportJobView } from "./pdf-import-dialog-utils";
+"use client";
 
-type ImportQuestion = ImportJobView["questions"][number];
+import { PdfImportDialogQuestionCardEditable } from "./pdf-import-dialog-question-card-editable";
+import { PdfImportDialogQuestionCardReadonly } from "./pdf-import-dialog-question-card-readonly";
+import type { ImportQuestionView } from "./pdf-import-dialog-utils";
 
 export function PdfImportDialogQuestionCard({
   question,
+  isEditable,
+  onReject,
+  onUpdate,
 }: {
-  question: ImportQuestion;
+  question: ImportQuestionView;
+  isEditable: boolean;
+  onReject?: () => void;
+  onUpdate?: (nextQuestion: ImportQuestionView) => void;
 }) {
   return (
     <div
@@ -19,14 +27,11 @@ export function PdfImportDialogQuestionCard({
         <span className="rounded-full bg-[#F2F4F7] px-2.5 py-1 text-[12px] font-medium text-[#344054]">
           #{question.order}
         </span>
-        <span className="rounded-full bg-[#EEF4FF] px-2.5 py-1 text-[12px] font-medium text-[#1D4ED8]">
-          {questionTypeLabels[question.type]}
-        </span>
-        <span className="rounded-full bg-[#F9FAFB] px-2.5 py-1 text-[12px] font-medium text-[#475467]">
-          {question.difficulty}
-        </span>
         <span className="rounded-full bg-[#F9FAFB] px-2.5 py-1 text-[12px] font-medium text-[#475467]">
           {Math.round(question.confidence * 100)}%
+        </span>
+        <span className="rounded-full bg-[#F9FAFB] px-2.5 py-1 text-[12px] font-medium text-[#475467]">
+          Хуудас: {question.sourcePage ?? "-"}
         </span>
         {question.needsReview ? (
           <span className="rounded-full bg-[#FFF7ED] px-2.5 py-1 text-[12px] font-medium text-[#C4320A]">
@@ -35,29 +40,15 @@ export function PdfImportDialogQuestionCard({
         ) : null}
       </div>
 
-      <h4 className="mt-3 text-[16px] font-semibold text-[#101828]">
-        {question.title}
-      </h4>
-      <p className="mt-2 text-[14px] leading-6 text-[#475467]">{question.prompt}</p>
-
-      {question.options.length ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {question.options.map((option) => (
-            <span
-              key={`${question.id}-${option}`}
-              className="rounded-full border border-[#D0D5DD] bg-[#FCFCFD] px-3 py-1 text-[12px] font-medium text-[#344054]"
-            >
-              {option}
-            </span>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="mt-3 flex flex-wrap items-center gap-3 text-[13px] text-[#667085]">
-        <span>Зөв хариу: {question.answers.join(", ") || "Оруулаагүй"}</span>
-        <span>Оноо: {question.score}</span>
-        <span>Хуудас: {question.sourcePage ?? "-"}</span>
-      </div>
+      {isEditable && onReject && onUpdate ? (
+        <PdfImportDialogQuestionCardEditable
+          question={question}
+          onReject={onReject}
+          onUpdate={onUpdate}
+        />
+      ) : (
+        <PdfImportDialogQuestionCardReadonly question={question} />
+      )}
     </div>
   );
 }

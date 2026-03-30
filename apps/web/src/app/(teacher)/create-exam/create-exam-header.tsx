@@ -3,20 +3,24 @@ import { SaveIcon } from "./create-exam-icons";
 type CreateExamHeaderProps = {
   isSubmitting: boolean;
   disabled: boolean;
+  isEditMode: boolean;
 };
 
 export function CreateExamHeader({
   isSubmitting,
   disabled,
+  isEditMode,
 }: CreateExamHeaderProps) {
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="space-y-2">
         <h1 className="text-[32px] font-semibold leading-tight text-[#101828]">
-          Шалгалт үүсгэх
+          {isEditMode ? "Шалгалт засах" : "Шалгалт үүсгэх"}
         </h1>
         <p className="max-w-[620px] text-[15px] leading-6 text-[#667085]">
-          Анги, асуулт, тохиргоогоо сонгож шалгалтаа хадгална.
+          {isEditMode
+            ? "Одоогийн draft шалгалтын анги, асуулт, тохиргоог шинэчилж хадгална."
+            : "Анги, асуулт, тохиргоогоо сонгож шалгалтаа хадгална."}
         </p>
       </div>
 
@@ -26,7 +30,13 @@ export function CreateExamHeader({
         disabled={disabled}
       >
         <SaveIcon className="h-4 w-4" />
-        {isSubmitting ? "Үүсгэж байна..." : "Шалгалт үүсгэх"}
+        {isSubmitting
+          ? isEditMode
+            ? "Шинэчилж байна..."
+            : "Үүсгэж байна..."
+          : isEditMode
+            ? "Шалгалт шинэчлэх"
+            : "Шалгалт үүсгэх"}
       </button>
     </header>
   );

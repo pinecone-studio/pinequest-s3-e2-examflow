@@ -1,5 +1,6 @@
 import { all, first, invariant, run, type D1DatabaseLike } from "../../lib/d1";
 import type { RequestContext } from "../../auth";
+import { parseImportedExamText, type ParsedImportQuestion } from "./imports-parser";
 import {
   makeId,
   now,
@@ -8,11 +9,11 @@ import {
   type ApproveExamImportJobArgs,
   type ByIdArgs,
   type CreateExamImportJobArgs,
-  type Difficulty,
   type ExamImportJobRow,
   type ExamImportQuestionRow,
+  type ExamRow,
   type QuestionBankRow,
-  type QuestionType,
+  type ReviewedExamImportQuestionInput,
   type Role,
   type UserRow,
 } from "../types";
@@ -20,6 +21,7 @@ import {
 const importJobSelectFields = `id,
       teacher_id,
       question_bank_id,
+      exam_id,
       file_name,
       file_size_bytes,
       source_type,
@@ -46,19 +48,6 @@ const importQuestionSelectFields = `id,
       needs_review,
       created_at`;
 
-type DraftQuestion = {
-  type: QuestionType;
-  title: string;
-  prompt: string;
-  options: string[];
-  answers: string[];
-  score: number;
-  difficulty: Difficulty;
-  sourcePage: number;
-  confidence: number;
-  needsReview: boolean;
-};
-
 const stripPdfExtension = (fileName: string) =>
   fileName.replace(/\.pdf$/i, "").trim();
 
@@ -71,46 +60,7 @@ const toImportTitle = (fileName: string) => {
   return normalized.length > 0 ? normalized : "PDF импорт шалгалт";
 };
 
-const buildDraftQuestions = (title: string): DraftQuestion[] => [
-  {
-    type: "MCQ",
-    title: `${title} - Асуулт 1`,
-    prompt: "Монгол Улсын нийслэл аль нь вэ?",
-    options: ["Улаанбаатар", "Дархан", "Эрдэнэт", "Чойбалсан"],
-    answers: ["Улаанбаатар"],
-    score: 1,
-    difficulty: "EASY",
-    sourcePage: 1,
-    confidence: 0.94,
-    needsReview: false,
-  },
-  {
-    type: "TRUE_FALSE",
-    title: `${title} - Асуулт 2`,
-    prompt: "1 километр нь 1000 метртэй тэнцүү.",
-    options: ["True", "False"],
-    answers: ["True"],
-    score: 1,
-    difficulty: "EASY",
-    sourcePage: 1,
-    confidence: 0.91,
-    needsReview: false,
-  },
-  {
-    type: "SHORT_ANSWER",
-    title: `${title} - Асуулт 3`,
-    prompt: "12 * 8 = ?",
-    options: [],
-    answers: ["96"],
-    score: 2,
-    difficulty: "MEDIUM",
-    sourcePage: 2,
-    confidence: 0.63,
-    needsReview: true,
-  },
-];
-
-const toParsedExamJson = (title: string, questions: DraftQuestion[]) =>
+const toParsedExamJson = (title: string, questions: ParsedImportQuestion[]) =>
   JSON.stringify({
     title,
     questions: questions.map((question, index) => ({
@@ -127,6 +77,107 @@ const toParsedExamJson = (title: string, questions: DraftQuestion[]) =>
       needsReview: question.needsReview,
     })),
   });
+
+const insertImportQuestions = async (
+  db: D1DatabaseLike,
+  jobId: string,
+  createdAt: string,
+  questions: ParsedImportQuestion[],
+) => {
+  for (const [index, question] of questions.entries()) {
+    await run(
+      db,
+      `INSERT INTO exam_import_questions (
+        id,
+        job_id,
+        display_order,
+        type,
+        title,
+        prompt,
+        options_json,
+        answers_json,
+        score,
+        difficulty,
+        source_page,
+        confidence,
+        needs_review,
+        created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        makeId("import_question"),
+        jobId,
+        index + 1,
+        question.type,
+        question.title,
+        question.prompt,
+        toJsonArray(question.options),
+        toJsonArray(question.answers),
+        question.score,
+        question.difficulty,
+        question.sourcePage,
+        question.confidence,
+        question.needsReview ? 1 : 0,
+        createdAt,
+      ],
+    );
+  }
+};
+
+const normalizeReviewedQuestion = (
+  question: ReviewedExamImportQuestionInput,
+  fallbackOrder: number,
+): ParsedImportQuestion => {
+  const normalizedPrompt = question.prompt.trim();
+  const normalizedType = question.type;
+  const normalizedOptions =
+    normalizedType === "TRUE_FALSE"
+      ? ["True", "False"]
+      : question.options.map((option) => option.trim()).filter(Boolean);
+  const normalizedAnswers = question.answers.map((answer) => answer.trim()).filter(Boolean);
+  const normalizedTitle = question.title.trim() || `Асуулт ${question.order || fallbackOrder}`;
+
+  return {
+    type: normalizedType,
+    title: normalizedTitle,
+    prompt: normalizedPrompt,
+    options: normalizedOptions,
+    answers: normalizedAnswers,
+    score: Math.max(1, Math.round(question.score || 1)),
+    difficulty: question.difficulty,
+    sourcePage: question.sourcePage ?? fallbackOrder,
+    confidence: Math.max(0, Math.min(1, question.confidence)),
+    needsReview:
+      question.needsReview ||
+      !normalizedPrompt ||
+      ((normalizedType === "MCQ" || normalizedType === "TRUE_FALSE") && normalizedAnswers.length === 0),
+  };
+};
+
+const replaceImportQuestions = async (
+  db: D1DatabaseLike,
+  jobId: string,
+  updatedAt: string,
+  questions: ReviewedExamImportQuestionInput[],
+) => {
+  const normalizedQuestions = questions.map((question, index) =>
+    normalizeReviewedQuestion(question, index + 1),
+  );
+
+  await run(db, "DELETE FROM exam_import_questions WHERE job_id = ?", [jobId]);
+  await insertImportQuestions(db, jobId, updatedAt, normalizedQuestions);
+
+  return normalizedQuestions;
+};
+
+const estimateDurationMinutes = (questions: ExamImportQuestionRow[]) =>
+  Math.max(
+    20,
+    Math.min(
+      180,
+      questions.reduce((total, question) => total + Math.max(1, question.score) * 2, 0),
+    ),
+  );
 
 export const findExamImportJobById = async (
   db: D1DatabaseLike,
@@ -184,8 +235,14 @@ const findScopedImportJob = async (
 type ImportModuleDependencies = {
   db: D1DatabaseLike;
   requireActor: (context: RequestContext, roles: Role[]) => Promise<UserRow>;
+  findClass: (
+    db: D1DatabaseLike,
+    id: string,
+  ) => Promise<{ id: string; teacher_id: string; grade: number; subject: string }>;
+  findExam: (db: D1DatabaseLike, id: string) => Promise<ExamRow>;
   findQuestionBank: (db: D1DatabaseLike, id: string) => Promise<QuestionBankRow>;
   findUser: (db: D1DatabaseLike, id: string) => Promise<UserRow>;
+  toExam: (db: D1DatabaseLike, exam: ExamRow) => unknown;
   toQuestionBank: (db: D1DatabaseLike, bank: QuestionBankRow) => unknown;
   toUser: (user: UserRow) => unknown;
 };
@@ -193,8 +250,11 @@ type ImportModuleDependencies = {
 export const createImportQueriesAndMutations = ({
   db,
   requireActor,
+  findClass,
+  findExam,
   findQuestionBank,
   findUser,
+  toExam,
   toQuestionBank,
   toUser,
 }: ImportModuleDependencies) => {
@@ -239,6 +299,7 @@ export const createImportQueriesAndMutations = ({
       row.question_bank_id
         ? toQuestionBank(db, await findQuestionBank(db, row.question_bank_id))
         : null,
+    exam: async () => (row.exam_id ? toExam(db, await findExam(db, row.exam_id)) : null),
     createdBy: async () => toUser(await findUser(db, row.teacher_id)),
     questions: async () => (await listImportQuestions(db, row.id)).map(toExamImportQuestion),
     createdAt: row.created_at,
@@ -274,14 +335,14 @@ export const createImportQueriesAndMutations = ({
       return row ? toExamImportJob(row) : null;
     },
     createExamImportJob: async (
-      { fileName, fileSizeBytes }: CreateExamImportJobArgs,
+      { fileName, fileSizeBytes, extractedText }: CreateExamImportJobArgs,
       context: RequestContext,
     ) => {
       const actor = await requireActor(context, ["ADMIN", "TEACHER"]);
       const id = makeId("import");
       const createdAt = now();
-      const title = toImportTitle(fileName);
-      const questions = buildDraftQuestions(title);
+      const fallbackTitle = toImportTitle(fileName);
+      const normalizedExtractedText = extractedText.trim();
 
       await run(
         db,
@@ -289,6 +350,7 @@ export const createImportQueriesAndMutations = ({
           id,
           teacher_id,
           question_bank_id,
+          exam_id,
           file_name,
           file_size_bytes,
           source_type,
@@ -300,82 +362,93 @@ export const createImportQueriesAndMutations = ({
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           actor.id,
           null,
+          null,
           fileName.trim(),
           fileSizeBytes,
           "PDF",
-          "REVIEW",
-          title,
-          null,
-          toParsedExamJson(title, questions),
+          "PROCESSING",
+          fallbackTitle,
+          normalizedExtractedText || null,
+          toParsedExamJson(fallbackTitle, []),
           null,
           createdAt,
           createdAt,
         ],
       );
 
-      for (const [index, question] of questions.entries()) {
+      if (!normalizedExtractedText) {
         await run(
           db,
-          `INSERT INTO exam_import_questions (
-            id,
-            job_id,
-            display_order,
-            type,
-            title,
-            prompt,
-            options_json,
-            answers_json,
-            score,
-            difficulty,
-            source_page,
-            confidence,
-            needs_review,
-            created_at
-          )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            makeId("import_question"),
-            id,
-            index + 1,
-            question.type,
-            question.title,
-            question.prompt,
-            toJsonArray(question.options),
-            toJsonArray(question.answers),
-            question.score,
-            question.difficulty,
-            question.sourcePage,
-            question.confidence,
-            question.needsReview ? 1 : 0,
-            createdAt,
-          ],
+          `UPDATE exam_import_jobs
+           SET status = ?, error_message = ?, updated_at = ?
+           WHERE id = ?`,
+          ["FAILED", "PDF файлаас text гаргаж чадсангүй.", createdAt, id],
         );
+        return toExamImportJob(await findExamImportJobById(db, id));
       }
+
+      const parsedExam = parseImportedExamText(normalizedExtractedText, fallbackTitle);
+      const nextStatus = parsedExam.questions.length > 0 ? "REVIEW" : "FAILED";
+      await insertImportQuestions(db, id, createdAt, parsedExam.questions);
+      await run(
+        db,
+        `UPDATE exam_import_jobs
+         SET status = ?, title = ?, parsed_exam_json = ?, error_message = ?, updated_at = ?
+         WHERE id = ?`,
+        [
+          nextStatus,
+          parsedExam.title,
+          toParsedExamJson(parsedExam.title, parsedExam.questions),
+          nextStatus === "FAILED" ? "PDF parsing амжилтгүй боллоо." : null,
+          createdAt,
+          id,
+        ],
+      );
 
       return toExamImportJob(await findExamImportJobById(db, id));
     },
     approveExamImportJob: async (
-      { id }: ApproveExamImportJobArgs,
+      { id, classId, questions: reviewedQuestions }: ApproveExamImportJobArgs,
       context: RequestContext,
     ) => {
       const actor = await requireActor(context, ["ADMIN", "TEACHER"]);
       const job = await findScopedImportJob(db, id, actor);
       invariant(job, "PDF импортын ажил олдсонгүй.");
+      const classroom = await findClass(db, classId);
+      if (actor.role === "TEACHER") {
+        invariant(
+          classroom.teacher_id === actor.id,
+          "Зөвхөн өөрийн ангид импортолсон шалгалтыг холбож болно.",
+        );
+      }
 
-      if (job.status === "APPROVED" && job.question_bank_id) {
+      if (job.status === "PUBLISHED" && job.question_bank_id && job.exam_id) {
         return toExamImportJob(job);
       }
 
       const bankId = makeId("bank");
+      const examId = makeId("exam");
       const updatedAt = now();
       const bankTitle = `${job.title} PDF import`;
       const bankDescription = `${job.file_name} файлаас үүсгэсэн асуултын сан`;
+      invariant(reviewedQuestions.length > 0, "Дор хаяж нэг асуултыг баталгаажуулна уу.");
+      const normalizedQuestions = await replaceImportQuestions(db, job.id, updatedAt, reviewedQuestions);
+      await run(
+        db,
+        `UPDATE exam_import_jobs
+         SET parsed_exam_json = ?, updated_at = ?
+         WHERE id = ?`,
+        [toParsedExamJson(job.title, normalizedQuestions), updatedAt, job.id],
+      );
       const questions = await listImportQuestions(db, job.id);
+      const durationMinutes = estimateDurationMinutes(questions);
+      const examDescription = `${job.file_name} файлаас импортолсон шалгалтын ноорог`;
+      const insertedQuestionIds: string[] = [];
 
       await run(
         db,
@@ -385,8 +458,8 @@ export const createImportQueriesAndMutations = ({
           bankId,
           bankTitle,
           bankDescription,
-          10,
-          "Ерөнхий",
+          classroom.grade,
+          classroom.subject,
           "PDF импорт",
           "PRIVATE",
           job.teacher_id,
@@ -401,6 +474,7 @@ export const createImportQueriesAndMutations = ({
             ? ["True", "False"]
             : parseJsonArray(question.options_json);
         const correctAnswer = answers[0] ?? null;
+        const nextQuestionId = makeId("question");
         await run(
           db,
           `INSERT INTO questions (
@@ -418,7 +492,7 @@ export const createImportQueriesAndMutations = ({
           )
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            makeId("question"),
+            nextQuestionId,
             bankId,
             question.type,
             question.title,
@@ -431,14 +505,81 @@ export const createImportQueriesAndMutations = ({
             updatedAt,
           ],
         );
+        insertedQuestionIds.push(nextQuestionId);
+      }
+
+      await run(
+        db,
+        `INSERT INTO exams (
+          id,
+          class_id,
+          is_template,
+          source_exam_id,
+          title,
+          description,
+          mode,
+          status,
+          duration_minutes,
+          started_at,
+          ends_at,
+          created_by_id,
+          scheduled_for,
+          shuffle_questions,
+          shuffle_answers,
+          generation_mode,
+          rules_json,
+          passing_criteria_type,
+          passing_threshold,
+          created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          examId,
+          classId,
+          1,
+          null,
+          job.title,
+          examDescription,
+          "SCHEDULED",
+          "DRAFT",
+          durationMinutes,
+          null,
+          null,
+          job.teacher_id,
+          updatedAt,
+          0,
+          0,
+          "MANUAL",
+          "[]",
+          "PERCENTAGE",
+          40,
+          updatedAt,
+        ],
+      );
+
+      for (const [index, question] of questions.entries()) {
+        const insertedQuestionId = insertedQuestionIds[index];
+        invariant(insertedQuestionId, "Импортолсон асуултыг шалгалттай холбоход алдаа гарлаа.");
+        await run(
+          db,
+          `INSERT INTO exam_questions (id, exam_id, question_id, points, display_order)
+           VALUES (?, ?, ?, ?, ?)`,
+          [
+            makeId("exam_question"),
+            examId,
+            insertedQuestionId,
+            question.score,
+            index + 1,
+          ],
+        );
       }
 
       await run(
         db,
         `UPDATE exam_import_jobs
-         SET status = ?, question_bank_id = ?, updated_at = ?
+         SET status = ?, question_bank_id = ?, exam_id = ?, updated_at = ?
          WHERE id = ?`,
-        ["APPROVED", bankId, updatedAt, job.id],
+        ["PUBLISHED", bankId, examId, updatedAt, job.id],
       );
 
       return toExamImportJob(await findExamImportJobById(db, job.id));

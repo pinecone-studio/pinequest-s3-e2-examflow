@@ -55,6 +55,8 @@ const classExamEventsPathPattern = /^\/events\/classes\/([^/]+)\/exams$/;
 type Env = {
   DB: D1DatabaseLike;
   CLERK_SECRET_KEY?: string;
+  PDF_EXTRACTION_SERVICE_TOKEN?: string;
+  PDF_EXTRACTION_SERVICE_URL?: string;
 } & LiveExamEventsEnv;
 
 type GraphQLRequestBody = {
@@ -62,6 +64,24 @@ type GraphQLRequestBody = {
   variables?: Record<string, unknown> | null;
   operationName?: string | null;
 };
+
+type PdfExtractionResponse = {
+  extractedText: string;
+  provider: string;
+  strategy: string;
+};
+
+const isPdfExtractionResponse = (
+  value: unknown,
+): value is PdfExtractionResponse =>
+  typeof value === "object" &&
+  value !== null &&
+  "extractedText" in value &&
+  typeof value.extractedText === "string" &&
+  "provider" in value &&
+  typeof value.provider === "string" &&
+  "strategy" in value &&
+  typeof value.strategy === "string";
 
 const graphiqlPage = `<!doctype html>
 <html lang="en">
@@ -461,6 +481,145 @@ const handleSession = async (request: Request, env: Env): Promise<Response> => {
   }
 };
 
+const parsePdfExtractionResponse = async (
+  response: Response,
+): Promise<PdfExtractionResponse | Response> => {
+  const payload = (await response.json().catch(() => null)) as
+    | PdfExtractionResponse
+    | { error?: string }
+    | null;
+
+  if (!response.ok) {
+    return json(
+      {
+        error:
+          typeof payload === "object" &&
+          payload &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "PDF extraction service request failed.",
+      },
+      { status: response.status },
+    );
+  }
+
+  if (!isPdfExtractionResponse(payload)) {
+    return json(
+      {
+        error: "PDF extraction service returned an invalid payload.",
+      },
+      { status: 502 },
+    );
+  }
+
+  return payload;
+};
+
+const handlePdfExtraction = async (
+  request: Request,
+  env: Env,
+): Promise<Response> => {
+  if (request.method === "OPTIONS") {
+    return empty({ status: 204 });
+  }
+
+  if (request.method !== "POST") {
+    return json(
+      {
+        error: "Method Not Allowed",
+      },
+      { status: 405 },
+    );
+  }
+
+  const actor = await authenticateActor(request, env.DB, env);
+  if (!actor || (actor.user.role !== "ADMIN" && actor.user.role !== "TEACHER")) {
+    return json(
+      {
+        error: "Authentication required.",
+      },
+      { status: 401 },
+    );
+  }
+
+  if (!env.PDF_EXTRACTION_SERVICE_URL?.trim()) {
+    return json(
+      {
+        error: "PDF extraction service is not configured on the API.",
+      },
+      { status: 501 },
+    );
+  }
+
+  const formData = await request.formData().catch(() => null);
+  if (!formData) {
+    return json(
+      {
+        error: "Invalid multipart form data.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return json(
+      {
+        error: "PDF file is required.",
+      },
+      { status: 400 },
+    );
+  }
+
+  if (!file.name.toLowerCase().endsWith(".pdf")) {
+    return json(
+      {
+        error: "Only PDF files are supported.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const upstreamFormData = new FormData();
+  upstreamFormData.set("file", file, file.name);
+  upstreamFormData.set("actorId", actor.user.id);
+  upstreamFormData.set("actorRole", actor.user.role);
+
+  const upstreamHeaders = new Headers();
+  if (env.PDF_EXTRACTION_SERVICE_TOKEN?.trim()) {
+    upstreamHeaders.set(
+      "authorization",
+      `Bearer ${env.PDF_EXTRACTION_SERVICE_TOKEN.trim()}`,
+    );
+  }
+
+  try {
+    const upstreamResponse = await fetch(env.PDF_EXTRACTION_SERVICE_URL.trim(), {
+      method: "POST",
+      headers: upstreamHeaders,
+      body: upstreamFormData,
+    });
+
+    const parsed = await parsePdfExtractionResponse(upstreamResponse);
+    if (parsed instanceof Response) {
+      return parsed;
+    }
+
+    return json(parsed);
+  } catch (error) {
+    return json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "PDF extraction service is unreachable.",
+      },
+      { status: 503 },
+    );
+  }
+};
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url);
@@ -505,6 +664,10 @@ export default {
 
     if (pathname === "/auth/session") {
       return handleSession(request, env);
+    }
+
+    if (pathname === "/imports/pdf/extract") {
+      return handlePdfExtraction(request, env);
     }
 
     if (pathname === "/graphql") {

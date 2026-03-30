@@ -1,21 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useMutation } from "@apollo/client/react";
-import {
-  ApproveExamImportJobMutationDocument,
-  CreateExamImportJobMutationDocument,
-  QuestionBanksQueryDocument,
-  type ApproveExamImportJobMutationMutation,
-  type ApproveExamImportJobMutationMutationVariables,
-  type CreateExamImportJobMutationMutation,
-  type CreateExamImportJobMutationMutationVariables,
-} from "@/graphql/generated";
 import { CloseIcon } from "../icons";
 import { PdfImportDialogFooter } from "./pdf-import-dialog-footer";
 import { PdfImportDialogPreviewPane } from "./pdf-import-dialog-preview-pane";
 import { PdfImportDialogReviewPane } from "./pdf-import-dialog-review-pane";
-import { buildImportJobView, type ImportJobView } from "./pdf-import-dialog-utils";
+import { usePdfImportDialog } from "./use-pdf-import-dialog";
 
 export function PdfImportDialog({
   open,
@@ -26,94 +15,28 @@ export function PdfImportDialog({
   selectedFile: File | null;
   onClose: () => void;
 }) {
-  const [jobView, setJobView] = useState<ImportJobView | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [createImportJob, { loading: isCreating }] = useMutation<
-    CreateExamImportJobMutationMutation,
-    CreateExamImportJobMutationMutationVariables
-  >(
-    CreateExamImportJobMutationDocument,
-  );
-  const [approveImportJob, { loading: isApproving }] = useMutation<
-    ApproveExamImportJobMutationMutation,
-    ApproveExamImportJobMutationMutationVariables
-  >(
-    ApproveExamImportJobMutationDocument,
-  );
-
-  useEffect(() => {
-    if (!selectedFile) {
-      setPreviewUrl(null);
-      setJobView(null);
-      setErrorMessage(null);
-      return;
-    }
-
-    const nextPreviewUrl = URL.createObjectURL(selectedFile);
-    setPreviewUrl(nextPreviewUrl);
-    setJobView(null);
-    setErrorMessage(null);
-
-    return () => {
-      URL.revokeObjectURL(nextPreviewUrl);
-    };
-  }, [selectedFile]);
-
-  const reviewSummary = useMemo(() => {
-    if (!jobView) {
-      return null;
-    }
-
-    return `${jobView.totalQuestions} асуулт, ${jobView.reviewCount} шалгах шаардлагатай`;
-  }, [jobView]);
+  const {
+    classOptions,
+    errorMessage,
+    examEditHref,
+    handleApprove,
+    handleImport,
+    infoMessage,
+    isApproving,
+    isCreating,
+    jobView,
+    previewUrl,
+    rejectQuestion,
+    reviewQuestions,
+    reviewSummary,
+    selectedClassId,
+    setSelectedClassId,
+    updateQuestion,
+  } = usePdfImportDialog(selectedFile, open);
 
   if (!open || !selectedFile) {
     return null;
   }
-
-  const handleImport = async () => {
-    try {
-      setErrorMessage(null);
-      const result = await createImportJob({
-        variables: {
-          fileName: selectedFile.name,
-          fileSizeBytes: selectedFile.size,
-        },
-      });
-      const nextJob = result.data?.createExamImportJob;
-      if (!nextJob) {
-        throw new Error("PDF import job үүсгэсэн мэдээлэл ирсэнгүй.");
-      }
-      setJobView(buildImportJobView(nextJob));
-    } catch (error) {
-      console.error("Failed to create PDF import job", error);
-      setErrorMessage("PDF импорт бэлтгэх үед алдаа гарлаа.");
-    }
-  };
-
-  const handleApprove = async () => {
-    if (!jobView) {
-      return;
-    }
-
-    try {
-      setErrorMessage(null);
-      const result = await approveImportJob({
-        variables: { id: jobView.id },
-        refetchQueries: [{ query: QuestionBanksQueryDocument }],
-        awaitRefetchQueries: true,
-      });
-      const nextJob = result.data?.approveExamImportJob;
-      if (!nextJob) {
-        throw new Error("PDF import approval мэдээлэл ирсэнгүй.");
-      }
-      setJobView(buildImportJobView(nextJob));
-    } catch (error) {
-      console.error("Failed to approve PDF import job", error);
-      setErrorMessage("PDF импортын асуултуудыг хадгалах үед алдаа гарлаа.");
-    }
-  };
 
   return (
     <div
@@ -149,16 +72,26 @@ export function PdfImportDialog({
             previewUrl={previewUrl}
           />
           <PdfImportDialogReviewPane
+            examEditHref={examEditHref}
             errorMessage={errorMessage}
+            infoMessage={infoMessage}
             jobView={jobView}
+            onQuestionReject={rejectQuestion}
+            onQuestionUpdate={updateQuestion}
+            reviewQuestions={reviewQuestions}
             reviewSummary={reviewSummary}
           />
         </div>
         <PdfImportDialogFooter
+          examEditHref={examEditHref}
           jobView={jobView}
           isCreating={isCreating}
           isApproving={isApproving}
+          classOptions={classOptions}
+          reviewQuestionCount={reviewQuestions.length}
+          selectedClassId={selectedClassId}
           onClose={onClose}
+          onClassChange={setSelectedClassId}
           onImport={() => void handleImport()}
           onApprove={() => void handleApprove()}
         />

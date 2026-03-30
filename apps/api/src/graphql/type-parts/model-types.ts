@@ -22,8 +22,9 @@ export type ExamGenerationRule = {
 };
 export type ExamImportJobStatus =
   | "UPLOADED"
+  | "PROCESSING"
   | "REVIEW"
-  | "APPROVED"
+  | "PUBLISHED"
   | "FAILED";
 export type ExamImportSourceType = "PDF";
 
@@ -130,6 +131,7 @@ export type ExamImportJobRow = {
   id: string;
   teacher_id: string;
   question_bank_id: string | null;
+  exam_id: string | null;
   file_name: string;
   file_size_bytes: number;
   source_type: ExamImportSourceType;

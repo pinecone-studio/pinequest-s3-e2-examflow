@@ -13,12 +13,14 @@ import { useCreateExamFlow } from "./hooks/use-create-exam-flow";
 type CreateExamContentProps = {
   initialClassId?: string;
   initialBankId?: string;
+  examId?: string;
   returnTo?: string;
 };
 
 export function CreateExamContent({
   initialClassId = "",
   initialBankId = "",
+  examId = "",
   returnTo = "",
 }: CreateExamContentProps) {
   const router = useRouter();
@@ -26,6 +28,7 @@ export function CreateExamContent({
     initialClassId,
     returnTo ? initialClassId : "",
     initialBankId,
+    examId,
   );
   const isDisabled =
     flow.isSubmitting ||
@@ -36,9 +39,9 @@ export function CreateExamContent({
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void (async () => {
-      const examId = await flow.submitForm();
-      if (examId && returnTo) {
-        router.push(`${returnTo}?assignedExamId=${examId}`);
+      const submittedExamId = await flow.submitForm();
+      if (submittedExamId && returnTo) {
+        router.push(`${returnTo}?assignedExamId=${submittedExamId}`);
       }
     })();
   };
@@ -49,10 +52,14 @@ export function CreateExamContent({
     <div className="mx-auto w-full max-w-[836px]">
       <form className="space-y-6" onSubmit={handleSubmit}>
         <TeacherBackButton fallbackHref={backHref} />
-        <CreateExamHeader isSubmitting={flow.isSubmitting} disabled={isDisabled} />
+        <CreateExamHeader
+          isSubmitting={flow.isSubmitting}
+          disabled={isDisabled}
+          isEditMode={flow.isEditMode}
+        />
         <CreateExamSubmitAlert submitState={flow.submitState} />
 
-        {initialBankId ? (
+        {flow.resolvedBankId ? (
           <div className="mt-4 rounded-md border border-[#B2DDFF] bg-[#F0F9FF] px-4 py-3 text-[13px] text-[#175CD3]">
             Энэ шалгалт тухайн question bank-аас эхэлж байна. Хэрэв өөр bank сонгох бол энэ хуудсыг question bank-гүй нээнэ.
           </div>
@@ -109,7 +116,7 @@ export function CreateExamContent({
           onRemoveGenerationRule={flow.removeGenerationRule}
           onUpdateGenerationRule={flow.updateGenerationRule}
           onQuestionsRefresh={flow.refetchOptions}
-          initialBankId={initialBankId}
+          initialBankId={flow.resolvedBankId}
         />
       </form>
     </div>

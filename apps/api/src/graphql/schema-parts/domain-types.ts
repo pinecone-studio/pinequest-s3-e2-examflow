@@ -131,6 +131,7 @@ export const schemaDomainTypes = /* GraphQL */ `
     totalQuestions: Int!
     reviewCount: Int!
     questionBank: QuestionBank
+    exam: Exam
     createdBy: User!
     questions: [ExamImportQuestion!]!
     createdAt: String!
