@@ -1,4 +1,9 @@
-import { ExamStatus, ClassStudentStatus } from "@/graphql/generated";
+import {
+  AttemptIntegrityEventType,
+  ClassStudentStatus,
+  ExamStatus,
+  IntegrityRiskLevel,
+} from "@/graphql/generated";
 
 const relativeFormatter = new Intl.RelativeTimeFormat("mn", {
   numeric: "auto",
@@ -51,4 +56,40 @@ export const formatRelativeTime = (value: string | null | undefined) => {
   }
 
   return "Саяхан";
+};
+
+export const formatIntegrityRisk = (
+  risk: IntegrityRiskLevel,
+  eventCount: number,
+) => {
+  if (eventCount === 0) {
+    return "Цэвэр";
+  }
+
+  if (risk === IntegrityRiskLevel.High) {
+    return "Өндөр";
+  }
+
+  return risk === IntegrityRiskLevel.Medium ? "Дунд" : "Бага";
+};
+
+export const formatIntegritySignal = (type: AttemptIntegrityEventType) => {
+  switch (type) {
+    case AttemptIntegrityEventType.TabHidden:
+      return "Tab";
+    case AttemptIntegrityEventType.WindowBlur:
+      return "Focus";
+    case AttemptIntegrityEventType.FullscreenExit:
+      return "Fullscreen";
+    case AttemptIntegrityEventType.PasteAttempt:
+      return "Paste";
+    case AttemptIntegrityEventType.CopyAttempt:
+      return "Copy";
+    case AttemptIntegrityEventType.BulkInputBurst:
+      return "Огцом текст";
+    case AttemptIntegrityEventType.InactiveThenBulkInput:
+      return "Удаад их текст";
+    default:
+      return type;
+  }
 };

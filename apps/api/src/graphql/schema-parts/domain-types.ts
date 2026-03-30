@@ -32,6 +32,16 @@ export const schemaDomainTypes = /* GraphQL */ `
     status: ClassStudentStatus!
     lastActiveAt: String
     averageScore: Float
+    suspiciousEventCount: Int!
+    integrityRisk: IntegrityRiskLevel!
+    lastIntegrityEventAt: String
+    integritySignals: [IntegritySignalCount!]!
+  }
+
+  type IntegritySignalCount {
+    type: AttemptIntegrityEventType!
+    severity: IntegritySeverity!
+    count: Int!
   }
 
   type ClassExamInsight {

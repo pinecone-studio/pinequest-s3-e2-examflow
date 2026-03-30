@@ -18,6 +18,14 @@ query ClassDetail($id: ID!) {
       status
       lastActiveAt
       averageScore
+      suspiciousEventCount
+      integrityRisk
+      lastIntegrityEventAt
+      integritySignals {
+        type
+        severity
+        count
+      }
       student {
         id
         fullName

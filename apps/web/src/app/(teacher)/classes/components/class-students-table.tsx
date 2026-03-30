@@ -1,4 +1,4 @@
-import { ClockIcon, DotsIcon } from "../../components/icons";
+import { ClockIcon } from "../../components/icons";
 import { ClassesStatusBadge } from "./classes-status-badge";
 
 type StudentRow = {
@@ -8,7 +8,10 @@ type StudentRow = {
   status: string;
   lastActive: string;
   averageScore: string;
-  tone: "success" | "warning" | "muted";
+  integrityDetail: string;
+  integrityLabel: string;
+  integrityTone: "success" | "warning" | "muted" | "danger";
+  tone: "success" | "warning" | "muted" | "danger";
 };
 
 type ClassStudentsTableProps = {
@@ -26,7 +29,7 @@ export function ClassStudentsTable({ rows }: ClassStudentsTableProps) {
             <th className="px-4 py-3 font-medium">Төлөв</th>
             <th className="px-4 py-3 font-medium">Сүүлд идэвхтэй байсан</th>
             <th className="px-4 py-3 font-medium">Дундаж оноо</th>
-            <th className="py-3 pl-4 text-right font-medium">Үйлдэл</th>
+            <th className="py-3 pl-4 text-right font-medium">Сэрэмжлүүлэг</th>
           </tr>
         </thead>
         <tbody>
@@ -45,9 +48,15 @@ export function ClassStudentsTable({ rows }: ClassStudentsTableProps) {
               </td>
               <td className="px-4 py-4 text-[#0F1216]">{row.averageScore}</td>
               <td className="py-4 pl-4">
-                <span className="flex justify-end text-[#0F1216]">
-                  <DotsIcon className="h-5 w-5" />
-                </span>
+                <div className="space-y-1 text-right">
+                  <div className="flex justify-end">
+                    <ClassesStatusBadge
+                      label={row.integrityLabel}
+                      tone={row.integrityTone}
+                    />
+                  </div>
+                  <p className="text-[12px] text-[#667085]">{row.integrityDetail}</p>
+                </div>
               </td>
             </tr>
           ))}

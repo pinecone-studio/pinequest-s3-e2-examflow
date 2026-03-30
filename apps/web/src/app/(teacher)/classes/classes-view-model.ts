@@ -6,12 +6,15 @@ import type {
 import {
   formatExamStatus,
   formatGradeLabel,
+  formatIntegrityRisk,
+  formatIntegritySignal,
   formatPercentage,
   formatRelativeTime,
   formatStudentStatus,
 } from "./classes-format";
 
 type StatusTone = "success" | "warning" | "muted";
+type IntegrityTone = StatusTone | "danger";
 
 export const buildClassesListViewModel = (data: ClassesListQuery) =>
   data.classes.map((item) => ({
@@ -51,6 +54,26 @@ export const buildClassDetailViewModel = (
       name: entry.student.fullName,
       email: entry.student.email,
       status: formatStudentStatus(entry.status as ClassStudentStatus),
+      integrityDetail:
+        entry.suspiciousEventCount > 0
+          ? `${entry.integritySignals
+              .slice(0, 2)
+              .map((signal) => `${formatIntegritySignal(signal.type)} x${signal.count}`)
+              .join(", ")}${entry.lastIntegrityEventAt ? ` · ${formatRelativeTime(entry.lastIntegrityEventAt)}` : ""}`
+          : "Flag алга",
+      integrityLabel: `${formatIntegrityRisk(
+        entry.integrityRisk,
+        entry.suspiciousEventCount,
+      )}${entry.suspiciousEventCount > 0 ? ` · ${entry.suspiciousEventCount}` : ""}`,
+      integrityTone: (
+        entry.suspiciousEventCount === 0
+          ? "success"
+          : entry.integrityRisk === "HIGH"
+            ? "danger"
+            : entry.integrityRisk === "MEDIUM"
+              ? "warning"
+              : "muted"
+      ) as IntegrityTone,
       lastActive: formatRelativeTime(entry.lastActiveAt),
       averageScore: formatOptionalPercentage(entry.averageScore),
       searchText: `${entry.student.fullName} ${entry.student.email}`,
