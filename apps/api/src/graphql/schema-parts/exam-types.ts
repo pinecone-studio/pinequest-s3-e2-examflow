@@ -43,8 +43,8 @@ export const schemaExamTypes = /* GraphQL */ `
     id: ID!
     question: Question!
     value: String!
-    autoScore: Int
-    manualScore: Int
+    autoScore: Float
+    manualScore: Float
     feedback: String
     createdAt: String!
   }
@@ -56,9 +56,9 @@ export const schemaExamTypes = /* GraphQL */ `
     status: AttemptStatus!
     generationSeed: String
     answers: [Answer!]!
-    autoScore: Int!
-    manualScore: Int!
-    totalScore: Int!
+    autoScore: Float!
+    manualScore: Float!
+    totalScore: Float!
     startedAt: String!
     submittedAt: String
   }

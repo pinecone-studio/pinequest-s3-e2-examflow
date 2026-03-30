@@ -20,11 +20,11 @@ export type Scalars = {
 
 export type Answer = {
   __typename?: 'Answer';
-  autoScore?: Maybe<Scalars['Int']['output']>;
+  autoScore?: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['String']['output'];
   feedback?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
-  manualScore?: Maybe<Scalars['Int']['output']>;
+  manualScore?: Maybe<Scalars['Float']['output']>;
   question: Question;
   value: Scalars['String']['output'];
 };
@@ -32,16 +32,16 @@ export type Answer = {
 export type Attempt = {
   __typename?: 'Attempt';
   answers: Array<Answer>;
-  autoScore: Scalars['Int']['output'];
+  autoScore: Scalars['Float']['output'];
   exam: Exam;
   generationSeed?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
-  manualScore: Scalars['Int']['output'];
+  manualScore: Scalars['Float']['output'];
   startedAt: Scalars['String']['output'];
   status: AttemptStatus;
   student: User;
   submittedAt?: Maybe<Scalars['String']['output']>;
-  totalScore: Scalars['Int']['output'];
+  totalScore: Scalars['Float']['output'];
 };
 
 export enum AttemptStatus {
