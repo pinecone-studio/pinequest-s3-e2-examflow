@@ -683,6 +683,14 @@ export type CloseExamMutationVariables = Exact<{
 
 export type CloseExamMutation = { __typename?: 'Mutation', closeExam: { __typename?: 'Exam', id: string, status: ExamStatus } };
 
+export type CreateClassMutationVariables = Exact<{
+  name: Scalars['String']['input'];
+  description?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type CreateClassMutation = { __typename?: 'Mutation', createClass: { __typename?: 'Class', id: string, name: string, subject: string, grade: number } };
+
 export type CreateExamDraftVariantsMutationMutationVariables = Exact<{
   sourceQuestionId: Scalars['ID']['input'];
   totalVariants: Scalars['Int']['input'];
@@ -1117,6 +1125,43 @@ export function useCloseExamMutation(baseOptions?: ApolloReactHooks.MutationHook
 export type CloseExamMutationHookResult = ReturnType<typeof useCloseExamMutation>;
 export type CloseExamMutationResult = ApolloReactCommon.MutationResult<CloseExamMutation>;
 export type CloseExamMutationOptions = ApolloReactCommon.BaseMutationOptions<CloseExamMutation, CloseExamMutationVariables>;
+export const CreateClassDocument = gql`
+    mutation CreateClass($name: String!, $description: String) {
+  createClass(name: $name, description: $description) {
+    id
+    name
+    subject
+    grade
+  }
+}
+    `;
+export type CreateClassMutationFn = ApolloReactCommon.MutationFunction<CreateClassMutation, CreateClassMutationVariables>;
+
+/**
+ * __useCreateClassMutation__
+ *
+ * To run a mutation, you first call `useCreateClassMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateClassMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createClassMutation, { data, loading, error }] = useCreateClassMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *      description: // value for 'description'
+ *   },
+ * });
+ */
+export function useCreateClassMutation(baseOptions?: ApolloReactHooks.MutationHookOptions<CreateClassMutation, CreateClassMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return ApolloReactHooks.useMutation<CreateClassMutation, CreateClassMutationVariables>(CreateClassDocument, options);
+      }
+export type CreateClassMutationHookResult = ReturnType<typeof useCreateClassMutation>;
+export type CreateClassMutationResult = ApolloReactCommon.MutationResult<CreateClassMutation>;
+export type CreateClassMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateClassMutation, CreateClassMutationVariables>;
 export const CreateExamDraftVariantsMutationDocument = gql`
     mutation CreateExamDraftVariantsMutation($sourceQuestionId: ID!, $totalVariants: Int!) {
   createExamDraftVariants(

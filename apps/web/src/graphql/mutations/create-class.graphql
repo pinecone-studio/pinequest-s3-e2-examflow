@@ -1,0 +1,8 @@
+mutation CreateClass($name: String!, $description: String) {
+  createClass(name: $name, description: $description) {
+    id
+    name
+    subject
+    grade
+  }
+}
