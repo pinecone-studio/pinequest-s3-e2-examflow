@@ -2,7 +2,6 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDownIcon } from "../icons";
 import { DownPressIcon } from "../icons-ic";
 import { TopSearchBar } from "../top-search-bar";
 import { PdfImportDialog } from "./pdf-import-dialog";
