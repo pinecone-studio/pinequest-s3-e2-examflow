@@ -1,6 +1,7 @@
 const LOCAL_GRAPHQL_ENDPOINT = "http://127.0.0.1:8787/graphql";
+const LOCAL_API_HOSTNAMES = new Set(["127.0.0.1", "localhost"]);
 
-export const getGraphqlEndpoint = (): string => {
+const getConfiguredGraphqlEndpoint = (): string => {
   const configuredEndpoint = process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT?.trim();
 
   if (configuredEndpoint) {
@@ -14,8 +15,30 @@ export const getGraphqlEndpoint = (): string => {
   throw new Error("NEXT_PUBLIC_GRAPHQL_ENDPOINT is not configured.");
 };
 
+const shouldUseSameOriginApiProxy = (endpoint: string): boolean => {
+  if (process.env.NODE_ENV !== "development" || typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    const url = new URL(endpoint);
+    return url.protocol === "http:" && LOCAL_API_HOSTNAMES.has(url.hostname);
+  } catch {
+    return false;
+  }
+};
+
+export const getGraphqlEndpoint = (): string => {
+  const endpoint = getConfiguredGraphqlEndpoint();
+  return shouldUseSameOriginApiProxy(endpoint) ? "/graphql" : endpoint;
+};
+
 export const getApiBaseUrl = (): string => {
-  const endpoint = getGraphqlEndpoint().trim();
+  const endpoint = getConfiguredGraphqlEndpoint().trim();
+
+  if (shouldUseSameOriginApiProxy(endpoint)) {
+    return "";
+  }
 
   try {
     const url = new URL(endpoint);
