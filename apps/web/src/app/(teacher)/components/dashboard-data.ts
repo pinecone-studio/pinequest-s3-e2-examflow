@@ -2,18 +2,14 @@ import type { ReactElement } from "react";
 import type { IconProps } from "./icons";
 import {
   BookIcon,
+  CheckCircleIcon,
+  ClipboardIcon,
+  GridIcon,
+  MonitorIcon,
   PlusIcon,
+  HomeIcon,
   UsersIcon,
 } from "./icons";
-import {
-  ClassesSideBarIcon,
-  CheckIcon,
-  GlobalIcon,
-  HomeIcon,
-  MyExamsIcon,
-  QuestionBoxIcon,
-} from "./icons-svg";
-import { TEACHER_COMMON_TEXT } from "./teacher-ui";
 type IconComponent = (props: IconProps) => ReactElement;
 
 export type NavItem = {
@@ -30,11 +26,12 @@ export type QuickAction = {
 
 export const navItems: NavItem[] = [
   { label: "Нүүр", href: "/", icon: HomeIcon },
-  { label: "Миний шалгалтууд", href: "/my-exams", icon: MyExamsIcon },
-  { label: "Ангиуд", href: "/classes", icon: ClassesSideBarIcon },
-  { label: "Асуултын сан", href: "/question-bank", icon: QuestionBoxIcon },
-  { label: TEACHER_COMMON_TEXT.community, href: "/community", icon: GlobalIcon },
-  { label: "Үнэлгээ", href: "/evaluation", icon: CheckIcon },
+  { label: "Миний шалгалтууд", href: "/my-exams", icon: ClipboardIcon },
+  { label: "Шалгалт авах", href: "/create-exam", icon: MonitorIcon },
+  { label: "Ангиуд", href: "/classes", icon: UsersIcon },
+  { label: "Асуултын сан", href: "/question-bank", icon: BookIcon },
+  { label: "Community", href: "/community", icon: GridIcon },
+  { label: "Үнэлгээ", href: "/evaluation", icon: CheckCircleIcon },
 ];
 
 export const quickActions: QuickAction[] = [
@@ -51,7 +48,7 @@ export const quickActions: QuickAction[] = [
   {
     label: "Шалгах хэсэг рүү орох",
     tone: "bg-[#FAFAFA] text-[#0F1216] border-[#DFE1E5]",
-    icon: CheckIcon,
+    icon: CheckCircleIcon,
   },
   {
     label: "Асуултын сан руу орох",
