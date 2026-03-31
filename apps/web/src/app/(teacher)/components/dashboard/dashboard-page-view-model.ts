@@ -18,22 +18,22 @@ const quickActions: DashboardPageViewModel["quickActions"] = [
     primary: true,
   },
   {
-    label: "Дүн шалгах",
-    description: "Ирсэн оролдлого, үр дүнгээ шалгана.",
-    href: "/my-exams",
-    icon: "review",
+    label: "Асуултын сан үүсгэх",
+    description: "Сангаа цэгцэлж, шинэ асуултуудаа бэлдэнэ.",
+    href: "/question-bank",
+    icon: "bank",
   },
   {
-    label: "Анги удирдах",
-    description: "Анги, сурагчдын мэдээллээ цэгцэлнэ.",
-    href: "/classes",
+    label: "Шалгалт авах",
+    description: "Явагдаж буй шалгалтууд, урсгалаа хянаж ажиллана.",
+    href: "/my-exams",
     icon: "classes",
   },
   {
-    label: "Асуултын сан",
-    description: "Сангаас асуулт нэмэх, засварлана.",
-    href: "/question-bank",
-    icon: "bank",
+    label: "Дүн тавих",
+    description: "Үнэлгээний ажлаа төвлөрүүлж үргэлжлүүлнэ.",
+    href: "/evaluation",
+    icon: "review",
   },
 ];
 
@@ -48,6 +48,7 @@ export const buildDashboardPageViewModel = (
 
   return {
     teacherName: overview.teacherName,
+    pendingReviewCount,
     stats: [
       {
         title: "Анхаарал шаардлагатай",
@@ -78,6 +79,7 @@ export const buildDashboardPageViewModel = (
     upcomingExams: overview.upcomingExams.map((exam) => ({
       id: exam.id,
       title: exam.title,
+      scheduledAt: exam.scheduledFor,
       scheduledLabel: formatDashboardDateTime(exam.scheduledFor),
       questionCountLabel: formatQuestionCount(exam.questionCount),
       href: `/my-exams`,
@@ -88,6 +90,7 @@ export const buildDashboardPageViewModel = (
       passCount: exam.passCount,
       failCount: exam.failCount,
       progressPercent: clampPercent(exam.progressPercent),
+      averageScorePercent: clampPercent(exam.averageScorePercent),
       averageScoreLabel: `Дундаж ${clampPercent(exam.averageScorePercent)}%`,
       href: "/my-exams",
     })),

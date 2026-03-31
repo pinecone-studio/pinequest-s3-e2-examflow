@@ -3,12 +3,8 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { useDashboardData } from "../hooks/use-dashboard-data";
 import { DashboardEmptyState, DashboardErrorState, DashboardSkeleton } from "./dashboard-page-states";
-import { DashboardHero } from "./dashboard-hero";
-import { DashboardQuickActions } from "./dashboard-quick-actions";
-import { DashboardRecentResults } from "./dashboard-recent-results";
-import { DashboardStatsRow } from "./dashboard-stats-row";
+import { DashboardMainGrid } from "./dashboard-main-grid";
 import { DashboardTopBar } from "./dashboard-top-bar";
-import { DashboardUpcomingList } from "./dashboard-upcoming-list";
 
 const matchesSearch = (value: string, keyword: string): boolean =>
   value.toLowerCase().includes(keyword);
@@ -61,40 +57,25 @@ export function DashboardPageContainer() {
   }
 
   return (
-    <section className="mx-auto max-w-[1184px] space-y-5">
+    <section className="mx-auto max-w-[1184px] space-y-6">
       <DashboardTopBar onChange={setSearchValue} value={searchValue} />
 
       {error ? (
-        <div className="rounded-[24px] border border-[#FBD38D] bg-[#FFFAEB] px-4 py-3 text-[14px] text-[#9A6700]">
+        <div className="rounded-[20px] border border-[#F2E6B5] bg-[#FFF8E8] px-4 py-3 text-[14px] text-[#8A6C17]">
           Зарим өгөгдөл шинэчлэгдэх үед алдаа гарсан ч dashboard сүүлийн амжилттай мэдээллээр үргэлжилж байна.
         </div>
       ) : null}
 
-      <DashboardHero teacherName={viewModel.teacherName} />
-      <DashboardStatsRow cards={viewModel.stats} />
-
-      {!viewModel.hasAnyData ? (
-        <DashboardEmptyState />
+      {viewModel.hasAnyData ? (
+        <DashboardMainGrid
+          actions={viewModel.quickActions}
+          pendingReviewCount={viewModel.pendingReviewCount}
+          recentResults={filteredRecent}
+          searchActive={deferredSearch.length > 0}
+          upcomingExams={filteredUpcoming}
+        />
       ) : (
-        <div className="mx-auto grid h-[312px] w-full max-w-[1120px] justify-center gap-4 xl:grid-cols-[repeat(3,362.67px)]">
-          <DashboardQuickActions actions={viewModel.quickActions} />
-          <DashboardUpcomingList
-            emptyMessage={
-              deferredSearch.length
-                ? "Хайлттай тохирох товлосон шалгалт олдсонгүй."
-                : "Одоогоор удахгүй болох шалгалт алга."
-            }
-            exams={filteredUpcoming}
-          />
-          <DashboardRecentResults
-            emptyMessage={
-              deferredSearch.length
-                ? "Хайлттай тохирох саяхны үр дүн олдсонгүй."
-                : "Саяхан дууссан шалгалтын үр дүн алга."
-            }
-            results={filteredRecent}
-          />
-        </div>
+        <DashboardEmptyState />
       )}
     </section>
   );

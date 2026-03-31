@@ -64,6 +64,7 @@ export type DashboardQuickActionView = {
 export type DashboardUpcomingExamItem = {
   id: string;
   title: string;
+  scheduledAt: string;
   scheduledLabel: string;
   questionCountLabel: string;
   href: string;
@@ -75,12 +76,14 @@ export type DashboardRecentResultItem = {
   passCount: number;
   failCount: number;
   progressPercent: number;
+  averageScorePercent: number;
   averageScoreLabel: string;
   href: string;
 };
 
 export type DashboardPageViewModel = {
   teacherName: string;
+  pendingReviewCount: number;
   stats: DashboardSummaryCardView[];
   quickActions: DashboardQuickActionView[];
   upcomingExams: DashboardUpcomingExamItem[];
