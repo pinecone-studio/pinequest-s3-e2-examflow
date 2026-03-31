@@ -33,6 +33,15 @@ type StudentIntegrityRow = {
   last_event_at: string | null;
 };
 
+type StudentIntegrityEventRow = {
+  student_id: string;
+  id: string;
+  event_type: AttemptIntegrityEventType;
+  severity: IntegritySeverity;
+  details_json: string;
+  created_at: string;
+};
+
 type ExamInsightRow = {
   exam_id: string;
   submitted_count: number;
@@ -170,6 +179,22 @@ export const createClassAnalytics = ({
     GROUP BY a.student_id, ie.event_type, ie.severity`,
     [classroom.id],
   );
+  const studentIntegrityEventsPromise = all<StudentIntegrityEventRow>(
+    db,
+    `SELECT
+      a.student_id AS student_id,
+      ie.id AS id,
+      ie.event_type AS event_type,
+      ie.severity AS severity,
+      ie.details_json AS details_json,
+      ie.created_at AS created_at
+    FROM attempt_integrity_events ie
+    JOIN attempts a ON a.id = ie.attempt_id
+    JOIN exams e ON e.id = ie.exam_id
+    WHERE e.class_id = ? AND a.status = 'IN_PROGRESS'
+    ORDER BY ie.created_at DESC`,
+    [classroom.id],
+  );
   const examInsightsPromise = all<ExamInsightRow>(
     db,
     `SELECT
@@ -215,13 +240,23 @@ export const createClassAnalytics = ({
     completedExamCount: async () => (await metricsPromise).completedExamCount,
     averageScore: async () => (await metricsPromise).averageScore,
     studentInsights: async () => {
-      const [metrics, studentRows, integrityRows] = await Promise.all([
+      const [metrics, studentRows, integrityRows, integrityEvents] = await Promise.all([
         metricsPromise,
         studentInsightsPromise,
         studentIntegrityPromise,
+        studentIntegrityEventsPromise,
       ]);
 
       const integrityRowsByStudent = integrityRows.reduce<Map<string, StudentIntegrityRow[]>>(
+        (current, row) => {
+          const next = current.get(row.student_id) ?? [];
+          next.push(row);
+          current.set(row.student_id, next);
+          return current;
+        },
+        new Map(),
+      );
+      const integrityEventsByStudent = integrityEvents.reduce<Map<string, StudentIntegrityEventRow[]>>(
         (current, row) => {
           const next = current.get(row.student_id) ?? [];
           next.push(row);
@@ -246,6 +281,8 @@ export const createClassAnalytics = ({
             integritySignals
               .map((entry) => entry.last_event_at)
               .filter((value): value is string => Boolean(value))[0] ?? null;
+          const studentIntegrityEvents =
+            integrityEventsByStudent.get(row.student_id) ?? [];
 
           return {
             student: toUser(db, await findUser(db, row.student_id)),
@@ -262,6 +299,13 @@ export const createClassAnalytics = ({
               type: entry.event_type,
               severity: entry.severity,
               count: entry.event_count,
+            })),
+            integrityEvents: studentIntegrityEvents.map((entry) => ({
+              id: entry.id,
+              type: entry.event_type,
+              severity: entry.severity,
+              details: entry.details_json,
+              createdAt: entry.created_at,
             })),
           };
         }),

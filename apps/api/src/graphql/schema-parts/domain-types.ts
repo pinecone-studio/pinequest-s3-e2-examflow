@@ -36,12 +36,21 @@ export const schemaDomainTypes = /* GraphQL */ `
     integrityRisk: IntegrityRiskLevel!
     lastIntegrityEventAt: String
     integritySignals: [IntegritySignalCount!]!
+    integrityEvents: [IntegrityEvent!]!
   }
 
   type IntegritySignalCount {
     type: AttemptIntegrityEventType!
     severity: IntegritySeverity!
     count: Int!
+  }
+
+  type IntegrityEvent {
+    id: ID!
+    type: AttemptIntegrityEventType!
+    severity: IntegritySeverity!
+    details: String!
+    createdAt: String!
   }
 
   type ClassExamInsight {

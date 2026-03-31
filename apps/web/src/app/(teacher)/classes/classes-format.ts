@@ -3,10 +3,18 @@ import {
   ClassStudentStatus,
   ExamStatus,
   IntegrityRiskLevel,
+  IntegritySeverity,
 } from "@/graphql/generated";
 
 const relativeFormatter = new Intl.RelativeTimeFormat("mn", {
   numeric: "auto",
+});
+const absoluteDateTimeFormatter = new Intl.DateTimeFormat("mn-MN", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
 });
 
 const relativeUnits = [
@@ -58,6 +66,39 @@ export const formatRelativeTime = (value: string | null | undefined) => {
   return "Саяхан";
 };
 
+export const formatAbsoluteDateTime = (value: string | null | undefined) => {
+  if (!value) {
+    return "Тодорхойгүй";
+  }
+
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) {
+    return "Тодорхойгүй";
+  }
+
+  return absoluteDateTimeFormatter.format(timestamp);
+};
+
+export const formatDurationMs = (value: number | null | undefined) => {
+  if (value === null || value === undefined || !Number.isFinite(value) || value < 0) {
+    return "Тодорхойгүй";
+  }
+
+  const totalMinutes = Math.round(value / (1000 * 60));
+  if (totalMinutes >= 60) {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return minutes > 0 ? `${hours} цаг ${minutes} минут` : `${hours} цаг`;
+  }
+
+  if (totalMinutes >= 1) {
+    return `${totalMinutes} минут`;
+  }
+
+  const totalSeconds = Math.max(1, Math.round(value / 1000));
+  return `${totalSeconds} сек`;
+};
+
 export const formatIntegrityRisk = (
   risk: IntegrityRiskLevel,
   eventCount: number,
@@ -71,6 +112,14 @@ export const formatIntegrityRisk = (
   }
 
   return risk === IntegrityRiskLevel.Medium ? "Дунд" : "Бага";
+};
+
+export const formatIntegritySeverity = (severity: IntegritySeverity) => {
+  if (severity === IntegritySeverity.High) {
+    return "Өндөр";
+  }
+
+  return severity === IntegritySeverity.Medium ? "Дунд" : "Бага";
 };
 
 export const formatIntegritySignal = (type: AttemptIntegrityEventType) => {

@@ -26,6 +26,13 @@ query ClassDetail($id: ID!) {
         severity
         count
       }
+      integrityEvents {
+        id
+        type
+        severity
+        details
+        createdAt
+      }
       student {
         id
         fullName

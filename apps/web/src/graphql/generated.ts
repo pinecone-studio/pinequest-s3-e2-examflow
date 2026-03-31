@@ -99,6 +99,7 @@ export type ClassExamInsight = {
 export type ClassStudentInsight = {
   __typename?: 'ClassStudentInsight';
   averageScore?: Maybe<Scalars['Float']['output']>;
+  integrityEvents: Array<IntegrityEvent>;
   integrityRisk: IntegrityRiskLevel;
   integritySignals: Array<IntegritySignalCount>;
   lastActiveAt?: Maybe<Scalars['String']['output']>;
@@ -297,6 +298,15 @@ export type Health = {
 export type Hello = {
   __typename?: 'Hello';
   message: Scalars['String']['output'];
+};
+
+export type IntegrityEvent = {
+  __typename?: 'IntegrityEvent';
+  createdAt: Scalars['String']['output'];
+  details: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  severity: IntegritySeverity;
+  type: AttemptIntegrityEventType;
 };
 
 export enum IntegrityRiskLevel {
@@ -852,7 +862,7 @@ export type ClassDetailQueryVariables = Exact<{
 }>;
 
 
-export type ClassDetailQuery = { __typename?: 'Query', class?: { __typename?: 'Class', id: string, name: string, description?: string | null, subject: string, grade: number, studentCount: number, assignedExamCount: number, upcomingExamCount: number, completedExamCount: number, averageScore?: number | null, teacher: { __typename?: 'User', id: string, fullName: string }, studentInsights: Array<{ __typename?: 'ClassStudentInsight', status: ClassStudentStatus, lastActiveAt?: string | null, averageScore?: number | null, suspiciousEventCount: number, integrityRisk: IntegrityRiskLevel, lastIntegrityEventAt?: string | null, integritySignals: Array<{ __typename?: 'IntegritySignalCount', type: AttemptIntegrityEventType, severity: IntegritySeverity, count: number }>, student: { __typename?: 'User', id: string, fullName: string, email: string } }>, examInsights: Array<{ __typename?: 'ClassExamInsight', submittedCount: number, totalStudents: number, progressPercent: number, averageScore?: number | null, questionCount: number, exam: { __typename?: 'Exam', id: string, title: string, durationMinutes: number, status: ExamStatus } }> } | null };
+export type ClassDetailQuery = { __typename?: 'Query', class?: { __typename?: 'Class', id: string, name: string, description?: string | null, subject: string, grade: number, studentCount: number, assignedExamCount: number, upcomingExamCount: number, completedExamCount: number, averageScore?: number | null, teacher: { __typename?: 'User', id: string, fullName: string }, studentInsights: Array<{ __typename?: 'ClassStudentInsight', status: ClassStudentStatus, lastActiveAt?: string | null, averageScore?: number | null, suspiciousEventCount: number, integrityRisk: IntegrityRiskLevel, lastIntegrityEventAt?: string | null, integritySignals: Array<{ __typename?: 'IntegritySignalCount', type: AttemptIntegrityEventType, severity: IntegritySeverity, count: number }>, integrityEvents: Array<{ __typename?: 'IntegrityEvent', id: string, type: AttemptIntegrityEventType, severity: IntegritySeverity, details: string, createdAt: string }>, student: { __typename?: 'User', id: string, fullName: string, email: string } }>, examInsights: Array<{ __typename?: 'ClassExamInsight', submittedCount: number, totalStudents: number, progressPercent: number, averageScore?: number | null, questionCount: number, exam: { __typename?: 'Exam', id: string, title: string, durationMinutes: number, status: ExamStatus } }> } | null };
 
 export type ClassesListQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1944,6 +1954,13 @@ export const ClassDetailDocument = gql`
         type
         severity
         count
+      }
+      integrityEvents {
+        id
+        type
+        severity
+        details
+        createdAt
       }
       student {
         id
