@@ -148,3 +148,7 @@ export function ViewIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export { MenuIcon } from "./icons-extra";
+export { ChevronDownIcon } from "./icons-ui";
+export { PlusIcon } from "./icons-actions";

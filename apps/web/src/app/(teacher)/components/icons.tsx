@@ -1,9 +1,16 @@
 export * from "./icons-base";
-export * from "./icons-actions";
 export * from "./icons-extra";
-export * from "./icons-svg";
+export * from "./icons-actions";
 export * from "./icons-ui";
-export * from "./icons-more";
+export {
+  ClassesIcon,
+  ClassesSideBarIcon,
+  GlobalIcon,
+  HomesIcon,
+  MenuOpenIcon,
+  MyExamsIcon,
+  QuestionBox,
+} from "./icons-svg";
 export * from "./icons/PreviewCheckCircleIcon";
 export * from "./icons/PreviewFileIcon";
 export * from "./icons/PreviewInfoIcon";
