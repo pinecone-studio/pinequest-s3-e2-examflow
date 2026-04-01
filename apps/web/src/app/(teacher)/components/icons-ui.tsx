@@ -25,6 +25,14 @@ export function DotsIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function AutoAwesomeIcon({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7 3 1.5-3.5L17 7l-3.5-1.5L12 2l-1.5 3.5L7 7l3.5 1.5L12 12zm-7 5 1-2.25L8 14l-2.25-1L5 11l-1 2.25L2 14l2.25 1L5 17z" />
+    </svg>
+  );
+}
 export function FileIcon({ className }: IconProps) {
   return (
     <svg

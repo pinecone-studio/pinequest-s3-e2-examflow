@@ -148,6 +148,24 @@ export function ViewIcon({ className }: IconProps) {
     </svg>
   );
 }
+export function ArrowRightIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+      width={10}
+      height={6}
+      fill="none"
+    >
+      <path
+        stroke="#6434F8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M.5 2.833h8.167m0 0L6.333 5.167m2.334-2.334L6.333.5"
+      />
+    </svg>
+  );
+}
 
 export { MenuIcon } from "./icons-extra";
 export { ChevronDownIcon } from "./icons-ui";
