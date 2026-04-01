@@ -132,9 +132,12 @@ const buildBaseExamView = (
     id: exam.id,
     title: exam.title,
     subject: exam.class.name,
+    className: exam.class.name,
     subjectName: exam.class.subject,
     classGrade: exam.class.grade,
     createdDateLabel: formatDateOnly(exam.createdAt),
+    startedAtLabel: exam.startedAt ? formatDate(exam.startedAt) : null,
+    endsAtLabel: exam.endsAt ? formatDate(exam.endsAt) : null,
     questionCount: exam.questions.length,
     totalPoints,
     passingCriteriaType: exam.passingCriteriaType,
@@ -174,6 +177,9 @@ export const buildMyExamDetailView = (exam: QueryExamDetail): MyExamView => {
   const questionPointsMap = new Map(
     exam.questions.map((item) => [item.question.id, item.points]),
   );
+  const questionCorrectAnswerMap = new Map(
+    exam.questions.map((item) => [item.question.id, item.question.correctAnswer ?? null]),
+  );
 
   const studentRows: MyExamStudentRow[] = exam.attempts.map((attempt) => {
     const answers: MyExamStudentAnswer[] = [...attempt.answers]
@@ -187,6 +193,7 @@ export const buildMyExamDetailView = (exam: QueryExamDetail): MyExamView => {
         questionId: answer.question.id,
         prompt: answer.question.prompt || answer.question.title,
         promptImageValue: getQuestionPromptImageValue(answer.question.tags),
+        correctAnswer: questionCorrectAnswerMap.get(answer.question.id) ?? null,
         value: answer.value,
         displayValue: formatAnswerValue(answer.question.type, answer.value),
         type: answer.question.type,

@@ -1,7 +1,7 @@
 /* eslint-disable max-lines, @next/next/no-img-element, react-hooks/set-state-in-effect */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useReviewAttemptMutation } from "@/graphql/generated";
 import { isDirectImageSource, useProtectedImageSource } from "@/lib/image-answer";
 import { parseOpenTaskAnswer } from "@/lib/open-task-answer";
@@ -23,6 +23,9 @@ type ReviewDraft = {
   feedback: string;
 };
 
+const getReviewDraftKey = (answer: MyExamStudentAnswer) =>
+  `${answer.id}:${answer.questionId}`;
+
 const questionTypeLabel = (type: string) => {
   if (type === "MCQ") return "Олон сонголт";
   if (type === "TRUE_FALSE") return "Үнэн / Худал";
@@ -42,10 +45,29 @@ const getMaxManualScore = (answer: MyExamStudentAnswer) =>
     ? answer.total
     : Math.max(answer.total - (answer.autoScore ?? 0), 0);
 
+const shouldShowCorrectAnswer = (answer: MyExamStudentAnswer) =>
+  Boolean(answer.correctAnswer) && answer.score < answer.total;
+
+const shouldShowFeedbackField = (answer: MyExamStudentAnswer) =>
+  allowsManualScore(answer) || answer.score < answer.total;
+
+const formatCorrectAnswer = (answer: MyExamStudentAnswer) => {
+  if (!answer.correctAnswer) return null;
+  if (answer.type === "TRUE_FALSE") {
+    if (answer.correctAnswer === "True" || answer.correctAnswer === "true") {
+      return "Үнэн";
+    }
+    if (answer.correctAnswer === "False" || answer.correctAnswer === "false") {
+      return "Худал";
+    }
+  }
+  return answer.correctAnswer;
+};
+
 const createInitialDrafts = (student: MyExamStudentRow | null) =>
   Object.fromEntries(
     (student?.answers ?? []).map((answer) => [
-      answer.id,
+      getReviewDraftKey(answer),
       {
         manualScore: answer.manualScore === null ? "" : String(answer.manualScore),
         feedback: answer.feedback ?? "",
@@ -193,13 +215,18 @@ export function ExamResultsStudentDetailDialog({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [reviewAttempt, reviewAttemptState] = useReviewAttemptMutation();
+  const previousStudentIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open) {
+      previousStudentIdRef.current = null;
       return;
     }
 
-    setDrafts(createInitialDrafts(student));
+    if (previousStudentIdRef.current !== student?.id) {
+      setDrafts(createInitialDrafts(student));
+      previousStudentIdRef.current = student?.id ?? null;
+    }
     setErrorMessage(null);
     setSuccessMessage(null);
   }, [open, student]);
@@ -213,7 +240,7 @@ export function ExamResultsStudentDetailDialog({
     (answer) => answer.requiresReview,
   ).length;
   const hasUnsavedReviews = student.answers.some((answer) => {
-    const draft = drafts[answer.id];
+    const draft = drafts[getReviewDraftKey(answer)];
     if (!draft) {
       return false;
     }
@@ -271,7 +298,7 @@ export function ExamResultsStudentDetailDialog({
     }[] = [];
 
     for (const answer of student.answers) {
-      const draft = drafts[answer.id] ?? {
+      const draft = drafts[getReviewDraftKey(answer)] ?? {
         manualScore: answer.manualScore === null ? "" : String(answer.manualScore),
         feedback: answer.feedback ?? "",
       };
@@ -448,7 +475,24 @@ export function ExamResultsStudentDetailDialog({
 
                   <AnswerValue answer={answer} />
 
-                  <div className="grid gap-3 rounded-lg border border-[#E4E7EC] bg-[#F8FAFC] p-3 lg:grid-cols-[160px_minmax(0,1fr)]">
+                  {shouldShowCorrectAnswer(answer) ? (
+                    <div className="rounded-lg border border-[#C7D7FE] bg-[#EEF4FF] px-4 py-3">
+                      <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#1D4ED8]">
+                        Зөв хариулт
+                      </p>
+                      <p className="mt-1 text-[14px] font-medium text-[#0F172A]">
+                        {formatCorrectAnswer(answer)}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <div
+                    className={`grid gap-3 rounded-lg border border-[#E4E7EC] bg-[#F8FAFC] p-3 ${
+                      shouldShowFeedbackField(answer)
+                        ? "lg:grid-cols-[160px_minmax(0,1fr)]"
+                        : ""
+                    }`}
+                  >
                     <div className="space-y-2">
                       <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#475467]">
                         Оноо
@@ -472,9 +516,13 @@ export function ExamResultsStudentDetailDialog({
                             min={0}
                             max={getMaxManualScore(answer)}
                             step="0.1"
-                            value={drafts[answer.id]?.manualScore ?? ""}
+                            value={drafts[getReviewDraftKey(answer)]?.manualScore ?? ""}
                             onChange={(event) =>
-                              handleDraftChange(answer.id, "manualScore", event.target.value)
+                              handleDraftChange(
+                                getReviewDraftKey(answer),
+                                "manualScore",
+                                event.target.value,
+                              )
                             }
                             className="w-full rounded-md border border-[#D0D5DD] bg-white px-3 py-2 text-[14px] text-[#0F1216] outline-none transition focus:border-[#2466D0]"
                           />
@@ -489,23 +537,29 @@ export function ExamResultsStudentDetailDialog({
                       )}
                     </div>
 
-                    <label className="block space-y-1">
-                      <span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#475467]">
-                        Feedback
-                      </span>
-                      <textarea
-                        rows={4}
-                        value={drafts[answer.id]?.feedback ?? ""}
-                        onChange={(event) =>
-                          handleDraftChange(answer.id, "feedback", event.target.value)
-                        }
-                        placeholder="Student-д харагдах тайлбар оруулна уу..."
-                        className="min-h-[120px] w-full rounded-md border border-[#D0D5DD] bg-white px-3 py-2 text-[14px] leading-6 text-[#0F1216] outline-none transition focus:border-[#2466D0]"
-                      />
-                      <p className="text-[12px] text-[#667085]">
-                        Одоогийн нийт оноо: {formatScore(answer.score)} / {formatScore(answer.total)}
-                      </p>
-                    </label>
+                    {shouldShowFeedbackField(answer) ? (
+                      <label className="block space-y-1">
+                        <span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#475467]">
+                          Feedback
+                        </span>
+                        <textarea
+                          rows={4}
+                          value={drafts[getReviewDraftKey(answer)]?.feedback ?? ""}
+                          onChange={(event) =>
+                            handleDraftChange(
+                              getReviewDraftKey(answer),
+                              "feedback",
+                              event.target.value,
+                            )
+                          }
+                          placeholder="Student-д харагдах тайлбар оруулна уу..."
+                          className="min-h-[120px] w-full rounded-md border border-[#D0D5DD] bg-white px-3 py-2 text-[14px] leading-6 text-[#0F1216] outline-none transition focus:border-[#2466D0]"
+                        />
+                        <p className="text-[12px] text-[#667085]">
+                          Одоогийн нийт оноо: {formatScore(answer.score)} / {formatScore(answer.total)}
+                        </p>
+                      </label>
+                    ) : null}
                   </div>
                 </div>
               </article>

@@ -40,6 +40,7 @@ export type MyExamStudentAnswer = {
   questionId: string;
   prompt: string;
   promptImageValue: string | null;
+  correctAnswer: string | null;
   value: string;
   displayValue: string;
   type: string;
@@ -69,9 +70,12 @@ export type MyExamListView = {
   id: string;
   title: string;
   subject: string;
+  className: string;
   subjectName: string;
   classGrade: number;
   createdDateLabel: string;
+  startedAtLabel: string | null;
+  endsAtLabel: string | null;
   questionCount: number;
   totalPoints: number;
   passingCriteriaType: PassingCriteriaType;
