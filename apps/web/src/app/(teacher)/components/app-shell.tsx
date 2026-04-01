@@ -11,7 +11,7 @@ type AppShellProps = PropsWithChildren<{
 
 export function AppShell({ children, contentClassName }: AppShellProps) {
   return (
-    <main className="min-h-screen bg-[#F7F7FB]">
+    <main className="min-h-screen bg-[#FAFAFA]">
       <div className="flex min-h-screen flex-col lg:flex-row">
         <Sidebar />
         <section className="flex-1 overflow-y-auto">

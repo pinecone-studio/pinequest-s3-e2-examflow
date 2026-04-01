@@ -25,23 +25,6 @@ export function DotsIcon({ className }: IconProps) {
     </svg>
   );
 }
-export function BellIcon({ className }: IconProps) {
-  return (
-    <svg
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-      width={16}
-      height={20}
-      fill="none"
-    >
-      <path
-        fill="#52555B"
-        d="m14.877 14.79-1.29-1.29v-5c0-3.07-1.64-5.64-4.5-6.32V1.5c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68c-2.87.68-4.5 3.24-4.5 6.32v5l-1.29 1.29c-.63.63-.19 1.71.7 1.71h13.17c.9 0 1.34-1.08.71-1.71Zm-3.29-.29h-8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6Zm-4 5c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2Z"
-      />
-    </svg>
-  );
-}
-
 export function FileIcon({ className }: IconProps) {
   return (
     <svg
@@ -61,7 +44,6 @@ export function FileIcon({ className }: IconProps) {
     </svg>
   );
 }
-
 export function PencilIcon({ className }: IconProps) {
   return (
     <svg
@@ -81,7 +63,6 @@ export function PencilIcon({ className }: IconProps) {
     </svg>
   );
 }
-
 export function CalendarIcon({ className }: IconProps) {
   return (
     <svg
@@ -160,6 +141,22 @@ export function QuestionBoxIcon({ className }: IconProps) {
         strokeLinejoin="round"
         strokeWidth={1.333}
         d="m10.667 4 2.666 9.333M8 4v9.333M5.333 5.333v8M2.667 2.667v10.666"
+      />
+    </svg>
+  );
+}
+export function NotificationIcon({ className }: IconProps) {
+  return (
+    <svg
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+      width={16}
+      height={20}
+      fill="none"
+    >
+      <path
+        fill="currentColor"
+        d="m14.877 14.79-1.29-1.29v-5c0-3.07-1.64-5.64-4.5-6.32V1.5c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68c-2.87.68-4.5 3.24-4.5 6.32v5l-1.29 1.29c-.63.63-.19 1.71.7 1.71h13.17c.9 0 1.34-1.08.71-1.71Zm-3.29-.29h-8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6Zm-4 5c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2Z"
       />
     </svg>
   );

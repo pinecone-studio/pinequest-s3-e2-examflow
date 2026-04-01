@@ -9,7 +9,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-full border-b border-[#ECEAF8] bg-[#FBFAFF] lg:min-h-screen lg:w-[256px] lg:min-w-[256px] lg:border-b-0 lg:border-r">
+    <aside className="w-full border-b border-[#ECEAF8] bg-[#FAFAFA] lg:min-h-screen lg:w-[256px] lg:min-w-[256px] lg:border-b-0 lg:border-r">
       <div className="flex h-full flex-1 flex-col p-4 lg:px-4 lg:py-5">
         <div className="flex min-h-[84px] items-center px-3">
           <div className="flex items-center gap-3">
@@ -34,8 +34,9 @@ export function Sidebar() {
             const itemClassName = `flex h-11 w-full items-center gap-3 rounded-[14px] px-4 py-3 text-left text-[14px] font-medium leading-5 transition ${
               isActive
                 ? "bg-[#6434F8] text-white shadow-[0_14px_32px_rgba(100,52,248,0.24)]"
-                : "text-[#6B6E72] hover:bg-white hover:text-[#17151F]"
+                : "text-[#6B6E72] hover:bg-white hover:text-[#17151F] active:text-white"
             }`;
+            const iconClassName = "h-[18px] w-[18px] shrink-0 text-current";
 
             if (!item.href || item.disabled) {
               return (
@@ -44,7 +45,7 @@ export function Sidebar() {
                   aria-disabled="true"
                   className={itemClassName}
                 >
-                  <Icon className="h-[18px] w-[18px] shrink-0" />
+                  <Icon className={iconClassName} />
                   <span>{item.label}</span>
                 </div>
               );
@@ -56,7 +57,7 @@ export function Sidebar() {
                 href={item.href}
                 className={itemClassName}
               >
-                <Icon className="h-[18px] w-[18px] shrink-0" />
+                <Icon className={iconClassName} />
                 <span>{item.label}</span>
               </Link>
             );
