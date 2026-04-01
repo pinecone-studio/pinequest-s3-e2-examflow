@@ -1,4 +1,4 @@
-const LOCAL_GRAPHQL_ENDPOINT = "http://127.0.0.1:8787/graphql";
+const LOCAL_GRAPHQL_ENDPOINT = "http://localhost:8787/graphql";
 
 const getConfiguredGraphqlEndpoint = (): string => {
   const configuredEndpoint = process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT?.trim();
