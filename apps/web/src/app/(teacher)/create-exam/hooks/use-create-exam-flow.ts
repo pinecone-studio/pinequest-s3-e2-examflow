@@ -54,7 +54,7 @@ export const useCreateExamFlow = (
 ) => {
   const isEditMode = Boolean(examId);
   const optionsQuery = useCreateExamOptionsQuery({
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "network-only",
     notifyOnNetworkStatusChange: true,
     ssr: false,
   });
