@@ -16,7 +16,7 @@ export function ClassCard({
   name,
   meta,
   studentCountLabel,
-  upcomingLabel,
+  upcomingLabel: _upcomingLabel,
   completedLabel,
 }: ClassCardProps) {
   const [subject = "", grade = ""] = meta.split(" · ");
