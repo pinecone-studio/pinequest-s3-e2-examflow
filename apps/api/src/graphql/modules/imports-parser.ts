@@ -33,6 +33,12 @@ const answerPattern =
   /^(correct answer|answer key|answer|зөв хариулт|хариулт|хариу)\s*[:\-]\s*(.+)$/iu;
 const scorePattern = /^(score|scores|point|points|оноо)\s*[:\-]\s*(\d+)$/iu;
 const trailingScorePattern = /^(\d+)\s*оноо$/iu;
+const inlineScorePattern =
+  /(?:^|[\s([{-])(\d+)\s*(?:оноо|оноотой|point|points)(?=$|[\s)\]}.!,;:])/iu;
+const questionScoreRangePattern =
+  /^(\d+)\s*[–-]\s*(\d+)\s*[–-]?\s*р\s+бодлого(?:\s+тус\s+бүр)?[^.\n]*?(\d+)\s*оноотой\.?$/iu;
+const questionScoreSinglePattern =
+  /^(\d+)\s*[–-]?\s*р\s+бодлого(?:\s+тус\s+бүр)?[^.\n]*?(\d+)\s*оноотой\.?$/iu;
 const pagePattern = /^(page|хуудас|хуудасны)\s*[:\-]?\s*(\d+)$/iu;
 const mcqTypePattern = /^(олон сонголт|multiple choice)$/iu;
 const shortAnswerTypePattern = /^(богино хариулт|short answer)$/iu;
@@ -54,7 +60,10 @@ const stripBoilerplate = (value: string) =>
   value
     .replace(/хариултаа оруулахад автоматаар хадгална\.?/giu, " ")
     .replace(/\b(олон сонголт|multiple choice|богино хариулт|short answer)\b/giu, " ")
-    .replace(/\b\d+\s*оноо\b/giu, " ")
+    .replace(
+      /(?:^|[\s([{-])\d+\s*(?:оноо|оноотой|point|points)(?=$|[\s)\]}.!,;:])/giu,
+      " ",
+    )
     .replace(/\b\d+\s*[–-]\s*\d+\s*р\s+бодлого[^.\n]*оноотой\.?/giu, " ")
     .replace(/\b\d+\s*р\s+бодлого[^.\n]*оноотой\.?/giu, " ")
     .replace(/\s+/gu, " ")
@@ -133,6 +142,75 @@ const explodeLogicalLine = (line: string) =>
     .split(/\r?\n/u)
     .map((item) => item.trim())
     .filter(Boolean);
+
+const parseDeclaredScoreRule = (line: string): { orders: number[]; score: number } | null => {
+  const rangeMatch = questionScoreRangePattern.exec(line);
+  if (rangeMatch?.[1] && rangeMatch[2] && rangeMatch[3]) {
+    const start = Number.parseInt(rangeMatch[1], 10);
+    const end = Number.parseInt(rangeMatch[2], 10);
+    const score = Number.parseInt(rangeMatch[3], 10);
+    if (Number.isFinite(start) && Number.isFinite(end) && Number.isFinite(score) && score > 0) {
+      const orders = Array.from(
+        { length: Math.max(end - start + 1, 0) },
+        (_, index) => start + index,
+      );
+      return { orders, score };
+    }
+  }
+
+  const singleMatch = questionScoreSinglePattern.exec(line);
+  if (singleMatch?.[1] && singleMatch[2]) {
+    const order = Number.parseInt(singleMatch[1], 10);
+    const score = Number.parseInt(singleMatch[2], 10);
+    if (Number.isFinite(order) && Number.isFinite(score) && score > 0) {
+      return { orders: [order], score };
+    }
+  }
+
+  return null;
+};
+
+const parseInlineScore = (line: string): number | null => {
+  const scoreMatch = scorePattern.exec(line);
+  if (scoreMatch?.[2]) {
+    const score = Number.parseInt(scoreMatch[2], 10);
+    return Number.isFinite(score) && score > 0 ? score : null;
+  }
+
+  const trailingScoreMatch = trailingScorePattern.exec(line);
+  if (trailingScoreMatch?.[1]) {
+    const score = Number.parseInt(trailingScoreMatch[1], 10);
+    return Number.isFinite(score) && score > 0 ? score : null;
+  }
+
+  const inlineMatch = inlineScorePattern.exec(line);
+  if (inlineMatch?.[1]) {
+    const score = Number.parseInt(inlineMatch[1], 10);
+    return Number.isFinite(score) && score > 0 ? score : null;
+  }
+
+  return null;
+};
+
+const collectDeclaredScores = (
+  lines: string[],
+  baseScores: Map<number, number>,
+) => {
+  const nextScores = new Map(baseScores);
+
+  for (const line of lines) {
+    const declaredScoreRule = parseDeclaredScoreRule(line);
+    if (!declaredScoreRule) {
+      continue;
+    }
+
+    for (const order of declaredScoreRule.orders) {
+      nextScores.set(order, declaredScoreRule.score);
+    }
+  }
+
+  return nextScores;
+};
 
 const segmentImportedExamText = (rawText: string): SegmentedPage[] => {
   const sourceLines = rawText.replace(/\r\n?/gu, "\n").split("\n");
@@ -471,13 +549,28 @@ const parseQuestionBlock = (
   title: string,
   pageNumber: number,
   nextOrder: number,
+  inheritedDeclaredScores: Map<number, number>,
 ): ParsedImportQuestion | null => {
   let currentQuestion: WorkingQuestion | null = null;
+  const declaredScores = new Map(inheritedDeclaredScores);
 
   for (const [index, line] of lines.entries()) {
+    const declaredScoreRule = parseDeclaredScoreRule(line);
+    if (declaredScoreRule) {
+      for (const order of declaredScoreRule.orders) {
+        declaredScores.set(order, declaredScoreRule.score);
+        if (currentQuestion?.order === order) {
+          currentQuestion.score = declaredScoreRule.score;
+          currentQuestion.difficulty = toDifficulty(declaredScoreRule.score);
+        }
+      }
+      continue;
+    }
+
     const titledQuestionMatch = titledQuestionPattern.exec(line);
     if (titledQuestionMatch?.[2]) {
       const order = Number.parseInt(titledQuestionMatch[2], 10) || nextOrder;
+      const score = parseInlineScore(line) ?? declaredScores.get(order) ?? 1;
       currentQuestion = {
         order,
         type: "ESSAY",
@@ -485,8 +578,8 @@ const parseQuestionBlock = (
         prompt: stripBoilerplate(titledQuestionMatch[3] ?? ""),
         options: [],
         answers: [],
-        score: 1,
-        difficulty: "EASY",
+        score,
+        difficulty: toDifficulty(score),
         sourcePage: pageNumber,
         confidence: 0.5,
         needsReview: true,
@@ -497,6 +590,7 @@ const parseQuestionBlock = (
     const namedQuestionMatch = namedQuestionPattern.exec(line);
     if (namedQuestionMatch?.[1]) {
       const order = Number.parseInt(namedQuestionMatch[1], 10) || nextOrder;
+      const score = parseInlineScore(line) ?? declaredScores.get(order) ?? 1;
       currentQuestion = {
         order,
         type: "ESSAY",
@@ -504,8 +598,8 @@ const parseQuestionBlock = (
         prompt: stripBoilerplate(namedQuestionMatch[2] ?? ""),
         options: [],
         answers: [],
-        score: 1,
-        difficulty: "EASY",
+        score,
+        difficulty: toDifficulty(score),
         sourcePage: pageNumber,
         confidence: 0.5,
         needsReview: true,
@@ -516,6 +610,7 @@ const parseQuestionBlock = (
     const questionMatch = matchQuestionStart(line);
     if (questionMatch) {
       const order = questionMatch.order || nextOrder;
+      const score = parseInlineScore(line) ?? declaredScores.get(order) ?? 1;
       currentQuestion = {
         order,
         type: "ESSAY",
@@ -523,8 +618,8 @@ const parseQuestionBlock = (
         prompt: questionMatch.prompt,
         options: [],
         answers: [],
-        score: 1,
-        difficulty: "EASY",
+        score,
+        difficulty: toDifficulty(score),
         sourcePage: pageNumber,
         confidence: 0.5,
         needsReview: true,
@@ -558,23 +653,10 @@ const parseQuestionBlock = (
       continue;
     }
 
-    const scoreMatch = scorePattern.exec(line);
-    if (scoreMatch?.[2]) {
-      const score = Number.parseInt(scoreMatch[2], 10);
-      if (Number.isFinite(score) && score > 0) {
-        currentQuestion.score = score;
-        currentQuestion.difficulty = toDifficulty(score);
-      }
-      continue;
-    }
-
-    const trailingScoreMatch = trailingScorePattern.exec(line);
-    if (trailingScoreMatch?.[1]) {
-      const score = Number.parseInt(trailingScoreMatch[1], 10);
-      if (Number.isFinite(score) && score > 0) {
-        currentQuestion.score = score;
-        currentQuestion.difficulty = toDifficulty(score);
-      }
+    const score = parseInlineScore(line);
+    if (score !== null) {
+      currentQuestion.score = score;
+      currentQuestion.difficulty = toDifficulty(score);
       continue;
     }
 
@@ -635,9 +717,17 @@ export const parseImportedExamText = (
   const title = titleSource.length ? titleSource.slice(0, 120) : fallbackTitle;
   const questions: ParsedImportQuestion[] = [];
   let lastAcceptedOrder = 0;
+  let declaredScores = new Map<number, number>();
   for (const page of pages) {
     for (const block of page.blocks) {
-      const parsedQuestion = parseQuestionBlock(block, title, page.pageNumber, questions.length + 1);
+      declaredScores = collectDeclaredScores(block, declaredScores);
+      const parsedQuestion = parseQuestionBlock(
+        block,
+        title,
+        page.pageNumber,
+        questions.length + 1,
+        declaredScores,
+      );
       if (parsedQuestion) {
         for (const candidate of splitMergedQuestion(parsedQuestion, title)) {
           const candidateOrder =
