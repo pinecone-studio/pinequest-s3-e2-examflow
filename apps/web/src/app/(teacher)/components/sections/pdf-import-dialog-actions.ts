@@ -4,6 +4,7 @@ import type {
   CreateExamImportJobMutationMutation,
   CreateExamImportJobMutationMutationVariables,
 } from "@/graphql/generated";
+import { extractPdfText } from "./pdf-import-text-extractor";
 import {
   extractPdfImportContent,
   uploadPdfImportFile,
@@ -89,6 +90,10 @@ export const createPdfImportDraft = async ({
   }
 
   const extraction = await extractPdfImportContent(selectedFile, getToken, storageKey);
+  const structuredFallback =
+    extraction.document && extraction.classification ? undefined : await extractPdfText(selectedFile);
+  const document = extraction.document ?? structuredFallback?.document;
+  const classification = extraction.classification ?? structuredFallback?.classification;
   const extractedText = extraction.extractedText;
   if (!extractedText.trim()) {
     throw new Error("PDF файлаас selectable text олдсонгүй.");
@@ -100,6 +105,8 @@ export const createPdfImportDraft = async ({
       fileSizeBytes: selectedFile.size,
       extractedText,
       storageKey,
+      extractionJson: document ? JSON.stringify(document) : null,
+      classifierJson: classification ? JSON.stringify(classification) : null,
     },
   });
   const nextJob = result.data?.createExamImportJob;
@@ -117,9 +124,13 @@ export const createPdfImportDraft = async ({
           ? "PDF-г түр хадгалаад extraction API ашиглан файлын text-ийг уншлаа."
           : "PDF extraction API ашиглан файлын text-ийг уншлаа."
         : null;
+  const engineMessage =
+    classification?.enginesUsed?.length
+      ? `Extraction engine: ${classification.enginesUsed.join(", ")}.`
+      : null;
 
   return {
     job: nextJob,
-    infoMessage: [storageWarning, extractionMessage].filter(Boolean).join(" ") || null,
+    infoMessage: [storageWarning, extractionMessage, engineMessage].filter(Boolean).join(" ") || null,
   };
 };

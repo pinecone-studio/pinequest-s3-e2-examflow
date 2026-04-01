@@ -160,6 +160,8 @@ export type ExamImportJobRow = {
   status: ExamImportJobStatus;
   title: string;
   extracted_text: string | null;
+  extraction_json: string | null;
+  classifier_json: string | null;
   parsed_exam_json: string;
   error_message: string | null;
   created_at: string;
@@ -178,6 +180,9 @@ export type ExamImportQuestionRow = {
   score: number;
   difficulty: Difficulty;
   source_page: number | null;
+  source_excerpt: string | null;
+  source_block_id: string | null;
+  source_bbox_json: string | null;
   confidence: number;
   needs_review: number;
   created_at: string;

@@ -2,12 +2,35 @@ import Link from "next/link";
 import { PdfImportDialogQuestionCard } from "./pdf-import-dialog-question-card";
 import type { ImportJobView, ImportQuestionView } from "./pdf-import-dialog-utils";
 
+const formatClassifierSummary = (jobView: ImportJobView | null) => {
+  if (!jobView?.classifier) {
+    return null;
+  }
+
+  const engines = jobView.classifier.enginesUsed?.length
+    ? jobView.classifier.enginesUsed.join(", ")
+    : "unknown";
+
+  return [
+    `Engine: ${engines}`,
+    `Layout: ${jobView.classifier.layout}`,
+    `Kind: ${jobView.classifier.documentKind}`,
+    jobView.classifier.tableHeavy ? "Tables detected" : null,
+    jobView.classifier.needsOcr ? "OCR likely needed" : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+};
+
 export function PdfImportDialogReviewPane({
   examEditHref,
   errorMessage,
   infoMessage,
   jobView,
+  onQuestionMergeWithNext,
+  onQuestionMove,
   onQuestionReject,
+  onQuestionSplit,
   onQuestionUpdate,
   reviewQuestions,
   reviewSummary,
@@ -16,12 +39,16 @@ export function PdfImportDialogReviewPane({
   errorMessage: string | null;
   infoMessage: string | null;
   jobView: ImportJobView | null;
+  onQuestionMergeWithNext: (questionId: string) => void;
+  onQuestionMove: (questionId: string, direction: "up" | "down") => void;
   onQuestionReject: (questionId: string) => void;
+  onQuestionSplit: (questionId: string) => void;
   onQuestionUpdate: (questionId: string, nextQuestion: ImportQuestionView) => void;
   reviewQuestions: ImportQuestionView[];
   reviewSummary: string | null;
 }) {
   const isEditable = Boolean(jobView && !jobView.questionBank);
+  const classifierSummary = formatClassifierSummary(jobView);
 
   return (
     <div className="flex min-h-0 flex-col">
@@ -34,6 +61,9 @@ export function PdfImportDialogReviewPane({
           {reviewSummary ??
             "Импорт эхлүүлсний дараа backend дээр draft асуултууд үүсэж энд харагдана."}
         </p>
+        {classifierSummary ? (
+          <p className="mt-2 text-[12px] text-[#475467]">{classifierSummary}</p>
+        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
@@ -85,7 +115,14 @@ export function PdfImportDialogReviewPane({
                   key={question.id}
                   question={question}
                   isEditable={isEditable}
+                  onMergeWithNext={
+                    isEditable ? () => onQuestionMergeWithNext(question.id) : undefined
+                  }
+                  onMove={
+                    isEditable ? (direction) => onQuestionMove(question.id, direction) : undefined
+                  }
                   onReject={isEditable ? () => onQuestionReject(question.id) : undefined}
+                  onSplit={isEditable ? () => onQuestionSplit(question.id) : undefined}
                   onUpdate={
                     isEditable ? (nextQuestion) => onQuestionUpdate(question.id, nextQuestion) : undefined
                   }

@@ -3,12 +3,16 @@ mutation CreateExamImportJobMutation(
   $fileSizeBytes: Int!
   $extractedText: String!
   $storageKey: String
+  $extractionJson: String
+  $classifierJson: String
 ) {
   createExamImportJob(
     fileName: $fileName
     fileSizeBytes: $fileSizeBytes
     extractedText: $extractedText
     storageKey: $storageKey
+    extractionJson: $extractionJson
+    classifierJson: $classifierJson
   ) {
     id
     storageKey
@@ -17,6 +21,8 @@ mutation CreateExamImportJobMutation(
     sourceType
     status
     title
+    extractionJson
+    classifierJson
     errorMessage
     totalQuestions
     reviewCount
@@ -33,6 +39,9 @@ mutation CreateExamImportJobMutation(
       score
       difficulty
       sourcePage
+      sourceExcerpt
+      sourceBlockId
+      sourceBboxJson
       confidence
       needsReview
       createdAt

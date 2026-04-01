@@ -63,6 +63,41 @@ This service is intentionally MVP-only:
 - OCR / scanned PDF: not handled by the service
 - when the service is not configured, the web app still falls back to client-side extraction
 
+## Optional Python multi-engine PDF service
+
+If you want a stronger local extraction pipeline with `PyMuPDF + pdfplumber + Azure DI hooks`, use the Python service scaffold:
+
+```bash
+python3 -m venv apps/pdf-extraction-python-service/.venv
+source apps/pdf-extraction-python-service/.venv/bin/activate
+pip install -r apps/pdf-extraction-python-service/requirements.txt
+cp apps/pdf-extraction-python-service/.env.example apps/pdf-extraction-python-service/.env
+npm run dev:pdf-service:python
+```
+
+Then point the API at it in `apps/api/.dev.vars`:
+
+```bash
+PDF_EXTRACTION_SERVICE_URL=http://127.0.0.1:8789/extract
+PDF_EXTRACTION_SERVICE_TOKEN=pinequest-local-pdf-service-token
+```
+
+Optional Azure settings live in `apps/pdf-extraction-python-service/.env`:
+
+```bash
+AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT=https://<your-resource>.cognitiveservices.azure.com/
+AZURE_DOCUMENT_INTELLIGENCE_KEY=<your-key>
+AZURE_DOCUMENT_INTELLIGENCE_MODEL=prebuilt-layout
+```
+
+Notes:
+
+- without Azure credentials, the Python service still works with local engines if installed
+- scanned PDF OCR for the Python service also needs the system `tesseract` binary installed
+  - macOS example: `brew install tesseract`
+- without Python dependencies installed, keep using the Node service or browser fallback
+- the API contract stays the same, so switching services is just changing `PDF_EXTRACTION_SERVICE_URL`
+
 ## Shared dev database maintenance
 
 When the schema changes, apply migrations to the shared dev database:

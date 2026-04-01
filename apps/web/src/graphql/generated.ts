@@ -207,11 +207,13 @@ export type ExamGenerationRuleInput = {
 
 export type ExamImportJob = {
   __typename?: 'ExamImportJob';
+  classifierJson?: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['String']['output'];
   createdBy: User;
   errorMessage?: Maybe<Scalars['String']['output']>;
   exam?: Maybe<Exam>;
   extractedText?: Maybe<Scalars['String']['output']>;
+  extractionJson?: Maybe<Scalars['String']['output']>;
   fileName: Scalars['String']['output'];
   fileSizeBytes: Scalars['Int']['output'];
   id: Scalars['ID']['output'];
@@ -246,6 +248,9 @@ export type ExamImportQuestion = {
   order: Scalars['Int']['output'];
   prompt: Scalars['String']['output'];
   score: Scalars['Int']['output'];
+  sourceBboxJson?: Maybe<Scalars['String']['output']>;
+  sourceBlockId?: Maybe<Scalars['String']['output']>;
+  sourceExcerpt?: Maybe<Scalars['String']['output']>;
   sourcePage?: Maybe<Scalars['Int']['output']>;
   title: Scalars['String']['output'];
   type: QuestionType;
@@ -261,6 +266,9 @@ export type ExamImportQuestionReviewInput = {
   order: Scalars['Int']['input'];
   prompt: Scalars['String']['input'];
   score: Scalars['Int']['input'];
+  sourceBboxJson?: InputMaybe<Scalars['String']['input']>;
+  sourceBlockId?: InputMaybe<Scalars['String']['input']>;
+  sourceExcerpt?: InputMaybe<Scalars['String']['input']>;
   sourcePage?: InputMaybe<Scalars['Int']['input']>;
   title: Scalars['String']['input'];
   type: QuestionType;
@@ -411,7 +419,9 @@ export type MutationCreateExamDraftVariantsArgs = {
 
 
 export type MutationCreateExamImportJobArgs = {
+  classifierJson?: InputMaybe<Scalars['String']['input']>;
   extractedText: Scalars['String']['input'];
+  extractionJson?: InputMaybe<Scalars['String']['input']>;
   fileName: Scalars['String']['input'];
   fileSizeBytes: Scalars['Int']['input'];
   storageKey?: InputMaybe<Scalars['String']['input']>;
@@ -669,7 +679,7 @@ export type ApproveExamImportJobMutationMutationVariables = Exact<{
 }>;
 
 
-export type ApproveExamImportJobMutationMutation = { __typename?: 'Mutation', approveExamImportJob: { __typename?: 'ExamImportJob', id: string, fileName: string, status: ExamImportJobStatus, title: string, totalQuestions: number, reviewCount: number, questionBank?: { __typename?: 'QuestionBank', id: string, title: string } | null, exam?: { __typename?: 'Exam', id: string, title: string, class: { __typename?: 'Class', id: string, name: string } } | null, questions: Array<{ __typename?: 'ExamImportQuestion', id: string, order: number, type: QuestionType, title: string, prompt: string, options: Array<string>, answers: Array<string>, score: number, difficulty: Difficulty, sourcePage?: number | null, confidence: number, needsReview: boolean, createdAt: string }> } };
+export type ApproveExamImportJobMutationMutation = { __typename?: 'Mutation', approveExamImportJob: { __typename?: 'ExamImportJob', id: string, fileName: string, status: ExamImportJobStatus, title: string, extractionJson?: string | null, classifierJson?: string | null, totalQuestions: number, reviewCount: number, questionBank?: { __typename?: 'QuestionBank', id: string, title: string } | null, exam?: { __typename?: 'Exam', id: string, title: string, class: { __typename?: 'Class', id: string, name: string } } | null, questions: Array<{ __typename?: 'ExamImportQuestion', id: string, order: number, type: QuestionType, title: string, prompt: string, options: Array<string>, answers: Array<string>, score: number, difficulty: Difficulty, sourcePage?: number | null, sourceExcerpt?: string | null, sourceBlockId?: string | null, sourceBboxJson?: string | null, confidence: number, needsReview: boolean, createdAt: string }> } };
 
 export type AssignExamToClassMutationVariables = Exact<{
   examId: Scalars['ID']['input'];
@@ -707,10 +717,12 @@ export type CreateExamImportJobMutationMutationVariables = Exact<{
   fileSizeBytes: Scalars['Int']['input'];
   extractedText: Scalars['String']['input'];
   storageKey?: InputMaybe<Scalars['String']['input']>;
+  extractionJson?: InputMaybe<Scalars['String']['input']>;
+  classifierJson?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
-export type CreateExamImportJobMutationMutation = { __typename?: 'Mutation', createExamImportJob: { __typename?: 'ExamImportJob', id: string, storageKey?: string | null, fileName: string, fileSizeBytes: number, sourceType: ExamImportSourceType, status: ExamImportJobStatus, title: string, errorMessage?: string | null, totalQuestions: number, reviewCount: number, createdAt: string, updatedAt: string, questions: Array<{ __typename?: 'ExamImportQuestion', id: string, order: number, type: QuestionType, title: string, prompt: string, options: Array<string>, answers: Array<string>, score: number, difficulty: Difficulty, sourcePage?: number | null, confidence: number, needsReview: boolean, createdAt: string }> } };
+export type CreateExamImportJobMutationMutation = { __typename?: 'Mutation', createExamImportJob: { __typename?: 'ExamImportJob', id: string, storageKey?: string | null, fileName: string, fileSizeBytes: number, sourceType: ExamImportSourceType, status: ExamImportJobStatus, title: string, extractionJson?: string | null, classifierJson?: string | null, errorMessage?: string | null, totalQuestions: number, reviewCount: number, createdAt: string, updatedAt: string, questions: Array<{ __typename?: 'ExamImportQuestion', id: string, order: number, type: QuestionType, title: string, prompt: string, options: Array<string>, answers: Array<string>, score: number, difficulty: Difficulty, sourcePage?: number | null, sourceExcerpt?: string | null, sourceBlockId?: string | null, sourceBboxJson?: string | null, confidence: number, needsReview: boolean, createdAt: string }> } };
 
 export type CreateExamMutationVariables = Exact<{
   classId: Scalars['ID']['input'];
@@ -995,6 +1007,8 @@ export const ApproveExamImportJobMutationDocument = gql`
     fileName
     status
     title
+    extractionJson
+    classifierJson
     totalQuestions
     reviewCount
     questionBank {
@@ -1020,6 +1034,9 @@ export const ApproveExamImportJobMutationDocument = gql`
       score
       difficulty
       sourcePage
+      sourceExcerpt
+      sourceBlockId
+      sourceBboxJson
       confidence
       needsReview
       createdAt
@@ -1211,12 +1228,14 @@ export type CreateExamDraftVariantsMutationMutationHookResult = ReturnType<typeo
 export type CreateExamDraftVariantsMutationMutationResult = ApolloReactCommon.MutationResult<CreateExamDraftVariantsMutationMutation>;
 export type CreateExamDraftVariantsMutationMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateExamDraftVariantsMutationMutation, CreateExamDraftVariantsMutationMutationVariables>;
 export const CreateExamImportJobMutationDocument = gql`
-    mutation CreateExamImportJobMutation($fileName: String!, $fileSizeBytes: Int!, $extractedText: String!, $storageKey: String) {
+    mutation CreateExamImportJobMutation($fileName: String!, $fileSizeBytes: Int!, $extractedText: String!, $storageKey: String, $extractionJson: String, $classifierJson: String) {
   createExamImportJob(
     fileName: $fileName
     fileSizeBytes: $fileSizeBytes
     extractedText: $extractedText
     storageKey: $storageKey
+    extractionJson: $extractionJson
+    classifierJson: $classifierJson
   ) {
     id
     storageKey
@@ -1225,6 +1244,8 @@ export const CreateExamImportJobMutationDocument = gql`
     sourceType
     status
     title
+    extractionJson
+    classifierJson
     errorMessage
     totalQuestions
     reviewCount
@@ -1241,6 +1262,9 @@ export const CreateExamImportJobMutationDocument = gql`
       score
       difficulty
       sourcePage
+      sourceExcerpt
+      sourceBlockId
+      sourceBboxJson
       confidence
       needsReview
       createdAt
@@ -1267,6 +1291,8 @@ export type CreateExamImportJobMutationMutationFn = ApolloReactCommon.MutationFu
  *      fileSizeBytes: // value for 'fileSizeBytes'
  *      extractedText: // value for 'extractedText'
  *      storageKey: // value for 'storageKey'
+ *      extractionJson: // value for 'extractionJson'
+ *      classifierJson: // value for 'classifierJson'
  *   },
  * });
  */

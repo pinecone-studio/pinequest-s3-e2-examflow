@@ -128,6 +128,8 @@ export type CreateExamImportJobArgs = {
   fileSizeBytes: number;
   extractedText: string;
   storageKey?: string | null;
+  extractionJson?: string | null;
+  classifierJson?: string | null;
 };
 export type ReviewedExamImportQuestionInput = {
   id: string;
@@ -140,6 +142,9 @@ export type ReviewedExamImportQuestionInput = {
   score: number;
   difficulty: Difficulty;
   sourcePage?: number | null;
+  sourceExcerpt?: string | null;
+  sourceBlockId?: string | null;
+  sourceBboxJson?: string | null;
   confidence: number;
   needsReview: boolean;
 };

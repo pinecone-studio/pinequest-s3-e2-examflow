@@ -18,7 +18,14 @@ import {
   createPdfImportDraft,
   getPdfImportErrorMessage,
 } from "./pdf-import-dialog-actions";
-import { buildExamEditHref, buildReviewSummary, toApprovedQuestionInput } from "./pdf-import-review-helpers";
+import {
+  buildExamEditHref,
+  buildReviewSummary,
+  mergeReviewQuestionWithNext,
+  moveReviewQuestion,
+  splitReviewQuestion,
+  toApprovedQuestionInput,
+} from "./pdf-import-review-helpers";
 import { buildImportJobView, type ImportJobView, type ImportQuestionView } from "./pdf-import-dialog-utils";
 
 export function usePdfImportDialog(selectedFile: File | null, open: boolean) {
@@ -68,9 +75,7 @@ export function usePdfImportDialog(selectedFile: File | null, open: boolean) {
   }, [jobView]);
 
   useEffect(() => {
-    if (selectedClassId || !classesQuery.data?.classes?.length) {
-      return;
-    }
+    if (selectedClassId || !classesQuery.data?.classes?.length) return;
     setSelectedClassId(classesQuery.data.classes[0]?.id ?? "");
   }, [classesQuery.data?.classes, selectedClassId]);
 
@@ -79,10 +84,7 @@ export function usePdfImportDialog(selectedFile: File | null, open: boolean) {
   const classOptions = classesQuery.data?.classes.map((classroom) => ({ id: classroom.id, name: classroom.name })) ?? [];
 
   const handleImport = async () => {
-    if (!selectedFile) {
-      return;
-    }
-
+    if (!selectedFile) return;
     try {
       setErrorMessage(null);
       setInfoMessage(null);
@@ -106,10 +108,7 @@ export function usePdfImportDialog(selectedFile: File | null, open: boolean) {
   };
 
   const handleApprove = async () => {
-    if (!jobView) {
-      return;
-    }
-
+    if (!jobView) return;
     try {
       setErrorMessage(null);
       if (reviewQuestions.length === 0) {
@@ -139,9 +138,10 @@ export function usePdfImportDialog(selectedFile: File | null, open: boolean) {
     setReviewQuestions((currentQuestions) => currentQuestions.map((question) => (question.id === questionId ? nextQuestion : question)));
   };
 
-  const rejectQuestion = (questionId: string) => {
-    setReviewQuestions((currentQuestions) => currentQuestions.filter((question) => question.id !== questionId).map((question, index) => ({ ...question, order: index + 1 })));
-  };
+  const rejectQuestion = (questionId: string) => setReviewQuestions((currentQuestions) => currentQuestions.filter((question) => question.id !== questionId).map((question, index) => ({ ...question, order: index + 1 })));
+  const splitQuestion = (questionId: string) => setReviewQuestions((currentQuestions) => splitReviewQuestion(currentQuestions, questionId, jobView));
+  const mergeQuestionWithNext = (questionId: string) => setReviewQuestions((currentQuestions) => mergeReviewQuestionWithNext(currentQuestions, questionId));
+  const moveQuestion = (questionId: string, direction: "up" | "down") => setReviewQuestions((currentQuestions) => moveReviewQuestion(currentQuestions, questionId, direction));
 
   const examEditHref = buildExamEditHref(jobView, selectedClassId);
 
@@ -161,6 +161,9 @@ export function usePdfImportDialog(selectedFile: File | null, open: boolean) {
     setSelectedClassId,
     handleApprove,
     handleImport,
+    mergeQuestionWithNext,
+    moveQuestion,
+    splitQuestion,
     updateQuestion,
   };
 }

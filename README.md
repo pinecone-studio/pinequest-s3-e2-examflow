@@ -5,6 +5,7 @@ Monorepo structure:
 - `apps/web`: Next.js application
 - `apps/api`: Cloudflare Workers GraphQL backend application
 - `apps/pdf-extraction-service`: optional local text-PDF extraction service
+- `apps/pdf-extraction-python-service`: optional Python multi-engine PDF extraction service scaffold
 - `packages/ui`: shared UI package
 
 Docs:

@@ -23,6 +23,9 @@ export const schemaRootTypes = /* GraphQL */ `
     score: Int!
     difficulty: Difficulty!
     sourcePage: Int
+    sourceExcerpt: String
+    sourceBlockId: String
+    sourceBboxJson: String
     confidence: Float!
     needsReview: Boolean!
   }
@@ -119,6 +122,8 @@ export const schemaRootTypes = /* GraphQL */ `
       fileSizeBytes: Int!
       extractedText: String!
       storageKey: String
+      extractionJson: String
+      classifierJson: String
     ): ExamImportJob!
     approveExamImportJob(
       id: ID!
