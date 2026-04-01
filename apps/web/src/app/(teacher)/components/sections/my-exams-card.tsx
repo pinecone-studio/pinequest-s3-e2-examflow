@@ -48,8 +48,6 @@ function ExamCardIllustration() {
 }
 
 export function MyExamCard({ exam, mode, onView, onResults }: MyExamCardProps) {
-  const resolvedSubject = exam.subjectName || exam.subject;
-  const levelLabel = `${exam.classGrade}-р анги`;
   const durationLabel = exam.durationLabel.replace("минут", "мин");
   const showResults = mode === "evaluation" && exam.actions.results;
   const canEdit = mode === "library" && exam.actions.edit;
@@ -62,9 +60,16 @@ export function MyExamCard({ exam, mode, onView, onResults }: MyExamCardProps) {
     "inline-flex h-8 items-center justify-center gap-1 rounded-[4px] bg-[#6434F8] px-4 text-[10px] font-semibold text-white transition hover:bg-[#5628E8]";
   const secondaryClassName =
     "inline-flex h-8 items-center justify-center gap-1 rounded-[4px] bg-[#FDF1ED] px-4 text-[10px] font-medium text-[#6434F8] transition hover:bg-[#F9E5DF]";
+  const statusTone = exam.status.tone;
+  const startedLabel =
+    exam.startedAtLabel ??
+    (exam.status.label === "Ноорог" ? "Хараахан эхлээгүй" : "Эхлэх хугацаагүй");
+  const endsLabel =
+    exam.endsAtLabel ??
+    (exam.status.label === "Ноорог" ? "Дуусах хугацаа товлоогүй" : "Дуусах хугацаагүй");
 
   return (
-    <article className="flex h-[215px] w-[268px] max-w-full flex-none flex-col gap-4 rounded-[6px] border border-[#E4E4E4] bg-white p-3 shadow-[0px_3.22px_4.83px_rgba(0,0,0,0.09)]">
+    <article className="flex min-h-[300px] w-[268px] max-w-full flex-none flex-col gap-4 rounded-[6px] border border-[#E4E4E4] bg-white p-3 shadow-[0px_3.22px_4.83px_rgba(0,0,0,0.09)]">
       <div className="relative flex h-24 items-center gap-3 overflow-hidden rounded-[4px] border border-[#F7E8C5] bg-[#FFF9EE] px-4">
         <div className="absolute inset-0 bg-[radial-gradient(circle,#F5E8C5_1px,transparent_1.2px)] [background-size:12px_12px] opacity-70" />
         <div className="relative shrink-0">
@@ -72,11 +77,13 @@ export function MyExamCard({ exam, mode, onView, onResults }: MyExamCardProps) {
         </div>
         <div className="relative min-w-0">
           <p className="truncate text-[14px] font-bold leading-[1.2] text-[#D8A028]">
-            {resolvedSubject}
+            {exam.className}
           </p>
         </div>
-        <span className="absolute right-[10px] top-[8px] rounded-[8px] border border-[#8B2CF5] bg-[#F3E8FF] px-2 py-1 text-[10px] font-semibold leading-3 text-[#7A1AE6]">
-          {resolvedSubject}, {levelLabel}
+        <span
+          className={`absolute right-[10px] top-[8px] rounded-[999px] border px-2 py-1 text-[10px] font-semibold leading-3 ${statusTone}`}
+        >
+          {exam.status.label}
         </span>
       </div>
 
@@ -85,6 +92,16 @@ export function MyExamCard({ exam, mode, onView, onResults }: MyExamCardProps) {
           <h3 className="line-clamp-2 text-[14px] font-bold leading-[17px] text-[#211C37]">
             {exam.title}
           </h3>
+          {mode === "evaluation" ? (
+            <div className="space-y-2 rounded-[4px] border border-[#ECECEC] bg-[#FAFAFA] px-3 py-2 text-[10px] text-[#344054]">
+              <p>
+                <span className="font-semibold text-[#101828]">Эхэлсэн:</span> {startedLabel}
+              </p>
+              <p>
+                <span className="font-semibold text-[#101828]">Дууссан:</span> {endsLabel}
+              </p>
+            </div>
+          ) : null}
           <div className="flex items-center gap-[14px] text-[10px] text-[#1C1D1D]">
             <span className="inline-flex items-center gap-1">
               <ClockIcon className="h-3 w-3" />
@@ -94,6 +111,11 @@ export function MyExamCard({ exam, mode, onView, onResults }: MyExamCardProps) {
               <QuestionBoxIcon className="h-3 w-3" />
               {exam.questionCount} асуулт
             </span>
+            {exam.footer ? (
+              <span className="inline-flex items-center gap-1 text-[#52555B]">
+                {exam.footer.submitted} хүүхэд өгсөн
+              </span>
+            ) : null}
           </div>
         </div>
 
