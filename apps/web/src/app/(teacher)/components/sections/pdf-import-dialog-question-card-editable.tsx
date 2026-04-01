@@ -1,10 +1,7 @@
 "use client";
-
 import { Difficulty, QuestionType } from "@/graphql/generated";
-import {
-  questionTypeLabels,
-  type ImportQuestionView,
-} from "./pdf-import-dialog-utils";
+import { questionTypeLabels, type ImportQuestionView } from "./pdf-import-dialog-utils";
+import { PdfImportDialogQuestionActions, PdfImportDialogQuestionSource } from "./pdf-import-dialog-question-card-tools";
 
 const difficultyLabels: Record<Difficulty, string> = {
   [Difficulty.Easy]: "Хялбар",
@@ -17,20 +14,22 @@ const splitEditorList = (value: string) =>
     .split(/\n|,/)
     .map((item) => item.trim())
     .filter(Boolean);
-
 export function PdfImportDialogQuestionCardEditable({
   question,
+  onMergeWithNext,
+  onMove,
   onReject,
+  onSplit,
   onUpdate,
 }: {
   question: ImportQuestionView;
+  onMergeWithNext?: () => void;
+  onMove?: (direction: "up" | "down") => void;
   onReject: () => void;
+  onSplit?: () => void;
   onUpdate: (nextQuestion: ImportQuestionView) => void;
 }) {
-  const handlePatch = (patch: Partial<ImportQuestionView>) => {
-    onUpdate({ ...question, ...patch });
-  };
-
+  const handlePatch = (patch: Partial<ImportQuestionView>) => onUpdate({ ...question, ...patch });
   return (
     <div className="mt-4 space-y-4">
       <div className="grid gap-3 sm:grid-cols-[1.3fr_0.75fr_0.75fr]">
@@ -98,6 +97,7 @@ export function PdfImportDialogQuestionCardEditable({
         />
       </label>
 
+      {question.sourceExcerpt ? <PdfImportDialogQuestionSource sourceExcerpt={question.sourceExcerpt} /> : null}
       {question.type !== QuestionType.Essay && question.type !== QuestionType.ImageUpload ? (
         <div className="grid gap-3 lg:grid-cols-2">
           <label className="space-y-1.5">
@@ -137,7 +137,6 @@ export function PdfImportDialogQuestionCardEditable({
           />
         </label>
       )}
-
       <div className="flex flex-wrap items-center gap-4">
         <label className="space-y-1.5">
           <span className="text-[12px] font-medium uppercase tracking-[0.08em] text-[#6B7280]">
@@ -167,6 +166,11 @@ export function PdfImportDialogQuestionCardEditable({
         >
           Reject
         </button>
+        <PdfImportDialogQuestionActions
+          onMergeWithNext={onMergeWithNext}
+          onMove={onMove}
+          onSplit={onSplit}
+        />
       </div>
     </div>
   );

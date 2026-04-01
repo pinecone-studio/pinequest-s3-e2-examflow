@@ -8,6 +8,8 @@ mutation ApproveExamImportJobMutation(
     fileName
     status
     title
+    extractionJson
+    classifierJson
     totalQuestions
     reviewCount
     questionBank {
@@ -33,6 +35,9 @@ mutation ApproveExamImportJobMutation(
       score
       difficulty
       sourcePage
+      sourceExcerpt
+      sourceBlockId
+      sourceBboxJson
       confidence
       needsReview
       createdAt

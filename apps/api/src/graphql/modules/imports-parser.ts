@@ -9,8 +9,64 @@ export type ParsedImportQuestion = {
   score: number;
   difficulty: Difficulty;
   sourcePage: number;
+  sourceExcerpt: string;
+  sourceBlockId: string;
+  sourceBboxJson: string | null;
   confidence: number;
   needsReview: boolean;
+};
+
+type StructuredImportBbox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+type StructuredImportLine = {
+  id: string;
+  text: string;
+  bbox: StructuredImportBbox;
+};
+
+type StructuredImportBlock = {
+  id: string;
+  pageNumber: number;
+  type: "header" | "section" | "question" | "options" | "table" | "text";
+  columnIndex: 0 | 1 | null;
+  bbox: StructuredImportBbox;
+  text: string;
+  lines: StructuredImportLine[];
+  sourceEngine: string;
+};
+
+type StructuredImportPage = {
+  number: number;
+  width: number;
+  height: number;
+  layout: "single-column" | "two-column";
+  blocks: StructuredImportBlock[];
+  text: string;
+};
+
+type StructuredImportDocument = {
+  pages: StructuredImportPage[];
+  fullText: string;
+  classifier?: {
+    documentKind?: string;
+    layout?: string;
+    tableHeavy?: boolean;
+    needsOcr?: boolean;
+    recommendedEngine?: string;
+    enginesUsed?: string[];
+  };
+};
+
+type StructuredRowEntry = {
+  text: string;
+  x: number;
+  y: number;
+  height: number;
 };
 
 type ParserState = {
@@ -20,6 +76,17 @@ type ParserState = {
 
 type WorkingQuestion = ParsedImportQuestion & {
   order: number;
+};
+
+type StructuredQuestionBuilder = {
+  order: number;
+  score: number;
+  pageNumber: number;
+  sourceBlockId: string;
+  sourceBboxJson: string | null;
+  sourceLines: string[];
+  promptLines: string[];
+  options: string[];
 };
 
 const optionLabels = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
@@ -55,6 +122,9 @@ const ignoredLinePatterns = [
 const preferredTitlePattern =
   /(олимпиад|шалгалт|тест|exam|сорил)/iu;
 const questionStartMarkerPattern = /^(\d{1,3})\s*(?:[\.\):]|-\s+)\s*(.+)$/u;
+const strictOlympiadQuestionStartPattern = /^(\d{1,2})\s*[\.\)]\s*(.+)$/u;
+const sectionScorePattern =
+  /^(\d{1,3})\s*[–-]\s*(\d{1,3})\s*р\s+бодлого.*?(\d+)\s*оноотой\.?$/iu;
 
 const stripBoilerplate = (value: string) =>
   value
@@ -68,6 +138,18 @@ const stripBoilerplate = (value: string) =>
     .replace(/\b\d+\s*р\s+бодлого[^.\n]*оноотой\.?/giu, " ")
     .replace(/\s+/gu, " ")
     .trim();
+
+const toSourceExcerpt = (lines: string[]) =>
+  lines
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n")
+    .replace(/\n{3,}/gu, "\n\n")
+    .slice(0, 1600)
+    .trim();
+
+const toBboxJson = (bbox: StructuredImportBbox | null | undefined) =>
+  bbox ? JSON.stringify(bbox) : null;
 
 const normalizeRawTextForParsing = (rawText: string) =>
   rawText
@@ -89,6 +171,27 @@ const normalizeRawTextForParsing = (rawText: string) =>
     .replace(/(?<=\S)\s+(?=(score|scores|point|points|оноо)\s*[:\-])/giu, "\n")
     .replace(/\n{3,}/gu, "\n\n")
     .trim();
+
+const isFallbackTitleNoise = (value: string) => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return true;
+  }
+
+  if (preferredTitlePattern.test(normalized)) {
+    return false;
+  }
+
+  if (/\d{6,}/u.test(normalized)) {
+    return true;
+  }
+
+  if (!/[\u0400-\u04FF]/u.test(normalized) && /^[a-z0-9 _.-]+$/iu.test(normalized)) {
+    return true;
+  }
+
+  return false;
+};
 
 type SegmentedPage = {
   pageNumber: number;
@@ -137,12 +240,32 @@ const isQuestionStartLine = (line: string) =>
   namedQuestionPattern.test(line) ||
   titledQuestionPattern.test(line);
 
+const splitBlockIntoQuestionGroups = (lines: string[]) => {
+  const groups: string[][] = [];
+  let currentGroup: string[] = [];
+
+  for (const line of lines) {
+    if (isQuestionStartLine(line) && currentGroup.length > 0) {
+      groups.push(currentGroup);
+      currentGroup = [line];
+      continue;
+    }
+
+    currentGroup.push(line);
+  }
+
+  if (currentGroup.length > 0) {
+    groups.push(currentGroup);
+  }
+
+  return groups;
+};
+
 const explodeLogicalLine = (line: string) =>
   normalizeRawTextForParsing(line)
     .split(/\r?\n/u)
     .map((item) => item.trim())
     .filter(Boolean);
-
 const parseDeclaredScoreRule = (line: string): { orders: number[]; score: number } | null => {
   const rangeMatch = questionScoreRangePattern.exec(line);
   if (rangeMatch?.[1] && rangeMatch[2] && rangeMatch[3]) {
@@ -210,6 +333,741 @@ const collectDeclaredScores = (
   }
 
   return nextScores;
+};
+
+const splitInlineOptionSegments = (value: string) => {
+  const matches = [...value.matchAll(new RegExp(`(${optionLabelPattern})\\s*[\\.)-]\\s*`, "gu"))];
+  if (matches.length === 0) {
+    return [];
+  }
+
+  return matches.map((match, index) => {
+    const label = match[1]?.trim() ?? "";
+    const labelStart = match.index ?? 0;
+    const start = labelStart + match[0].length;
+    const end = index + 1 < matches.length ? (matches[index + 1]?.index ?? value.length) : value.length;
+    return {
+      label,
+      labelStart,
+      value: stripBoilerplate(value.slice(start, end).trim()),
+    };
+  });
+};
+
+const matchStrictOlympiadQuestionStart = (line: string) => {
+  const match = strictOlympiadQuestionStartPattern.exec(line.trim());
+  if (!match?.[1] || !match[2]) {
+    return null;
+  }
+
+  const order = Number.parseInt(match[1], 10);
+  if (!Number.isFinite(order) || order <= 0) {
+    return null;
+  }
+
+  return {
+    order,
+    prompt: stripBoilerplate(match[2].trim()),
+  };
+};
+
+const splitByExpectedQuestionMarker = (line: string, expectedOrder: number) => {
+  const marker = new RegExp(`^(.*?)\\s+(${expectedOrder}\\s*[\\.)]\\s*.+)$`, "u");
+  const match = marker.exec(line.trim());
+  if (!match?.[2]) {
+    return null;
+  }
+
+  return {
+    before: match[1]?.trim() ?? "",
+    after: match[2].trim(),
+  };
+};
+
+type ExpectedQuestionSplit = ReturnType<typeof splitByExpectedQuestionMarker>;
+
+const isLikelyOlympiadFormat = (pages: SegmentedPage[]) => {
+  const allLines = pages.flatMap((page) => page.blocks.flat());
+  const questionStarts = allLines.filter((line) => matchQuestionStart(line)).length;
+  const optionMarkers = allLines.filter((line) => optionPattern.test(line)).length;
+  const sectionHeadings = allLines.filter((line) => sectionScorePattern.test(line)).length;
+  return questionStarts >= 8 && (optionMarkers >= 8 || sectionHeadings >= 1);
+};
+
+const buildQuestionFromChunk = ({
+  title,
+  pageNumber,
+  order,
+  score,
+  lines,
+  sourceBlockId,
+  sourceBboxJson,
+}: {
+  title: string;
+  pageNumber: number;
+  order: number;
+  score: number;
+  lines: string[];
+  sourceBlockId: string;
+  sourceBboxJson: string | null;
+}): ParsedImportQuestion | null => {
+  if (lines.length === 0) {
+    return null;
+  }
+
+  const sourceExcerpt = toSourceExcerpt(lines);
+  const normalizedLines = lines
+    .map((line, index) =>
+      index === 0 ? line.replace(/^\d{1,3}\s*(?:[\.\):]|-\s+)/u, "").trim() : line.trim(),
+    )
+    .filter(Boolean);
+  const promptParts: string[] = [];
+  const options: string[] = [];
+
+  for (const line of normalizedLines) {
+    const optionMatch = optionPattern.exec(line);
+    if (optionMatch?.[2]) {
+      options.push(stripBoilerplate(optionMatch[2].trim()));
+      continue;
+    }
+
+    promptParts.push(line);
+  }
+
+  const promptBody = promptParts.join(" ").replace(/\s+/gu, " ").trim();
+  const questionMarkIndex = promptBody.indexOf("?");
+  const promptSource =
+    questionMarkIndex >= 0 ? promptBody.slice(0, questionMarkIndex + 1) : promptBody;
+  const inlineOptionsSource =
+    questionMarkIndex >= 0 ? promptBody.slice(questionMarkIndex + 1).trim() : "";
+  const inlineOptions = splitInlineOptionSegments(inlineOptionsSource)
+    .map((segment) => segment.value)
+    .filter(Boolean);
+  const prompt = stripBoilerplate(promptSource.replace(/\s+/gu, " ").trim());
+  const normalizedOptions = [...options, ...inlineOptions].filter(Boolean).slice(0, 4);
+
+  if (!prompt || shouldIgnoreQuestionPrompt(prompt)) {
+    return null;
+  }
+
+  const type: QuestionType = normalizedOptions.length >= 2 ? "MCQ" : "SHORT_ANSWER";
+  const confidence =
+    type === "MCQ"
+      ? normalizedOptions.length >= 4
+        ? 0.82
+        : 0.66
+      : prompt.endsWith("?")
+        ? 0.62
+        : 0.52;
+
+  return {
+    type,
+    title: `${title} - Асуулт ${order}`,
+    prompt,
+    options: normalizedOptions,
+    answers: [],
+    score,
+    difficulty: toDifficulty(score),
+    sourcePage: pageNumber,
+    sourceExcerpt,
+    sourceBlockId,
+    sourceBboxJson,
+    confidence,
+    needsReview: true,
+  };
+};
+
+type OlympiadQuestionBuilder = {
+  order: number;
+  pageNumber: number;
+  score: number;
+  sourceBlockId: string;
+  sourceBboxJson: string | null;
+  promptParts: string[];
+  options: string[];
+  sourceLines: string[];
+};
+
+const splitPromptAndInlineOptions = (value: string) => {
+  const normalized = value.trim();
+  const optionSegments = splitInlineOptionSegments(normalized);
+  if (optionSegments.length === 0) {
+    return {
+      promptPart: normalized,
+      options: [] as string[],
+    };
+  }
+
+  return {
+    promptPart: normalized.slice(0, optionSegments[0]?.labelStart ?? normalized.length).trim(),
+    options: optionSegments.map((segment) => segment.value).filter(Boolean),
+  };
+};
+
+const finalizeOlympiadQuestionBuilder = (
+  title: string,
+  builder: OlympiadQuestionBuilder | null,
+): ParsedImportQuestion | null => {
+  if (!builder) {
+    return null;
+  }
+
+  const promptBody = builder.promptParts.join(" ").replace(/\s+/gu, " ").trim();
+  const questionMarkIndex = promptBody.indexOf("?");
+  const promptSource =
+    questionMarkIndex >= 0 ? promptBody.slice(0, questionMarkIndex + 1) : promptBody;
+  const prompt = stripBoilerplate(promptSource);
+  const options = builder.options.filter(Boolean).slice(0, 4);
+
+  if (!prompt || shouldIgnoreQuestionPrompt(prompt)) {
+    return null;
+  }
+
+  const type: QuestionType = options.length >= 2 ? "MCQ" : "SHORT_ANSWER";
+  const confidence =
+    type === "MCQ"
+      ? options.length >= 4
+        ? 0.86
+        : 0.74
+      : prompt.endsWith("?")
+        ? 0.64
+        : 0.54;
+
+  return {
+    type,
+    title: `${title} - Асуулт ${builder.order}`,
+    prompt,
+    options,
+    answers: [],
+    score: builder.score,
+    difficulty: toDifficulty(builder.score),
+    sourcePage: builder.pageNumber,
+    sourceExcerpt: toSourceExcerpt(builder.sourceLines),
+    sourceBlockId: builder.sourceBlockId,
+    sourceBboxJson: builder.sourceBboxJson,
+    confidence,
+    needsReview: true,
+  };
+};
+
+const isStructuredImportDocument = (value: unknown): value is StructuredImportDocument =>
+  typeof value === "object" &&
+  value !== null &&
+  "pages" in value &&
+  Array.isArray((value as { pages?: unknown }).pages);
+
+const parseStructuredImportDocument = (
+  extractionJson: string | null | undefined,
+): StructuredImportDocument | null => {
+  if (!extractionJson?.trim()) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(extractionJson) as unknown;
+    return isStructuredImportDocument(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const toVisualRowTolerance = (pageHeight: number, heights: number[]) => {
+  const sortedHeights = heights
+    .filter((height) => Number.isFinite(height) && height > 0)
+    .sort((left, right) => left - right);
+  const medianHeight =
+    sortedHeights.length > 0
+      ? sortedHeights[Math.floor(sortedHeights.length / 2)] ?? 0
+      : 0;
+
+  return Math.max(pageHeight * 0.006, medianHeight * 0.8, 0.05);
+};
+
+const buildStructuredSegmentedPages = (
+  document: StructuredImportDocument,
+  direction: "asc" | "desc",
+): SegmentedPage[] =>
+  document.pages.map((page) => {
+    const lineEntries: StructuredRowEntry[] = page.blocks
+      .flatMap((block) =>
+        block.lines.map((line) => ({
+          text: line.text.trim(),
+          x: line.bbox.x,
+          y: line.bbox.y,
+          height: line.bbox.height,
+        })),
+      )
+      .filter((entry) => entry.text.length > 0);
+
+    if (lineEntries.length === 0) {
+      return {
+        pageNumber: page.number,
+        blocks: page.blocks
+          .map((block) =>
+            block.text
+              .split(/\r?\n/u)
+              .map((line) => line.trim())
+              .filter(Boolean),
+          )
+          .filter((blockLines) => blockLines.length > 0),
+      };
+    }
+
+    const sortedEntries = [...lineEntries].sort((left, right) => {
+      if (left.y === right.y) {
+        return left.x - right.x;
+      }
+
+      return direction === "asc" ? left.y - right.y : right.y - left.y;
+    });
+    const tolerance = toVisualRowTolerance(
+      page.height,
+      sortedEntries.map((entry) => entry.height),
+    );
+    const rows: StructuredRowEntry[][] = [];
+
+    for (const entry of sortedEntries) {
+      const currentRow = rows.at(-1);
+      if (!currentRow) {
+        rows.push([entry]);
+        continue;
+      }
+
+      const anchorY = currentRow[0]?.y ?? entry.y;
+      if (Math.abs(entry.y - anchorY) <= tolerance) {
+        currentRow.push(entry);
+        continue;
+      }
+
+      rows.push([entry]);
+    }
+
+    const blocks = rows
+      .map((row) =>
+        row
+          .sort((left, right) => left.x - right.x)
+          .map((entry) => entry.text)
+          .filter(Boolean)
+          .join(" ")
+          .replace(/\s+/gu, " ")
+          .trim(),
+      )
+      .filter(Boolean)
+      .map((line) => [line]);
+
+    return {
+      pageNumber: page.number,
+      blocks,
+    };
+  });
+
+const buildStructuredSegmentedPagesFromLineOrder = (
+  document: StructuredImportDocument,
+): SegmentedPage[] =>
+  document.pages.map((page) => ({
+    pageNumber: page.number,
+    blocks: page.blocks
+      .flatMap((block) =>
+        block.lines.length > 0
+          ? block.lines
+              .map((line) => line.text.trim())
+              .filter(Boolean)
+              .map((line) => [line])
+          : block.text
+              .split(/\r?\n/u)
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .map((line) => [line]),
+      )
+      .filter((blockLines) => blockLines.length > 0),
+  }));
+
+const getParsedQuestionOrder = (question: ParsedImportQuestion) => {
+  const mongolianMatch = question.title.match(/Асуулт\s+(\d+)/u);
+  if (mongolianMatch?.[1]) {
+    return Number.parseInt(mongolianMatch[1], 10) || 0;
+  }
+
+  const englishMatch = question.title.match(/Question\s+(\d+)/u);
+  if (englishMatch?.[1]) {
+    return Number.parseInt(englishMatch[1], 10) || 0;
+  }
+
+  return 0;
+};
+
+const scoreStructuredOlympiadCandidate = (questions: ParsedImportQuestion[]) => {
+  if (questions.length === 0) {
+    return -1;
+  }
+
+  const orders = questions.map(getParsedQuestionOrder).filter((order) => order > 0);
+  let consecutiveCount = 0;
+  for (let index = 1; index < orders.length; index += 1) {
+    if ((orders[index] ?? 0) === (orders[index - 1] ?? 0) + 1) {
+      consecutiveCount += 1;
+    }
+  }
+
+  const startsAtOne = orders[0] === 1 ? 2 : 0;
+  return questions.length * 10 + consecutiveCount * 4 + startsAtOne;
+};
+
+const pickBestStructuredOlympiadQuestions = (
+  document: StructuredImportDocument,
+  title: string,
+) => {
+  const candidates = [
+    parseOlympiadStyleQuestions(buildStructuredSegmentedPages(document, "asc"), title),
+    parseOlympiadStyleQuestions(buildStructuredSegmentedPages(document, "desc"), title),
+    parseOlympiadStyleQuestions(buildStructuredSegmentedPagesFromLineOrder(document), title),
+  ];
+
+  return candidates.reduce<ParsedImportQuestion[]>(
+    (best, candidate) =>
+      scoreStructuredOlympiadCandidate(candidate) > scoreStructuredOlympiadCandidate(best)
+        ? candidate
+        : best,
+    [],
+  );
+};
+
+const parseQuestionsFromStructuredDocument = (
+  document: StructuredImportDocument,
+  title: string,
+) => {
+  const questions: ParsedImportQuestion[] = [];
+
+  for (const page of document.pages) {
+    let currentScore = 1;
+    let currentQuestion: StructuredQuestionBuilder | null = null;
+
+    const flushCurrent = () => {
+      if (!currentQuestion) {
+        return;
+      }
+
+      const parsed = finalizeOlympiadQuestionBuilder(title, {
+        order: currentQuestion.order,
+        pageNumber: currentQuestion.pageNumber,
+        score: currentQuestion.score,
+        sourceBlockId: currentQuestion.sourceBlockId,
+        sourceBboxJson: currentQuestion.sourceBboxJson,
+        promptParts: currentQuestion.promptLines,
+        options: currentQuestion.options,
+        sourceLines: currentQuestion.sourceLines,
+      });
+      if (parsed) {
+        questions.push(parsed);
+      }
+      currentQuestion = null;
+    };
+
+    for (const block of page.blocks) {
+      if (block.type === "header") {
+        continue;
+      }
+
+      const logicalLines =
+        block.lines.length > 0
+          ? block.lines.map((line) => line.text.trim()).filter(Boolean)
+          : block.text
+              .split(/\r?\n/u)
+              .map((line) => line.trim())
+              .filter(Boolean);
+
+      for (const rawLine of logicalLines) {
+        const line = stripBoilerplate(rawLine);
+        if (!line) {
+          continue;
+        }
+
+        const sectionMatch = sectionScorePattern.exec(line);
+        if (sectionMatch?.[3]) {
+          flushCurrent();
+          currentScore = Number.parseInt(sectionMatch[3], 10) || currentScore;
+          continue;
+        }
+
+        const expectedOrder = questions.length + (currentQuestion ? 2 : 1);
+        const splitLine: ExpectedQuestionSplit = currentQuestion
+          ? splitByExpectedQuestionMarker(rawLine, expectedOrder)
+          : null;
+        if (splitLine && currentQuestion) {
+          if (splitLine.before) {
+            currentQuestion.sourceLines.push(splitLine.before);
+            const optionMatch = optionPattern.exec(splitLine.before);
+            if (optionMatch?.[2]) {
+              currentQuestion.options.push(stripBoilerplate(optionMatch[2].trim()));
+            } else {
+              const split = splitPromptAndInlineOptions(splitLine.before);
+              if (split.promptPart) {
+                currentQuestion.promptLines.push(split.promptPart);
+              }
+              if (split.options.length > 0) {
+                currentQuestion.options.push(...split.options);
+              }
+            }
+          }
+
+          flushCurrent();
+        }
+
+        const questionMatch = matchStrictOlympiadQuestionStart(splitLine?.after ?? rawLine);
+        if (questionMatch && questionMatch.order === questions.length + 1) {
+          flushCurrent();
+          const sourceLine: string = splitLine?.after ?? rawLine;
+          const content = sourceLine.replace(strictOlympiadQuestionStartPattern, "$2").trim();
+          const split = splitPromptAndInlineOptions(content);
+          currentQuestion = {
+            order: questionMatch.order,
+            pageNumber: page.number,
+            score: currentScore,
+            sourceBlockId: block.id,
+            sourceBboxJson: toBboxJson(block.bbox),
+            sourceLines: [sourceLine],
+            promptLines: split.promptPart ? [split.promptPart] : [],
+            options: split.options,
+          };
+          continue;
+        }
+
+        if (!currentQuestion) {
+          continue;
+        }
+
+        currentQuestion.sourceLines.push(rawLine);
+        const optionMatch = optionPattern.exec(rawLine);
+        if (optionMatch?.[2]) {
+          currentQuestion.options.push(stripBoilerplate(optionMatch[2].trim()));
+          continue;
+        }
+
+        const split = splitPromptAndInlineOptions(rawLine);
+        if (split.promptPart) {
+          currentQuestion.promptLines.push(split.promptPart);
+        }
+        if (split.options.length > 0) {
+          currentQuestion.options.push(...split.options);
+        }
+      }
+    }
+
+    flushCurrent();
+  }
+
+  return questions;
+};
+
+const collectSectionScoreMarkers = (pageText: string) => {
+  const markers: Array<{ index: number; score: number }> = [];
+  const regex = new RegExp(sectionScorePattern.source, "giu");
+
+  let match = regex.exec(pageText);
+  while (match) {
+    markers.push({
+      index: match.index,
+      score: Number.parseInt(match[3] ?? "1", 10) || 1,
+    });
+    match = regex.exec(pageText);
+  }
+
+  return markers;
+};
+
+const findNearestScoreForIndex = (
+  markers: Array<{ index: number; score: number }>,
+  index: number,
+) =>
+  markers
+    .filter((marker) => marker.index <= index)
+    .at(-1)?.score ?? 1;
+
+const collectOlympiadQuestionMarkers = (pageText: string) => {
+  const markers: Array<{ index: number; order: number }> = [];
+  const regex = /(^|\n|\s)(\d{1,2})\s*[.)]\s+/gu;
+
+  let match = regex.exec(pageText);
+  while (match) {
+    const order = Number.parseInt(match[2] ?? "", 10);
+    if (Number.isFinite(order) && order > 0 && order <= 40) {
+      const leading = match[1]?.length ?? 0;
+      markers.push({
+        index: (match.index ?? 0) + leading,
+        order,
+      });
+    }
+    match = regex.exec(pageText);
+  }
+
+  return markers.sort((left, right) => left.index - right.index);
+};
+
+const parseOlympiadStyleQuestionsFromMarkers = (
+  pageText: string,
+  pageNumber: number,
+  title: string,
+) => {
+  const markers = collectOlympiadQuestionMarkers(pageText);
+  const scoreMarkers = collectSectionScoreMarkers(pageText);
+  const questions: ParsedImportQuestion[] = [];
+  let expectedOrder = 1;
+
+  for (let index = 0; index < markers.length; index += 1) {
+    const current = markers[index];
+    if (!current || current.order !== expectedOrder) {
+      continue;
+    }
+
+    let nextIndex = pageText.length;
+    for (let lookahead = index + 1; lookahead < markers.length; lookahead += 1) {
+      const candidate = markers[lookahead];
+      if (candidate && candidate.order === expectedOrder + 1) {
+        nextIndex = candidate.index;
+        break;
+      }
+    }
+
+    const chunkText = pageText.slice(current.index, nextIndex).trim();
+    const chunkLines = chunkText
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const parsed = buildQuestionFromChunk({
+      title,
+      pageNumber,
+      order: expectedOrder,
+      score: findNearestScoreForIndex(scoreMarkers, current.index),
+      lines: chunkLines,
+      sourceBlockId: `page-${pageNumber}-legacy-block-${expectedOrder}`,
+      sourceBboxJson: null,
+    });
+
+    if (parsed) {
+      questions.push(parsed);
+      expectedOrder += 1;
+    }
+  }
+
+  return questions;
+};
+
+const parseOlympiadStyleQuestions = (
+  pages: SegmentedPage[],
+  title: string,
+): ParsedImportQuestion[] => {
+  const questions: ParsedImportQuestion[] = [];
+
+  for (const page of pages) {
+    const lines = page.blocks.flat();
+    const pageText = lines.join("\n");
+    const markerQuestions = parseOlympiadStyleQuestionsFromMarkers(
+      pageText,
+      page.pageNumber,
+      title,
+    );
+    if (markerQuestions.length >= 4) {
+      questions.push(...markerQuestions);
+      continue;
+    }
+
+    let currentScore = 1;
+    let currentQuestion: OlympiadQuestionBuilder | null = null;
+
+    const flushCurrent = () => {
+      const parsed = finalizeOlympiadQuestionBuilder(title, currentQuestion);
+      if (parsed) {
+        questions.push(parsed);
+      }
+      currentQuestion = null;
+    };
+
+    for (const line of lines) {
+      const sectionMatch = sectionScorePattern.exec(line);
+      if (sectionMatch?.[3]) {
+        flushCurrent();
+        currentScore = Number.parseInt(sectionMatch[3], 10) || currentScore;
+        continue;
+      }
+
+      const expectedOrder: number = questions.length + (currentQuestion ? 2 : 1);
+      const splitLine = splitByExpectedQuestionMarker(line, expectedOrder);
+      if (splitLine && currentQuestion) {
+        if (splitLine.before) {
+          currentQuestion.sourceLines.push(splitLine.before);
+          const optionMatch = optionPattern.exec(splitLine.before);
+          if (optionMatch?.[2]) {
+            currentQuestion.options.push(stripBoilerplate(optionMatch[2].trim()));
+          } else {
+            const { promptPart, options } = splitPromptAndInlineOptions(splitLine.before);
+            if (options.length > 0) {
+              currentQuestion.options.push(...options);
+            }
+            if (promptPart) {
+              currentQuestion.promptParts.push(promptPart);
+            }
+          }
+        }
+
+        flushCurrent();
+        const remainder = splitLine.after.replace(strictOlympiadQuestionStartPattern, "$2").trim();
+        const { promptPart, options } = splitPromptAndInlineOptions(remainder);
+        currentQuestion = {
+          order: expectedOrder,
+          pageNumber: page.pageNumber,
+          score: currentScore,
+          sourceBlockId: `page-${page.pageNumber}-legacy-block-${expectedOrder}`,
+          sourceBboxJson: null,
+          promptParts: promptPart ? [promptPart] : [],
+          options,
+          sourceLines: [splitLine.after],
+        };
+        continue;
+      }
+
+      const questionMatch = matchStrictOlympiadQuestionStart(line);
+      if (questionMatch && questionMatch.order === expectedOrder) {
+        flushCurrent();
+        const remainder = line.replace(strictOlympiadQuestionStartPattern, "$2").trim();
+        const { promptPart, options } = splitPromptAndInlineOptions(remainder);
+        currentQuestion = {
+          order: expectedOrder,
+          pageNumber: page.pageNumber,
+          score: currentScore,
+          sourceBlockId: `page-${page.pageNumber}-legacy-block-${expectedOrder}`,
+          sourceBboxJson: null,
+          promptParts: promptPart ? [promptPart] : [],
+          options,
+          sourceLines: [line],
+        };
+        continue;
+      }
+
+      if (!currentQuestion) {
+        continue;
+      }
+
+      currentQuestion.sourceLines.push(line);
+
+      const optionMatch = optionPattern.exec(line);
+      if (optionMatch?.[2]) {
+        currentQuestion.options.push(stripBoilerplate(optionMatch[2].trim()));
+        continue;
+      }
+
+      const { promptPart, options } = splitPromptAndInlineOptions(line);
+      if (options.length > 0) {
+        currentQuestion.options.push(...options);
+      }
+      if (promptPart) {
+        currentQuestion.promptParts.push(promptPart);
+      }
+    }
+
+    flushCurrent();
+  }
+
+  return questions;
 };
 
 const segmentImportedExamText = (rawText: string): SegmentedPage[] => {
@@ -441,6 +1299,9 @@ const finalizeQuestion = (question: WorkingQuestion | null): ParsedImportQuestio
     score: question.score,
     difficulty: question.difficulty,
     sourcePage: question.sourcePage,
+    sourceExcerpt: question.sourceExcerpt,
+    sourceBlockId: question.sourceBlockId,
+    sourceBboxJson: question.sourceBboxJson,
     confidence,
     needsReview: confidence < 0.75 || answers.length === 0,
   };
@@ -455,6 +1316,9 @@ const createFallbackQuestion = (title: string, rawText: string): ParsedImportQue
   score: 1,
   difficulty: "MEDIUM",
   sourcePage: 1,
+  sourceExcerpt: rawText.trim().slice(0, 1600),
+  sourceBlockId: "fallback-block-1",
+  sourceBboxJson: null,
   confidence: 0.41,
   needsReview: true,
 });
@@ -477,6 +1341,9 @@ const mergeParsedQuestions = (
     options: mergedOptions,
     answers: mergedAnswers,
     score: Math.max(previous.score, current.score),
+    sourceExcerpt: [previous.sourceExcerpt, current.sourceExcerpt].filter(Boolean).join("\n\n").slice(0, 1600),
+    sourceBlockId: previous.sourceBlockId,
+    sourceBboxJson: previous.sourceBboxJson,
     confidence: Math.min(previous.confidence, current.confidence, 0.52),
     needsReview: true,
   };
@@ -529,6 +1396,9 @@ const splitMergedQuestion = (
       ...question,
       prompt: currentPrompt,
       options: firstOptions,
+      sourceExcerpt: toSourceExcerpt([currentPrompt, ...firstOptions]),
+      sourceBlockId: question.sourceBlockId,
+      sourceBboxJson: question.sourceBboxJson,
       confidence: Math.min(question.confidence, 0.58),
       needsReview: true,
     },
@@ -538,6 +1408,9 @@ const splitMergedQuestion = (
       prompt: nextPrompt,
       options: secondOptions,
       answers: [],
+      sourceExcerpt: toSourceExcerpt([nextPrompt, ...secondOptions]),
+      sourceBlockId: question.sourceBlockId,
+      sourceBboxJson: question.sourceBboxJson,
       confidence: Math.min(question.confidence, 0.56),
       needsReview: true,
     },
@@ -553,6 +1426,7 @@ const parseQuestionBlock = (
 ): ParsedImportQuestion | null => {
   let currentQuestion: WorkingQuestion | null = null;
   const declaredScores = new Map(inheritedDeclaredScores);
+  const sourceExcerpt = toSourceExcerpt(lines);
 
   for (const [index, line] of lines.entries()) {
     const declaredScoreRule = parseDeclaredScoreRule(line);
@@ -581,6 +1455,9 @@ const parseQuestionBlock = (
         score,
         difficulty: toDifficulty(score),
         sourcePage: pageNumber,
+        sourceExcerpt,
+        sourceBlockId: `page-${pageNumber}-legacy-block-${order}`,
+        sourceBboxJson: null,
         confidence: 0.5,
         needsReview: true,
       };
@@ -601,6 +1478,9 @@ const parseQuestionBlock = (
         score,
         difficulty: toDifficulty(score),
         sourcePage: pageNumber,
+        sourceExcerpt,
+        sourceBlockId: `page-${pageNumber}-legacy-block-${order}`,
+        sourceBboxJson: null,
         confidence: 0.5,
         needsReview: true,
       };
@@ -621,6 +1501,9 @@ const parseQuestionBlock = (
         score,
         difficulty: toDifficulty(score),
         sourcePage: pageNumber,
+        sourceExcerpt,
+        sourceBlockId: `page-${pageNumber}-legacy-block-${order}`,
+        sourceBboxJson: null,
         confidence: 0.5,
         needsReview: true,
       };
@@ -679,7 +1562,9 @@ const parseQuestionBlock = (
 export const parseImportedExamText = (
   rawText: string,
   fallbackTitle: string,
+  extractionJson?: string | null,
 ): ParserState => {
+  const structuredDocument = parseStructuredImportDocument(extractionJson);
   const pages = segmentImportedExamText(rawText);
   const allLines = pages.flatMap((page) => page.blocks.flat());
   const titledPrefix =
@@ -710,41 +1595,75 @@ export const parseImportedExamText = (
       !pagePattern.test(line) &&
       !isLikelyInlineOption(line),
   );
+  const normalizedFallbackTitle = fallbackTitle.trim();
   const titleSource =
     (titledPrefix && preferredTitlePattern.test(titledPrefix) ? titledPrefix : null) ||
     (titleCandidate && preferredTitlePattern.test(titleCandidate) ? titleCandidate : null) ||
-    fallbackTitle;
-  const title = titleSource.length ? titleSource.slice(0, 120) : fallbackTitle;
+    (isFallbackTitleNoise(normalizedFallbackTitle) ? "PDF импорт асуултууд" : fallbackTitle);
+  const title = titleSource.length ? titleSource.slice(0, 120) : "PDF импорт асуултууд";
+  if (structuredDocument) {
+    const structuredOlympiadQuestions = pickBestStructuredOlympiadQuestions(
+      structuredDocument,
+      title,
+    );
+    if (structuredOlympiadQuestions.length >= 4) {
+        return {
+          title,
+          questions: structuredOlympiadQuestions,
+        };
+    }
+
+    const structuredQuestions = parseQuestionsFromStructuredDocument(structuredDocument, title);
+    if (structuredQuestions.length >= 4) {
+      return {
+        title,
+        questions: structuredQuestions,
+      };
+    }
+  }
+
+  if (isLikelyOlympiadFormat(pages)) {
+    const olympiadQuestions = parseOlympiadStyleQuestions(pages, title);
+    if (olympiadQuestions.length > 0) {
+      return {
+        title,
+        questions: olympiadQuestions,
+      };
+    }
+  }
+
   const questions: ParsedImportQuestion[] = [];
   let lastAcceptedOrder = 0;
   let declaredScores = new Map<number, number>();
   for (const page of pages) {
     for (const block of page.blocks) {
       declaredScores = collectDeclaredScores(block, declaredScores);
-      const parsedQuestion = parseQuestionBlock(
-        block,
-        title,
-        page.pageNumber,
-        questions.length + 1,
-        declaredScores,
-      );
-      if (parsedQuestion) {
-        for (const candidate of splitMergedQuestion(parsedQuestion, title)) {
-          const candidateOrder =
-            Number.parseInt(candidate.title.match(/Асуулт\s+(\d+)/u)?.[1] ?? "", 10) ||
-            Number.parseInt(candidate.title.match(/Question\s+(\d+)/u)?.[1] ?? "", 10) ||
-            questions.length + 1;
+      for (const group of splitBlockIntoQuestionGroups(block)) {
+        const parsedQuestion = parseQuestionBlock(
+          group,
+          title,
+          page.pageNumber,
+          questions.length + 1,
+          declaredScores,
+        );
+        if (parsedQuestion) {
+          for (const candidate of splitMergedQuestion(parsedQuestion, title)) {
+            const candidateOrder =
+              Number.parseInt(candidate.title.match(/Асуулт\s+(\d+)/u)?.[1] ?? "", 10) ||
+              Number.parseInt(candidate.title.match(/Question\s+(\d+)/u)?.[1] ?? "", 10) ||
+              questions.length + 1;
 
-          if (questions.length > 0 && candidateOrder <= lastAcceptedOrder) {
-            questions[questions.length - 1] = mergeParsedQuestions(
-              questions[questions.length - 1],
-              candidate,
-            );
-            continue;
+            if (questions.length > 0 && candidateOrder <= lastAcceptedOrder) {
+              questions[questions.length - 1] = mergeParsedQuestions(
+                questions[questions.length - 1],
+                candidate,
+              );
+              continue;
+            }
+
+            questions.push(candidate);
+            lastAcceptedOrder = candidateOrder;
           }
-
-          questions.push(candidate);
-          lastAcceptedOrder = candidateOrder;
         }
       }
     }

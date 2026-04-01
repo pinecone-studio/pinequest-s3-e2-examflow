@@ -7,12 +7,18 @@ import type { ImportQuestionView } from "./pdf-import-dialog-utils";
 export function PdfImportDialogQuestionCard({
   question,
   isEditable,
+  onMergeWithNext,
+  onMove,
   onReject,
+  onSplit,
   onUpdate,
 }: {
   question: ImportQuestionView;
   isEditable: boolean;
+  onMergeWithNext?: () => void;
+  onMove?: (direction: "up" | "down") => void;
   onReject?: () => void;
+  onSplit?: () => void;
   onUpdate?: (nextQuestion: ImportQuestionView) => void;
 }) {
   return (
@@ -43,7 +49,10 @@ export function PdfImportDialogQuestionCard({
       {isEditable && onReject && onUpdate ? (
         <PdfImportDialogQuestionCardEditable
           question={question}
+          onMergeWithNext={onMergeWithNext}
+          onMove={onMove}
           onReject={onReject}
+          onSplit={onSplit}
           onUpdate={onUpdate}
         />
       ) : (

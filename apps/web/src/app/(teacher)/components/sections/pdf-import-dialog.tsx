@@ -25,12 +25,15 @@ export function PdfImportDialog({
     isApproving,
     isCreating,
     jobView,
+    mergeQuestionWithNext,
+    moveQuestion,
     previewUrl,
     rejectQuestion,
     reviewQuestions,
     reviewSummary,
     selectedClassId,
     setSelectedClassId,
+    splitQuestion,
     updateQuestion,
   } = usePdfImportDialog(selectedFile, open);
 
@@ -76,7 +79,10 @@ export function PdfImportDialog({
             errorMessage={errorMessage}
             infoMessage={infoMessage}
             jobView={jobView}
+            onQuestionMergeWithNext={mergeQuestionWithNext}
+            onQuestionMove={moveQuestion}
             onQuestionReject={rejectQuestion}
+            onQuestionSplit={splitQuestion}
             onQuestionUpdate={updateQuestion}
             reviewQuestions={reviewQuestions}
             reviewSummary={reviewSummary}

@@ -165,6 +165,9 @@ export const schemaDomainTypes = /* GraphQL */ `
     score: Int!
     difficulty: Difficulty!
     sourcePage: Int
+    sourceExcerpt: String
+    sourceBlockId: String
+    sourceBboxJson: String
     confidence: Float!
     needsReview: Boolean!
     createdAt: String!
@@ -179,6 +182,8 @@ export const schemaDomainTypes = /* GraphQL */ `
     status: ExamImportJobStatus!
     title: String!
     extractedText: String
+    extractionJson: String
+    classifierJson: String
     errorMessage: String
     totalQuestions: Int!
     reviewCount: Int!

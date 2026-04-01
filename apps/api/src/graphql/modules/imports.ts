@@ -30,6 +30,8 @@ const importJobSelectFields = `id,
       status,
       title,
       extracted_text,
+      extraction_json,
+      classifier_json,
       parsed_exam_json,
       error_message,
       created_at,
@@ -46,6 +48,9 @@ const importQuestionSelectFields = `id,
       score,
       difficulty,
       source_page,
+      source_excerpt,
+      source_block_id,
+      source_bbox_json,
       confidence,
       needs_review,
       created_at`;
@@ -75,7 +80,10 @@ const toParsedExamJson = (title: string, questions: ParsedImportQuestion[]) =>
       score: question.score,
       difficulty: question.difficulty,
       sourcePage: question.sourcePage,
+      sourceExcerpt: question.sourceExcerpt,
       confidence: question.confidence,
+      sourceBlockId: question.sourceBlockId,
+      sourceBboxJson: question.sourceBboxJson,
       needsReview: question.needsReview,
     })),
   });
@@ -101,11 +109,14 @@ const insertImportQuestions = async (
         score,
         difficulty,
         source_page,
+        source_excerpt,
+        source_block_id,
+        source_bbox_json,
         confidence,
         needs_review,
         created_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       params: [
         makeId("import_question"),
         jobId,
@@ -118,6 +129,9 @@ const insertImportQuestions = async (
         question.score,
         question.difficulty,
         question.sourcePage,
+        question.sourceExcerpt,
+        question.sourceBlockId,
+        question.sourceBboxJson,
         question.confidence,
         question.needsReview ? 1 : 0,
         createdAt,
@@ -148,6 +162,9 @@ const normalizeReviewedQuestion = (
     score: Math.max(1, Math.round(question.score || 1)),
     difficulty: question.difficulty,
     sourcePage: question.sourcePage ?? fallbackOrder,
+    sourceExcerpt: question.sourceExcerpt?.trim() || normalizedPrompt,
+    sourceBlockId: question.sourceBlockId?.trim() || `review-block-${question.order || fallbackOrder}`,
+    sourceBboxJson: question.sourceBboxJson?.trim() || null,
     confidence: Math.max(0, Math.min(1, question.confidence)),
     needsReview:
       question.needsReview ||
@@ -271,6 +288,9 @@ export const createImportQueriesAndMutations = ({
     score: row.score,
     difficulty: row.difficulty,
     sourcePage: row.source_page,
+    sourceExcerpt: row.source_excerpt,
+    sourceBlockId: row.source_block_id,
+    sourceBboxJson: row.source_bbox_json,
     confidence: row.confidence,
     needsReview: Boolean(row.needs_review),
     createdAt: row.created_at,
@@ -285,6 +305,8 @@ export const createImportQueriesAndMutations = ({
     status: row.status,
     title: row.title,
     extractedText: row.extracted_text,
+    extractionJson: row.extraction_json,
+    classifierJson: row.classifier_json,
     errorMessage: row.error_message,
     totalQuestions: async () =>
       (await first<{ count: number | null }>(
@@ -338,7 +360,7 @@ export const createImportQueriesAndMutations = ({
       return row ? toExamImportJob(row) : null;
     },
     createExamImportJob: async (
-      { fileName, fileSizeBytes, extractedText, storageKey }: CreateExamImportJobArgs,
+      { fileName, fileSizeBytes, extractedText, storageKey, extractionJson, classifierJson }: CreateExamImportJobArgs,
       context: RequestContext,
     ) => {
       const actor = await requireActor(context, ["ADMIN", "TEACHER"]);
@@ -361,12 +383,14 @@ export const createImportQueriesAndMutations = ({
           status,
           title,
           extracted_text,
+          extraction_json,
+          classifier_json,
           parsed_exam_json,
           error_message,
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           actor.id,
@@ -379,6 +403,8 @@ export const createImportQueriesAndMutations = ({
           "UPLOADED",
           fallbackTitle,
           normalizedExtractedText || null,
+          extractionJson?.trim() || null,
+          classifierJson?.trim() || null,
           toParsedExamJson(fallbackTitle, []),
           null,
           createdAt,
@@ -405,7 +431,7 @@ export const createImportQueriesAndMutations = ({
         return toExamImportJob(await findExamImportJobById(db, id));
       }
 
-      const parsedExam = parseImportedExamText(normalizedExtractedText, fallbackTitle);
+      const parsedExam = parseImportedExamText(normalizedExtractedText, fallbackTitle, extractionJson);
       const nextStatus = parsedExam.questions.length > 0 ? "REVIEW" : "FAILED";
       await insertImportQuestions(db, id, createdAt, parsedExam.questions);
       await run(

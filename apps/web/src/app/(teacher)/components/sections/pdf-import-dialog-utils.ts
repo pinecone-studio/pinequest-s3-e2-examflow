@@ -3,6 +3,10 @@ import {
   type ApproveExamImportJobMutationMutation,
   type CreateExamImportJobMutationMutation,
 } from "@/graphql/generated";
+import type {
+  PdfImportClassifier,
+  PdfImportStructuredDocument,
+} from "./pdf-import-normalized-document";
 
 export type ImportQuestionView = {
   id: string;
@@ -15,6 +19,9 @@ export type ImportQuestionView = {
   score: number;
   difficulty: string;
   sourcePage?: number | null;
+  sourceExcerpt?: string | null;
+  sourceBlockId?: string | null;
+  sourceBboxJson?: string | null;
   confidence: number;
   needsReview: boolean;
 };
@@ -25,6 +32,8 @@ export type ImportJobView = {
   status: string;
   totalQuestions: number;
   reviewCount: number;
+  extractionDocument?: PdfImportStructuredDocument | null;
+  classifier?: PdfImportClassifier | null;
   questionBank?: { id: string; title: string } | null;
   exam?: { id: string; title: string; classId: string; className: string } | null;
   questions: ImportQuestionView[];
@@ -42,37 +51,67 @@ export const buildImportJobView = (
   job:
     | CreateExamImportJobMutationMutation["createExamImportJob"]
     | ApproveExamImportJobMutationMutation["approveExamImportJob"],
-): ImportJobView => ({
-  id: job.id,
-  title: job.title,
-  status: job.status,
-  totalQuestions: job.totalQuestions,
-  reviewCount: job.reviewCount,
-  questionBank: "questionBank" in job ? job.questionBank : null,
-  exam:
-    "exam" in job && job.exam
-      ? {
-          id: job.exam.id,
-          title: job.exam.title,
-          classId: job.exam.class.id,
-          className: job.exam.class.name,
-        }
-      : null,
-  questions: job.questions.map((question) => ({
-    id: question.id,
-    order: question.order,
-    type: question.type,
-    title: question.title,
-    prompt: question.prompt,
-    options: question.options,
-    answers: question.answers,
-    score: question.score,
-    difficulty: question.difficulty,
-    sourcePage: question.sourcePage,
-    confidence: question.confidence,
-    needsReview: question.needsReview,
-  })),
-});
+) => {
+  const extractionDocument = (() => {
+    if (typeof job.extractionJson !== "string" || !job.extractionJson.trim()) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(job.extractionJson) as PdfImportStructuredDocument;
+    } catch {
+      return null;
+    }
+  })();
+  const classifier = (() => {
+    if (typeof job.classifierJson === "string" && job.classifierJson.trim()) {
+      try {
+        return JSON.parse(job.classifierJson) as PdfImportClassifier;
+      } catch {
+        return extractionDocument?.classifier ?? null;
+      }
+    }
+
+    return extractionDocument?.classifier ?? null;
+  })();
+
+  return {
+    id: job.id,
+    title: job.title,
+    status: job.status,
+    totalQuestions: job.totalQuestions,
+    reviewCount: job.reviewCount,
+    extractionDocument,
+    classifier,
+    questionBank: "questionBank" in job ? job.questionBank : null,
+    exam:
+      "exam" in job && job.exam
+        ? {
+            id: job.exam.id,
+            title: job.exam.title,
+            classId: job.exam.class.id,
+            className: job.exam.class.name,
+          }
+        : null,
+    questions: job.questions.map((question) => ({
+      id: question.id,
+      order: question.order,
+      type: question.type,
+      title: question.title,
+      prompt: question.prompt,
+      options: question.options,
+      answers: question.answers,
+      score: question.score,
+      difficulty: question.difficulty,
+      sourcePage: question.sourcePage,
+      sourceExcerpt: question.sourceExcerpt,
+      sourceBlockId: question.sourceBlockId,
+      sourceBboxJson: question.sourceBboxJson,
+      confidence: question.confidence,
+      needsReview: question.needsReview,
+    })),
+  };
+};
 
 export const formatFileSize = (bytes: number) => {
   if (bytes < 1024 * 1024) {
