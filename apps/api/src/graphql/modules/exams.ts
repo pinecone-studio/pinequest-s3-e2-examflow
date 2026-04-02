@@ -149,6 +149,7 @@ const buildRuleBasedQuestions = async ({
     invariant(rule.points > 0, "Rule бүрийн оноо 1-ээс их байна.");
 
     invariant(rule.bankIds.length > 0, "Rule бүр дор хаяж нэг сантай байна.");
+    const ownedBankIds = new Set<string>();
 
     for (const bankId of rule.bankIds) {
       const bank = await findQuestionBankById(db, bankId);
@@ -157,6 +158,9 @@ const buildRuleBasedQuestions = async ({
           bank.visibility === "PUBLIC" || bank.owner_id === actor.id,
           "Зөвхөн өөрийн эсвэл нээлттэй сангаас rule ашиглана.",
         );
+        if (bank.owner_id === actor.id) {
+          ownedBankIds.add(bank.id);
+        }
       }
     }
 
@@ -166,12 +170,16 @@ const buildRuleBasedQuestions = async ({
       `SELECT
         id,
         bank_id,
+        canonical_question_id,
+        forked_from_question_id,
         type,
         title,
         prompt,
         options_json,
         correct_answer,
         difficulty,
+        share_scope,
+        requires_access_request,
         tags_json,
         created_by_id,
         created_at
@@ -183,7 +191,43 @@ const buildRuleBasedQuestions = async ({
       [...rule.bankIds, mode, rule.difficulty, rule.difficulty],
     );
 
-    const availableRows = rows.filter((row) => !usedQuestionIds.has(row.id));
+    const accessRequiredQuestionIds =
+      actor.role === "TEACHER"
+        ? rows
+            .filter(
+              (row) =>
+                row.requires_access_request === 1 &&
+                !ownedBankIds.has(row.bank_id),
+            )
+            .map((row) => row.id)
+        : [];
+    const approvedQuestionIds = new Set<string>();
+
+    if (accessRequiredQuestionIds.length > 0) {
+      const approvedPlaceholders = accessRequiredQuestionIds.map(() => "?").join(", ");
+      const approvedRows = await all<{ question_id: string }>(
+        db,
+        `SELECT question_id
+         FROM question_access_requests
+         WHERE requester_user_id = ?
+           AND status = 'APPROVED'
+           AND question_id IN (${approvedPlaceholders})`,
+        [actor.id, ...accessRequiredQuestionIds],
+      );
+
+      for (const approvedRow of approvedRows) {
+        approvedQuestionIds.add(approvedRow.question_id);
+      }
+    }
+
+    const availableRows = rows.filter(
+      (row) =>
+        !usedQuestionIds.has(row.id) &&
+        (actor.role !== "TEACHER" ||
+          row.requires_access_request !== 1 ||
+          ownedBankIds.has(row.bank_id) ||
+          approvedQuestionIds.has(row.id)),
+    );
     invariant(
       availableRows.length >= rule.count,
       `${rule.label} сэдвээс ${rule.count} асуулт бүрдүүлэхэд хүрэлцэхгүй байна.`,

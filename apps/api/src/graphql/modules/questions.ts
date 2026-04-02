@@ -251,6 +251,10 @@ const actorCanUseQuestion = async ({
     return true;
   }
 
+  if (question.requires_access_request === 1) {
+    return actorHasApprovedQuestionAccess(db, question.id, actor.id);
+  }
+
   if (question.share_scope === "PUBLIC" || bank.visibility === "PUBLIC") {
     return true;
   }
@@ -898,7 +902,8 @@ export const createQuestionQueriesAndMutations = ({
     invariant(actor.role !== "ADMIN", "Админд хүсэлт илгээх шаардлагагүй.");
     invariant(bank.owner_id !== actor.id, "Өөрийн асуулт дээр хүсэлт илгээхгүй.");
     invariant(
-      question.share_scope !== "PUBLIC" && bank.visibility !== "PUBLIC",
+      question.requires_access_request === 1 ||
+        (question.share_scope !== "PUBLIC" && bank.visibility !== "PUBLIC"),
       "Нээлттэй асуултыг хүсэлтгүй ашиглаж болно.",
     );
 
