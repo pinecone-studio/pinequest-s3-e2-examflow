@@ -1,10 +1,4 @@
-import type {
-  AttemptIntegrityEventType,
-  ClassDetailQuery,
-  ClassesListQuery,
-  ClassStudentStatus,
-  IntegritySeverity,
-} from "@/graphql/generated";
+import type { AttemptIntegrityEventType, ClassDetailQuery, ClassesListQuery, ClassStudentStatus, IntegritySeverity } from "@/graphql/generated";
 import {
   formatExamStatus,
   formatGradeLabel,
@@ -18,41 +12,15 @@ import {
 
 type StatusTone = "success" | "warning" | "muted";
 type IntegrityTone = StatusTone | "danger";
-type StudentInsightRisk =
-  NonNullable<ClassDetailQuery["class"]>["studentInsights"][number]["integrityRisk"];
+type StudentInsightRisk = NonNullable<ClassDetailQuery["class"]>["studentInsights"][number]["integrityRisk"];
 
-export type ClassStudentIntegritySignalView = {
-  label: string;
-  count: number;
-  severityLabel: string;
-  tone: IntegrityTone;
-};
+export type ClassStudentIntegritySignalView = { label: string; count: number; severityLabel: string; tone: IntegrityTone };
 
-export type ClassStudentIntegrityEventView = {
-  id: string;
-  type: AttemptIntegrityEventType;
-  severity: IntegritySeverity;
-  details: string;
-  createdAt: string;
-};
+export type ClassListItemView = { id: string; href: string; name: string; subject: string; grade: number; studentCount: number; studentCountLabel: string; studentCountValue: string; assignedExamCount: number; assignedExamCountLabel: string; assignedExamCountValue: string; upcomingExamCount: number; upcomingLabel: string; completedExamCount: number; completedLabel: string; averageScoreLabel: string; averageScoreValue: string; lastExamLabel: string; searchText: string };
 
-export type ClassStudentTableRow = {
-  id: string;
-  name: string;
-  email: string;
-  status: string;
-  lastActive: string;
-  averageScore: string;
-  integrityDetail: string;
-  integrityRiskLabel: string;
-  integrityLabel: string;
-  integrityTone: IntegrityTone;
-  integrityEventCount: number;
-  integritySignals: ClassStudentIntegritySignalView[];
-  integrityEvents: ClassStudentIntegrityEventView[];
-  searchText: string;
-  tone: StatusTone;
-};
+export type ClassStudentIntegrityEventView = { id: string; type: AttemptIntegrityEventType; severity: IntegritySeverity; details: string; createdAt: string };
+
+export type ClassStudentTableRow = { id: string; name: string; email: string; status: string; lastActive: string; averageScore: string; integrityDetail: string; integrityRiskLabel: string; integrityLabel: string; integrityTone: IntegrityTone; integrityEventCount: number; integritySignals: ClassStudentIntegritySignalView[]; integrityEvents: ClassStudentIntegrityEventView[]; searchText: string; tone: StatusTone };
 
 const resolveIntegrityTone = (
   suspiciousEventCount: number,
@@ -68,15 +36,35 @@ const resolveIntegrityTone = (
           : "muted"
   ) as IntegrityTone;
 
-export const buildClassesListViewModel = (data: ClassesListQuery) =>
+export const buildClassesListViewModel = (data: ClassesListQuery): ClassListItemView[] =>
   data.classes.map((item) => ({
     id: item.id,
     href: `/classes/${item.id}`,
     name: item.name,
-    meta: `${item.subject} · ${formatGradeLabel(item.grade)}`,
+    subject: item.subject,
+    grade: item.grade,
+    studentCount: item.studentCount,
     studentCountLabel: `${item.studentCount} сурагч`,
+    studentCountValue: String(item.studentCount),
+    assignedExamCount: item.assignedExamCount,
+    assignedExamCountLabel: `${item.assignedExamCount} Нийт авсан шалгалт`,
+    assignedExamCountValue: String(item.assignedExamCount),
+    upcomingExamCount: item.upcomingExamCount,
     upcomingLabel: `${item.upcomingExamCount} шалгалт удахгүй`,
+    completedExamCount: item.completedExamCount,
     completedLabel: `${item.completedExamCount} шалгалт дууссан`,
+    averageScoreLabel:
+      item.averageScore === null || item.averageScore === undefined
+        ? "Дундаж дүн алга"
+        : `${formatPercentage(item.averageScore)} Дундаж дүн`,
+    averageScoreValue:
+      item.averageScore === null || item.averageScore === undefined
+        ? "-"
+        : formatPercentage(item.averageScore),
+    lastExamLabel:
+      item.completedExamCount > 0
+        ? `Сүүлд авсан шалгалт: ${item.completedExamCount} дууссан`
+        : "Сүүлд авсан шалгалт: мэдээлэл алга",
     searchText: `${item.name} ${item.subject} ${item.grade}`,
   }));
 

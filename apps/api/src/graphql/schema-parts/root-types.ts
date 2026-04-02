@@ -148,6 +148,7 @@ export const schemaRootTypes = /* GraphQL */ `
       fileName: String!
       fileSizeBytes: Int!
       extractedText: String!
+      sourceType: ExamImportSourceType!
       storageKey: String
       extractionJson: String
       classifierJson: String

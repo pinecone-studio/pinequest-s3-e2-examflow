@@ -46,7 +46,7 @@ export type ExamImportJobStatus =
   | "REVIEW"
   | "PUBLISHED"
   | "FAILED";
-export type ExamImportSourceType = "PDF";
+export type ExamImportSourceType = "PDF" | "IMAGE";
 
 export type UserRow = {
   id: string;

@@ -4,6 +4,17 @@ import { extractPdfTextFromBuffer } from "./extract-pdf-text.mjs";
 const host = process.env.HOST?.trim() || "127.0.0.1";
 const port = Number.parseInt(process.env.PORT ?? "8788", 10);
 const sharedToken = process.env.PDF_EXTRACTION_SERVICE_TOKEN?.trim() || "";
+const tesseractLanguages = (process.env.TESSERACT_LANGUAGES?.trim() || "eng+rus")
+  .split("+")
+  .map((value) => value.trim())
+  .filter(Boolean);
+const supportedImageContentTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/bmp",
+]);
 
 const responseHeaders = {
   "access-control-allow-origin": "*",
@@ -29,6 +40,30 @@ const isAuthorized = (request) => {
 
   const [scheme, token] = authorization.split(" ", 2);
   return scheme?.toLowerCase() === "bearer" && token?.trim() === sharedToken;
+};
+
+const isPdfFile = (file) =>
+  file.type?.trim().toLowerCase() === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
+const isImageFile = (file) =>
+  supportedImageContentTypes.has(file.type?.trim().toLowerCase()) ||
+  /\.(?:jpe?g|png|webp|gif|bmp)$/i.test(file.name);
+
+const extractImageTextFromBuffer = async (buffer) => {
+  const tesseract = await import("tesseract.js");
+  const worker = await tesseract.createWorker(tesseractLanguages);
+
+  try {
+    await worker.setParameters({
+      preserve_interword_spaces: "1",
+      tessedit_pageseg_mode: tesseract.PSM.AUTO,
+    });
+
+    const result = await worker.recognize(Buffer.from(buffer), { rotateAuto: true });
+    return (result.data?.text ?? "").trim();
+  } finally {
+    await worker.terminate();
+  }
 };
 
 const createWebRequest = (request) =>
@@ -58,7 +93,8 @@ const server = http.createServer(async (request, response) => {
       sendJson(response, 200, {
         ok: true,
         service: "pdf-extraction-service",
-        mode: "text-only",
+        mode: "text-plus-image-ocr",
+        supports: ["pdf", "image"],
       });
       return;
     }
@@ -81,19 +117,23 @@ const server = http.createServer(async (request, response) => {
 
     const file = formData.get("file");
     if (!(file instanceof File)) {
-      sendJson(response, 400, { error: "PDF file is required." });
+      sendJson(response, 400, { error: "Import file is required." });
       return;
     }
 
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      sendJson(response, 400, { error: "Only PDF files are supported." });
+    if (!isPdfFile(file) && !isImageFile(file)) {
+      sendJson(response, 400, { error: "Only PDF and image files are supported." });
       return;
     }
 
-    const extractedText = await extractPdfTextFromBuffer(await file.arrayBuffer());
+    const extractedText = isPdfFile(file)
+      ? await extractPdfTextFromBuffer(await file.arrayBuffer())
+      : await extractImageTextFromBuffer(await file.arrayBuffer());
     if (!extractedText) {
       sendJson(response, 422, {
-        error: "No selectable text found in the PDF. OCR is not enabled in this service.",
+        error: isPdfFile(file)
+          ? "No selectable text found in the PDF. OCR is not enabled in this service."
+          : "No OCR text was extracted from the image.",
       });
       return;
     }
@@ -101,7 +141,7 @@ const server = http.createServer(async (request, response) => {
     sendJson(response, 200, {
       extractedText,
       provider: "api",
-      strategy: "text-layer",
+      strategy: isPdfFile(file) ? "text-layer" : "browser-ocr",
     });
   } catch (error) {
     sendJson(response, 500, {
