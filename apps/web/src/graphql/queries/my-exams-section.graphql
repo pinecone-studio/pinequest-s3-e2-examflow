@@ -15,6 +15,7 @@ query MyExamsSectionQuery {
     passingCriteriaType
     passingThreshold
     createdAt
+    scheduledFor
     startedAt
     endsAt
     createdBy {
