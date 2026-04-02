@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { getApiBaseUrl } from "./graphql-endpoint";
 
 export type LiveQuestionBankEvent = {
