@@ -19,6 +19,7 @@ import {
   type UserRow,
 } from "../types";
 import { findQuestionBankById } from "./questions";
+import { canActorUseQuestion } from "./questions";
 
 const examSelectFields = `id,
       class_id,
@@ -559,7 +560,14 @@ export const createExamQueriesAndMutations = ({
         "You can only edit exams for your own classes.",
       );
     }
-    await findQuestion(db, questionId);
+    const question = await findQuestion(db, questionId);
+    if (actor.role === "TEACHER") {
+      const questionBank = await findQuestionBankById(db, question.bank_id);
+      invariant(
+        await canActorUseQuestion({ actor, bank: questionBank, db, question }),
+        "Энэ асуултыг шалгалтдаа ашиглах эрх алга.",
+      );
+    }
 
     await appendQuestionToExam(db, examId, questionId, points);
 
@@ -607,7 +615,14 @@ export const createExamQueriesAndMutations = ({
         invariant(item.points > 0, "Асуултын оноо 1-ээс их байна.");
         invariant(!seenQuestionIds.has(item.questionId), "Давхардсан асуулт илэрлээ.");
         seenQuestionIds.add(item.questionId);
-        await findQuestion(db, item.questionId);
+        const question = await findQuestion(db, item.questionId);
+        if (actor.role === "TEACHER") {
+          const questionBank = await findQuestionBankById(db, question.bank_id);
+          invariant(
+            await canActorUseQuestion({ actor, bank: questionBank, db, question }),
+            "Зарим асуултыг энэ шалгалтад ашиглах эрх алга.",
+          );
+        }
       }
     }
 
