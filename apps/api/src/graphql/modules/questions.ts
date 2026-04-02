@@ -55,7 +55,7 @@ const legacyQuestionSelectFields = `id,
 
 const isMissingQuestionSharingColumnError = (error: unknown) =>
   error instanceof Error &&
-  /no such column: (canonical_question_id|forked_from_question_id|share_scope|requires_access_request)/i.test(
+  /no such column: (?:[a-z_]+\.)?(canonical_question_id|forked_from_question_id|share_scope|requires_access_request)/i.test(
     error.message,
   );
 
