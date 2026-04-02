@@ -2,9 +2,8 @@ import Link from "next/link";
 import {
   ClockIcon,
   DetailsIcon,
-  PreviewPencilIcon,
 } from "../icons";
-import { StickyNoteIcon } from "../icons-addition";
+import { EditPencilIcon, StickyNoteIcon } from "../icons-addition";
 import type { MyExamsSectionMode } from "./my-exams-section-config";
 import type { MyExamListView } from "./my-exams-types";
 
@@ -122,7 +121,7 @@ export function MyExamCard({ exam, mode, onView, onResults }: MyExamCardProps) {
         <div className="mt-auto flex flex-wrap items-center gap-3">
           {canEdit ? (
             <Link className={primaryClassName} href={editHref}>
-              <PreviewPencilIcon className="h-3 w-3" />
+              <EditPencilIcon className="h-3 w-3" />
               Засах
             </Link>
           ) : (
