@@ -11,7 +11,7 @@ const scoreBarHeights = [106, 140, 55, 106, 106];
 
 export function ScoreBreakdownWidget({ hasResults, searchActive }: ScoreBreakdownWidgetProps) {
   return (
-    <section className="h-[366px] w-[442px] rounded-[16px] bg-white p-[28px] shadow-[0_4px_8px_-2px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.06)]">
+    <section className="h-[366px] w-[442px] rounded-[16px] bg-white px-[28px] pb-[16px] pt-[28px] shadow-[0_4px_8px_-2px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.06)]">
       <div className="flex h-[70px] w-[386px] justify-between">
         <div className="flex h-[70px] w-[269px] flex-col justify-between gap-[8px]">
           <p className="text-[14px] font-medium leading-[18px] tracking-[-0.5px] text-[#7A7A7A] font-[var(--font-inter)]">
@@ -34,11 +34,12 @@ export function ScoreBreakdownWidget({ hasResults, searchActive }: ScoreBreakdow
       </div>
 
       {hasResults ? (
-        <div className="relative mt-[40px] h-[200px] w-[386px]">
-          <div className="absolute left-0 top-0 w-[69px] text-[10px] font-medium leading-[14px] tracking-[-0.5px] text-[rgba(100,52,248,0.6)] font-[var(--font-inter)]">
+        <div className="mt-[28px] w-[386px]">
+          <div className="mb-[8px] w-[69px] text-[10px] font-medium leading-[14px] tracking-[-0.5px] text-[rgba(100,52,248,0.6)] font-[var(--font-inter)]">
             Нийт Сурагчид
           </div>
-          <div className="mt-[12px] flex h-[174px] w-[386px] items-center justify-between">
+          <div className="relative h-[200px]">
+            <div className="mt-[12px] flex h-[174px] w-[386px] items-center justify-between">
             <div className="flex h-[174px] w-[41px] flex-col justify-between text-[10px] font-semibold leading-[14px] tracking-[-0.5px] text-[#464646] font-[var(--font-inter)]">
               {scoreYAxis.map((label) => (
                 <span key={label}>{label}</span>
@@ -62,15 +63,16 @@ export function ScoreBreakdownWidget({ hasResults, searchActive }: ScoreBreakdow
               </div>
             </div>
           </div>
-          <div className="mt-[12px] flex w-[386px] items-start">
-            <div className="w-[41px]" />
-            <div className="relative flex w-[313px] items-start justify-center gap-[34px] text-[10px] font-medium leading-[14px] tracking-[-0.5px] text-[#000] font-[var(--font-inter)]">
-              <span className="absolute -left-[38px] top-0 text-[10px] font-medium tracking-[-0.5px] text-[rgba(100,52,248,0.6)]">
-                Дүн
-              </span>
-              {scoreXAxisLabels.map((label) => (
-                <span key={label} className="w-[27px] text-center whitespace-nowrap font-semibold">{label}</span>
-              ))}
+            <div className="mt-[6px] flex w-[386px] items-start">
+              <div className="w-[41px]" />
+              <div className="relative flex w-[313px] items-start justify-center gap-[34px] text-[10px] font-medium leading-[14px] tracking-[-0.5px] text-[#000] font-[var(--font-inter)]">
+                <span className="absolute -left-[38px] top-0 text-[10px] font-medium tracking-[-0.5px] text-[rgba(100,52,248,0.6)]">
+                  Дүн
+                </span>
+                {scoreXAxisLabels.map((label) => (
+                  <span key={label} className="w-[27px] text-center whitespace-nowrap font-semibold">{label}</span>
+                ))}
+              </div>
             </div>
           </div>
         </div>

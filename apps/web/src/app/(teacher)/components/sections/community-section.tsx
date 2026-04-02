@@ -3,6 +3,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  CommunityMemberRole,
+  CommunitySharedBankStatus,
   CommunityVisibility,
   useCommunityDetailQuery,
   useCommunityOverviewQuery,
@@ -18,6 +20,32 @@ const formatGradeLabel = (grade: number) =>
 
 const formatVisibilityLabel = (visibility: CommunityVisibility) =>
   visibility === CommunityVisibility.Public ? "Нээлттэй" : "Хаалттай";
+
+const formatMemberRoleLabel = (role: CommunityMemberRole) => {
+  switch (role) {
+    case CommunityMemberRole.Owner:
+      return "Эзэмшигч";
+    case CommunityMemberRole.Moderator:
+      return "Зохицуулагч";
+    case CommunityMemberRole.Member:
+      return "Гишүүн";
+    default:
+      return "Гишүүн";
+  }
+};
+
+const formatSharedBankStatusLabel = (status: CommunitySharedBankStatus) => {
+  switch (status) {
+    case CommunitySharedBankStatus.Active:
+      return "Идэвхтэй";
+    case CommunitySharedBankStatus.Archived:
+      return "Архивласан";
+    case CommunitySharedBankStatus.Featured:
+      return "Онцолсон";
+    default:
+      return "Идэвхтэй";
+  }
+};
 
 export function CommunitySection() {
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
@@ -113,7 +141,7 @@ export function CommunitySection() {
       });
       const community = result.data?.createCommunity;
       if (!community) {
-        throw new Error("Community үүсгэсэн хариу ирсэнгүй.");
+        throw new Error("Нийгэмлэг үүсгэсэн хариу ирсэнгүй.");
       }
       setSelectedCommunityId(community.id);
       setName("");
@@ -121,11 +149,11 @@ export function CommunitySection() {
       setGrade("");
       setDescription("");
       setVisibility(CommunityVisibility.Public);
-      setFeedbackMessage("Community амжилттай үүслээ.");
+      setFeedbackMessage("Нийгэмлэг амжилттай үүслээ.");
       await refreshAll();
     } catch (error) {
       console.error("Failed to create community", error);
-      setErrorMessage("Community үүсгэх үед алдаа гарлаа.");
+      setErrorMessage("Нийгэмлэг үүсгэх үед алдаа гарлаа.");
     }
   };
 
@@ -135,11 +163,11 @@ export function CommunitySection() {
       setFeedbackMessage(null);
       await joinCommunity({ variables: { communityId } });
       setSelectedCommunityId(communityId);
-      setFeedbackMessage("Community-д амжилттай нэгдлээ.");
+      setFeedbackMessage("Нийгэмлэгт амжилттай нэгдлээ.");
       await refreshAll();
     } catch (error) {
       console.error("Failed to join community", error);
-      setErrorMessage("Community-д нэгдэх үед алдаа гарлаа.");
+      setErrorMessage("Нийгэмлэгт нэгдэх үед алдаа гарлаа.");
     }
   };
 
@@ -157,11 +185,11 @@ export function CommunitySection() {
           bankId,
         },
       });
-      setFeedbackMessage("My Bank community feed рүү амжилттай орлоо.");
+      setFeedbackMessage("Миний сан нийгэмлэгийн мэдээнд амжилттай орлоо.");
       await refreshAll();
     } catch (error) {
       console.error("Failed to share bank", error);
-      setErrorMessage("Question bank share хийх үед алдаа гарлаа.");
+      setErrorMessage("Асуултын санг хуваалцах үед алдаа гарлаа.");
     }
   };
 
@@ -170,11 +198,11 @@ export function CommunitySection() {
       setErrorMessage(null);
       setFeedbackMessage(null);
       await copySharedBank({ variables: { sharedBankId } });
-      setFeedbackMessage("Shared bank-ийг таны My Bank руу copy хийлээ.");
+      setFeedbackMessage("Хуваалцсан санг таны Миний санд хууллаа.");
       await overviewQuery.refetch();
     } catch (error) {
       console.error("Failed to copy shared bank", error);
-      setErrorMessage("Shared bank copy хийх үед алдаа гарлаа.");
+      setErrorMessage("Хуваалцсан санг хуулах үед алдаа гарлаа.");
     }
   };
 
@@ -185,7 +213,7 @@ export function CommunitySection() {
           {TEACHER_COMMON_TEXT.community}
         </h1>
         <p className="mt-1 text-[14px] text-[#52555B]">
-          My Bank-аа community руу share хийгээд, бусдын сайн сангуудыг өөрийн bank руу copy хийж ашиглана.
+          Миний сангаа нийгэмлэгт хуваалцаж, бусдын сайн сангуудыг өөрийн сандаа хуулж ашиглана.
         </p>
       </div>
 
@@ -203,7 +231,7 @@ export function CommunitySection() {
       <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-6">
           <div className="rounded-2xl border border-[#DFE1E5] bg-white p-5 shadow-[0px_4px_8px_-2px_rgba(0,0,0,0.08)]">
-            <h2 className="text-[18px] font-semibold text-[#0F1216]">Шинэ community</h2>
+            <h2 className="text-[18px] font-semibold text-[#0F1216]">Шинэ нийгэмлэг</h2>
             <div className="mt-4 space-y-3">
               <input
                 className="w-full rounded-xl border border-[#D0D5DD] px-4 py-3 text-[14px] outline-none"
@@ -233,12 +261,12 @@ export function CommunitySection() {
                   setVisibility(event.target.value as CommunityVisibility)
                 }
               >
-                <option value={CommunityVisibility.Public}>Нээлттэй community</option>
-                <option value={CommunityVisibility.Private}>Хаалттай community</option>
+                <option value={CommunityVisibility.Public}>Нээлттэй нийгэмлэг</option>
+                <option value={CommunityVisibility.Private}>Хаалттай нийгэмлэг</option>
               </select>
               <textarea
                 className="min-h-[88px] w-full rounded-xl border border-[#D0D5DD] px-4 py-3 text-[14px] outline-none"
-                placeholder="Энэ community ямар багш нарт зориулагдсан бэ?"
+                placeholder="Энэ нийгэмлэг ямар багш нарт зориулагдсан бэ?"
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
               />
@@ -248,14 +276,14 @@ export function CommunitySection() {
                 onClick={() => void handleCreateCommunity()}
                 disabled={isMutating || name.trim().length < 3}
               >
-                {createCommunityState.loading ? "Үүсгэж байна..." : "Community үүсгэх"}
+                {createCommunityState.loading ? "Үүсгэж байна..." : "Нийгэмлэг үүсгэх"}
               </button>
             </div>
           </div>
 
           <div className="rounded-2xl border border-[#DFE1E5] bg-white p-5 shadow-[0px_4px_8px_-2px_rgba(0,0,0,0.08)]">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[18px] font-semibold text-[#0F1216]">Community-үүд</h2>
+              <h2 className="text-[18px] font-semibold text-[#0F1216]">Нийгэмлэгүүд</h2>
               {overviewQuery.loading ? (
                 <span className="text-[12px] text-[#667085]">Шинэчилж байна...</span>
               ) : null}
@@ -288,11 +316,11 @@ export function CommunitySection() {
                       </span>
                     </div>
                     <p className="mt-3 text-[13px] leading-5 text-[#667085]">
-                      {community.description || "Тайлбаргүй community"}
+                      {community.description || "Тайлбаргүй нийгэмлэг"}
                     </p>
                     <div className="mt-3 flex items-center justify-between gap-3 text-[12px] text-[#667085]">
                       <span>{community.memberCount} гишүүн</span>
-                      <span>{community.sharedBankCount} share bank</span>
+                      <span>{community.sharedBankCount} хуваалцсан сан</span>
                     </div>
                     {!community.viewerRole ? (
                       <button
@@ -314,7 +342,7 @@ export function CommunitySection() {
                 ))
               ) : (
                 <div className="rounded-2xl border border-dashed border-[#D0D5DD] px-4 py-8 text-center text-[14px] text-[#667085]">
-                  Одоогоор community алга. Эхний community-гээ үүсгээд эхэлье.
+                  Одоогоор нийгэмлэг алга. Эхний нийгэмлэгээ үүсгээд эхэлье.
                 </div>
               )}
             </div>
@@ -324,7 +352,7 @@ export function CommunitySection() {
         <div className="space-y-6">
           {overviewQuery.error ? (
             <div className="rounded-2xl border border-[#F1D6D5] bg-white px-6 py-8 text-[14px] text-[#B42318]">
-              Community мэдээлэл ачаалахад алдаа гарлаа.
+              Нийгэмлэгийн мэдээлэл ачаалахад алдаа гарлаа.
             </div>
           ) : null}
 
@@ -363,10 +391,10 @@ export function CommunitySection() {
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <h3 className="text-[18px] font-semibold text-[#0F1216]">
-                          My Bank-аас share хийх
+                          Миний сангаас хуваалцах
                         </h3>
                         <p className="mt-1 text-[13px] text-[#667085]">
-                          Эх сурвалж нь таны My Bank хэвээр үлдэнэ. Community дээр зөвхөн shared layer үүснэ.
+                          Эх сурвалж нь таны Миний санд хэвээр үлдэнэ. Нийгэмлэг дээр зөвхөн хуваалцсан давхарга үүснэ.
                         </p>
                       </div>
                     </div>
@@ -374,7 +402,7 @@ export function CommunitySection() {
                     <div className="mt-4 max-h-[min(36rem,calc(100vh-20rem))] overflow-y-auto pr-1">
                       {!selectedCommunity.viewerRole ? (
                         <div className="rounded-2xl border border-dashed border-[#D0D5DD] px-4 py-6 text-[14px] text-[#667085]">
-                          Энэ хэсгийг ашиглахын тулд community-д эхлээд нэгдэнэ үү.
+                          Энэ хэсгийг ашиглахын тулд нийгэмлэгт эхлээд нэгдэнэ үү.
                         </div>
                       ) : shareableBanks.length ? (
                         <div className="space-y-3">
@@ -397,14 +425,16 @@ export function CommunitySection() {
                                 onClick={() => void handleShareBank(bank.id)}
                                 disabled={shareQuestionBankState.loading}
                               >
-                                {shareQuestionBankState.loading ? "Share хийж байна..." : "Share"}
+                                {shareQuestionBankState.loading
+                                  ? "Хуваалцаж байна..."
+                                  : "Хуваалцах"}
                               </button>
                             </div>
                           ))}
                         </div>
                       ) : (
                         <div className="rounded-2xl border border-dashed border-[#D0D5DD] px-4 py-6 text-[14px] text-[#667085]">
-                          Энэ community-д share хийгээгүй My Bank одоогоор алга.
+                          Энэ нийгэмлэгт хуваалцаагүй Миний сан одоогоор алга.
                         </div>
                       )}
                     </div>
@@ -414,10 +444,10 @@ export function CommunitySection() {
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <h3 className="text-[18px] font-semibold text-[#0F1216]">
-                          Shared question banks
+                          Хуваалцсан асуултын сангууд
                         </h3>
                         <p className="mt-1 text-[13px] text-[#667085]">
-                          Community дээрх сангуудыг copy хийгээд өөрийн My Bank руу авч ашиглана.
+                          Нийгэмлэг дээрх сангуудыг хуулж өөрийн Миний санд авч ашиглана.
                         </p>
                       </div>
                       {detailQuery.loading ? (
@@ -439,7 +469,7 @@ export function CommunitySection() {
                                     {sharedBank.bank.title}
                                   </p>
                                   <span className="rounded-full bg-[#F2F4F7] px-2.5 py-1 text-[12px] text-[#344054]">
-                                    {sharedBank.status}
+                                    {formatSharedBankStatusLabel(sharedBank.status)}
                                   </span>
                                 </div>
                                 <p className="mt-1 text-[13px] text-[#667085]">
@@ -449,7 +479,7 @@ export function CommunitySection() {
                                   {sharedBank.bank.description || "Тайлбаргүй сан"}
                                 </p>
                                 <p className="mt-2 text-[12px] text-[#667085]">
-                                  Share хийсэн: {sharedBank.sharedBy.fullName} · Эзэмшигч: {sharedBank.bank.owner.fullName}
+                                  Хуваалцсан: {sharedBank.sharedBy.fullName} · Эзэмшигч: {sharedBank.bank.owner.fullName}
                                 </p>
                               </div>
                               <button
@@ -458,14 +488,14 @@ export function CommunitySection() {
                                 onClick={() => void handleCopySharedBank(sharedBank.id)}
                                 disabled={copySharedBankState.loading}
                               >
-                                {copySharedBankState.loading ? "Copy хийж байна..." : "My Bank руу copy"}
+                                {copySharedBankState.loading ? "Хуулж байна..." : "Миний санд хуулах"}
                               </button>
                             </div>
                           </article>
                         ))
                       ) : (
                         <div className="rounded-2xl border border-dashed border-[#D0D5DD] px-4 py-8 text-center text-[14px] text-[#667085]">
-                          Энэ community-д одоогоор share хийгдсэн question bank алга.
+                          Энэ нийгэмлэгт одоогоор хуваалцсан асуултын сан алга.
                         </div>
                       )}
                     </div>
@@ -475,7 +505,7 @@ export function CommunitySection() {
                 <div className="rounded-2xl border border-[#DFE1E5] bg-white p-6 shadow-[0px_4px_8px_-2px_rgba(0,0,0,0.08)]">
                   <h3 className="text-[18px] font-semibold text-[#0F1216]">Гишүүд</h3>
                   <p className="mt-1 text-[13px] text-[#667085]">
-                    Subject-level community үүсгэх суурь гишүүд.
+                    Хичээл дээр суурилсан нийгэмлэг үүсгэх суурь гишүүд.
                   </p>
                   <div className="mt-4 space-y-3">
                     {selectedCommunity.members.map((member) => (
@@ -486,7 +516,9 @@ export function CommunitySection() {
                         <p className="text-[14px] font-semibold text-[#0F1216]">
                           {member.user.fullName}
                         </p>
-                        <p className="mt-1 text-[12px] text-[#667085]">{member.role}</p>
+                        <p className="mt-1 text-[12px] text-[#667085]">
+                          {formatMemberRoleLabel(member.role)}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -495,7 +527,7 @@ export function CommunitySection() {
             </>
           ) : (
             <div className="rounded-2xl border border-dashed border-[#D0D5DD] bg-white px-6 py-12 text-center text-[14px] text-[#667085] shadow-[0px_4px_8px_-2px_rgba(0,0,0,0.08)]">
-              Community сонгох эсвэл шинээр үүсгэж эхэлнэ үү.
+              Нийгэмлэг сонгох эсвэл шинээр үүсгэж эхэлнэ үү.
             </div>
           )}
         </div>
