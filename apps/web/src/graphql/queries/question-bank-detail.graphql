@@ -25,12 +25,13 @@ query QuestionBankDetailQuery($id: ID!) {
       }
     }
   }
-  questionBanks {
+  myQuestionBanks: questionBanks(repository: MINE) {
     id
     title
     grade
     subject
     topic
+    repositoryKind
     owner {
       id
     }
@@ -39,6 +40,7 @@ query QuestionBankDetailQuery($id: ID!) {
     id
     title
     description
+    repositoryKind
     grade
     subject
     topic
@@ -51,6 +53,7 @@ query QuestionBankDetailQuery($id: ID!) {
     }
     questions {
       id
+      repositoryKind
       title
       prompt
       type

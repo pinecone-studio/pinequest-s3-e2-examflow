@@ -6,6 +6,7 @@ mutation UpdateQuestionMutation(
   $options: [String!]
   $correctAnswer: String
   $difficulty: Difficulty!
+  $repositoryKind: QuestionRepositoryKind
   $shareScope: QuestionShareScope
   $requiresAccessRequest: Boolean
   $tags: [String!]
@@ -18,6 +19,7 @@ mutation UpdateQuestionMutation(
     options: $options
     correctAnswer: $correctAnswer
     difficulty: $difficulty
+    repositoryKind: $repositoryKind
     shareScope: $shareScope
     requiresAccessRequest: $requiresAccessRequest
     tags: $tags

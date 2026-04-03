@@ -33,6 +33,7 @@ type QuestionBankDetailSectionProps = {
   bankId: string;
   onAddQuestion: () => void;
   onSubjectChange: (subject: string) => void;
+  onRepositoryKindChange: (repositoryKind: "MINE" | "UNIFIED") => void;
 };
 
 type DetailTab = "questions" | "related-exams";
@@ -41,6 +42,7 @@ export function QuestionBankDetailSection({
   bankId,
   onAddQuestion,
   onSubjectChange,
+  onRepositoryKindChange,
 }: QuestionBankDetailSectionProps) {
   const [search, setSearch] = useState("");
   const [topic, setTopic] = useState("Бүх сэдэв");
@@ -63,13 +65,7 @@ export function QuestionBankDetailSection({
   const bank = data?.questionBank ?? null;
   const viewerId = data?.me?.id ?? null;
   const isOwnedBank = Boolean(bank && viewerId && bank.owner.id === viewerId);
-  const bankAccessKind = bank
-    ? isOwnedBank
-      ? "MINE"
-      : bank.visibility === "PUBLIC"
-        ? "PUBLIC"
-        : "SHARED"
-    : null;
+  const bankRepositoryKind = bank?.repositoryKind ?? "MINE";
 
   useLiveQuestionBankEvents({
     teacherId: isOwnedBank ? viewerId : null,
@@ -118,6 +114,10 @@ export function QuestionBankDetailSection({
     }
   }, [bank?.subject, onSubjectChange]);
 
+  useEffect(() => {
+    onRepositoryKindChange(bank?.repositoryKind === "UNIFIED" ? "UNIFIED" : "MINE");
+  }, [bank?.repositoryKind, onRepositoryKindChange]);
+
   const isEditable = isOwnedBank;
 
   const filteredRows = useMemo(() => {
@@ -150,13 +150,14 @@ export function QuestionBankDetailSection({
   }, [bankId, data?.questionAccessRequests, viewerId]);
   const ownedBankOptions = useMemo(
     () =>
-      (data?.questionBanks ?? [])
+      (data?.myQuestionBanks ?? [])
+        .filter((item) => item.repositoryKind === "MINE")
         .filter((item) => item.owner.id === viewerId)
         .map((item) => ({
           id: item.id,
           label: `${item.grade}-р анги · ${item.subject} · ${item.topic || item.title}`,
         })),
-    [data?.questionBanks, viewerId],
+    [data?.myQuestionBanks, viewerId],
   );
   const accessRequestRows = useMemo(() => {
     const relevantRequests = (data?.questionAccessRequests ?? []).filter(
@@ -293,18 +294,14 @@ export function QuestionBankDetailSection({
             {`${bank.grade}-р анги`}
           </span>
           <span className="rounded-md bg-[#F2F4F7] px-2.5 py-1 font-medium text-[#344054]">
-            {bankAccessKind === "MINE"
-              ? "Миний сан"
-              : bankAccessKind === "PUBLIC"
-                ? "Нээлттэй сан"
-                : "Community сан"}
+            {bankRepositoryKind === "MINE" ? "Миний сан" : "Нэгдсэн сан"}
           </span>
           <span>
             {isEditable
               ? "Энэ сан дээр асуулт нэмэх, засах боломжтой."
-              : bankAccessKind === "PUBLIC"
-                ? `${bank.owner.fullName}-ийн нээлттэй сан. Асуултуудыг шууд шалгалтад ашиглаж болно.`
-                : `${bank.owner.fullName}-ийн community-ээр хуваалцсан сан. Зөвшөөрөлтэй асуултыг шууд ашиглаж, хэрэгтэй бол хувилбар гаргаж авна.`}
+              : bankRepositoryKind === "UNIFIED"
+                ? `${bank.owner.fullName}-ийн нэгдсэн санд орсон сан. Асуултуудыг шууд шалгалтад ашиглаж болно.`
+                : `${bank.owner.fullName}-ийн хувийн сан. Зөвшөөрөлтэй асуултыг шууд ашиглаж, хэрэгтэй бол хувилбар гаргаж авна.`}
           </span>
         </div>
       ) : null}
@@ -361,6 +358,7 @@ export function QuestionBankDetailSection({
 
           <QuestionBankDetailTable
             bankId={bankId}
+            repositoryKind={bankRepositoryKind}
             subject={bank?.subject ?? "Хичээл"}
             editable={isEditable}
             loading={loading}

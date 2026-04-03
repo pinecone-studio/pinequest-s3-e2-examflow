@@ -3,7 +3,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState, type ReactNode } from "react";
-import { QuestionShareScope } from "@/graphql/generated";
+import { QuestionRepositoryKind } from "@/graphql/generated";
 import {
   uploadImageAnswer,
   useProtectedImageSource,
@@ -217,42 +217,40 @@ export function QuestionBankDialogMedia({
   );
 }
 
-export function QuestionBankDialogSharingSection({
-  shareScope,
+export function QuestionBankDialogRepositorySection({
+  repositoryKind,
   requiresAccessRequest,
   disabled,
-  onShareScopeChange,
   onRequiresAccessRequestChange,
 }: {
-  shareScope: QuestionShareScope;
+  repositoryKind: QuestionRepositoryKind;
   requiresAccessRequest: boolean;
   disabled?: boolean;
-  onShareScopeChange: (value: QuestionShareScope) => void;
   onRequiresAccessRequestChange: (value: boolean) => void;
 }) {
+  const isUnified = repositoryKind === QuestionRepositoryKind.Unified;
+
   return (
     <div className="grid gap-3 rounded-lg border border-[#EAECF0] bg-white p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
       <label className="space-y-2">
-        <span className="text-[12px] font-medium text-[#52555B]">Хуваалцах хүрээ</span>
-        <QuestionBankDialogSelect
-          value={shareScope}
-          disabled={disabled}
-          onChange={(value) => onShareScopeChange(value as QuestionShareScope)}
-        >
-          <option value={QuestionShareScope.Private}>Миний сан дотор</option>
-          <option value={QuestionShareScope.Community}>Community дотор ашиглаж болно</option>
-          <option value={QuestionShareScope.Public}>Нэгдсэн санд нээлттэй</option>
-        </QuestionBankDialogSelect>
+        <span className="text-[12px] font-medium text-[#52555B]">Хадгалах газар</span>
+        <div className="h-9 rounded-md border border-[#DFE1E5] bg-[#F8FAFC] px-3 text-[14px] leading-9 text-[#0F1216] shadow-[0px_1px_2px_rgba(0,0,0,0.05)]">
+          {isUnified ? "Нэгдсэн сан" : "Миний сан"}
+        </div>
       </label>
       <label className="flex items-center gap-3 rounded-md border border-[#E4E7EC] px-3 py-2.5 text-[13px] text-[#344054]">
         <input
           type="checkbox"
           checked={requiresAccessRequest}
           onChange={(event) => onRequiresAccessRequestChange(event.target.checked)}
-          disabled={disabled}
+          disabled={disabled || isUnified}
           className="h-4 w-4 rounded border-[#D0D5DD] text-[#00267F] focus:ring-[#00267F]"
         />
-        <span>Ашиглахын өмнө зөвшөөрөл авна</span>
+        <span>
+          {isUnified
+            ? "Нэгдсэн сангийн асуултыг шууд ашиглана"
+            : "Хүсэлтээр ашиглуулна"}
+        </span>
       </label>
     </div>
   );

@@ -1,4 +1,8 @@
-import type { Difficulty, QuestionType } from "@/graphql/generated";
+import {
+  QuestionRepositoryKind,
+  type Difficulty,
+  type QuestionType,
+} from "@/graphql/generated";
 import { difficultyOptions, questionTypeOptions } from "../components/sections/question-bank-dialog-config";
 import {
   getBankGradeOptions,
@@ -11,12 +15,14 @@ import type { CreateExamQuestionBankOption } from "./create-exam-types";
 
 type CreateExamQuestionComposerMetaProps = {
   bankOptions: CreateExamQuestionBankOption[];
+  repositoryKind: QuestionRepositoryKind;
   bankSelection: BankSelectionValues;
   difficulty: Difficulty;
   disabled: boolean;
   isBankLocked: boolean;
   loading: boolean;
   questionType: QuestionType;
+  onRepositoryKindChange: (value: QuestionRepositoryKind) => void;
   onBankSelectionChange: (
     field: keyof BankSelectionValues,
     value: string,
@@ -30,27 +36,32 @@ const SELECT_CLASS_NAME =
 
 export function CreateExamQuestionComposerMeta({
   bankOptions,
+  repositoryKind,
   bankSelection,
   difficulty,
   disabled,
   isBankLocked,
   loading,
   questionType,
+  onRepositoryKindChange,
   onBankSelectionChange,
   onDifficultyChange,
   onQuestionTypeChange,
 }: CreateExamQuestionComposerMetaProps) {
-  const gradeOptions = getBankGradeOptions(bankOptions);
-  const subjectOptions = getBankSubjectOptions(bankOptions, bankSelection.grade);
+  const filteredBankOptions = bankOptions.filter(
+    (option) => option.repositoryKind === repositoryKind,
+  );
+  const gradeOptions = getBankGradeOptions(filteredBankOptions);
+  const subjectOptions = getBankSubjectOptions(filteredBankOptions, bankSelection.grade);
   const topicOptions = getBankTopicOptions(
-    bankOptions,
+    filteredBankOptions,
     bankSelection.grade,
     bankSelection.subject,
   );
   const bankDisabled = disabled || loading || isBankLocked;
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[141.6px_1fr_1fr_1fr_93.6px]">
+    <div className="grid gap-4 xl:grid-cols-[141.6px_150px_1fr_1fr_1fr_93.6px]">
         <label className="relative block w-[141.6px]">
           <select
             value={questionType}
@@ -63,6 +74,21 @@ export function CreateExamQuestionComposerMeta({
                 {option.label === "Сонгох" ? "Олон сонголт" : option.label}
               </option>
             ))}
+          </select>
+          <ChevronDownIcon className="pointer-events-none absolute right-[11.8px] top-1/2 h-4 w-4 -translate-y-1/2 text-[#52555B] opacity-50" />
+        </label>
+
+        <label className="relative block">
+          <select
+            value={repositoryKind}
+            onChange={(event) =>
+              onRepositoryKindChange(event.target.value as QuestionRepositoryKind)
+            }
+            className={`${SELECT_CLASS_NAME} w-full text-[#0F1216]`}
+            disabled={bankDisabled}
+          >
+            <option value={QuestionRepositoryKind.Mine}>Миний сан</option>
+            <option value={QuestionRepositoryKind.Unified}>Нэгдсэн сан</option>
           </select>
           <ChevronDownIcon className="pointer-events-none absolute right-[11.8px] top-1/2 h-4 w-4 -translate-y-1/2 text-[#52555B] opacity-50" />
         </label>

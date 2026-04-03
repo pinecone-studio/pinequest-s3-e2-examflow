@@ -1400,8 +1400,8 @@ export function CommunitySection() {
               </CommunitySectionCard>
 
               <CommunitySectionCard
-                title="Нээлттэй сангууд"
-                description="Тухайн community доторх санг шууд ашиглах эсвэл өөрийн санд хувилбар гаргаж болно."
+                title="Нэгдсэн санд орж буй сангууд"
+                description="Эндхээс сангаа шууд шалгалтад ашиглах эсвэл өөрийнхөөрөө засах бол хувилбар гаргаж авна."
               >
                 {selectedCommunity.sharedBanks.length ? (
                   <div className="space-y-3">
@@ -1424,7 +1424,7 @@ export function CommunitySection() {
                                 {formatSharedBankStatusLabel(sharedBank.status)}
                               </span>
                               <span className="rounded-full bg-[#EEF2FF] px-2.5 py-1 text-[12px] text-[#4F46E5]">
-                                {sharedBank.copyCount} хуулалт
+                                {sharedBank.copyCount} ашиглалт
                               </span>
                             </div>
                             <p className="mt-1 text-[13px] text-[#667085]">

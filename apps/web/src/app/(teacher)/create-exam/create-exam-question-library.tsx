@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { getCurriculumTopicGroupName, getCurriculumTopicGroups } from "../components/question-bank-curriculum";
 import {
   ExamMode,
+  QuestionRepositoryKind,
 } from "@/graphql/generated";
 import type {
   CreateExamQuestionBankOption,
@@ -124,21 +125,38 @@ export function CreateExamQuestionLibrary({
   onAddSelected,
 }: CreateExamQuestionLibraryProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [repositoryKind, setRepositoryKind] = useState<QuestionRepositoryKind>(
+    QuestionRepositoryKind.Unified,
+  );
   const initialSelection = initialBankId
     ? getBankSelectionFromId(questionBankOptions, initialBankId)
     : EMPTY_BANK_SELECTION;
+  const initialBank = questionBankOptions.find((bank) => bank.id === initialBankId);
   const [grade, setGrade] = useState(initialSelection.grade);
   const [subject, setSubject] = useState(initialSelection.subject);
   const [topic, setTopic] = useState(initialSelection.topic);
   const [difficulty, setDifficulty] = useState("all");
   const [type, setType] = useState("all");
-
-  const gradeOptions = getBankGradeOptions(questionBankOptions);
-  const subjectOptions = getBankSubjectOptions(questionBankOptions, grade);
-  const topicOptions = getGroupedTopicOptions(questionBankOptions, grade, subject);
-  const filteredQuestions = useMemo(
+  const resolvedRepositoryKind = initialBank?.repositoryKind ?? repositoryKind;
+  const filteredBankOptions = useMemo(
+    () =>
+      questionBankOptions.filter((bank) => bank.repositoryKind === resolvedRepositoryKind),
+    [questionBankOptions, resolvedRepositoryKind],
+  );
+  const scopedQuestionOptions = useMemo(
     () =>
       questionOptions.filter(
+        (question) => question.bankRepositoryKind === resolvedRepositoryKind,
+      ),
+    [questionOptions, resolvedRepositoryKind],
+  );
+
+  const gradeOptions = getBankGradeOptions(filteredBankOptions);
+  const subjectOptions = getBankSubjectOptions(filteredBankOptions, grade);
+  const topicOptions = getGroupedTopicOptions(filteredBankOptions, grade, subject);
+  const filteredQuestions = useMemo(
+    () =>
+      scopedQuestionOptions.filter(
         (question) =>
           !question.tags.includes("variant_draft:true") &&
           (mode !== ExamMode.Practice ||
@@ -153,12 +171,48 @@ export function CreateExamQuestionLibrary({
             type,
           ),
       ),
-    [difficulty, grade, mode, questionOptions, searchTerm, subject, topic, type],
+    [difficulty, grade, mode, scopedQuestionOptions, searchTerm, subject, topic, type],
   );
 
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-4">
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            className={`inline-flex h-9 items-center rounded-full border px-4 text-[14px] font-medium transition ${
+              resolvedRepositoryKind === QuestionRepositoryKind.Unified
+                ? "border-[#00267F] bg-[#00267F] text-white"
+                : "border-[#DFE1E5] bg-white text-[#344054] hover:border-[#BFC5D0]"
+            }`}
+            disabled={disabled || Boolean(initialBankId)}
+            onClick={() => {
+              setRepositoryKind(QuestionRepositoryKind.Unified);
+              setGrade("");
+              setSubject("");
+              setTopic("");
+            }}
+          >
+            Нэгдсэн сан
+          </button>
+          <button
+            type="button"
+            className={`inline-flex h-9 items-center rounded-full border px-4 text-[14px] font-medium transition ${
+              resolvedRepositoryKind === QuestionRepositoryKind.Mine
+                ? "border-[#00267F] bg-[#00267F] text-white"
+                : "border-[#DFE1E5] bg-white text-[#344054] hover:border-[#BFC5D0]"
+            }`}
+            disabled={disabled || Boolean(initialBankId)}
+            onClick={() => {
+              setRepositoryKind(QuestionRepositoryKind.Mine);
+              setGrade("");
+              setSubject("");
+              setTopic("");
+            }}
+          >
+            Миний сан
+          </button>
+        </div>
         <input
           type="search"
           className="w-full rounded-xl border border-[#DFE1E5] px-4 py-3 text-[14px] text-[#0F1216]"
@@ -226,7 +280,7 @@ export function CreateExamQuestionLibrary({
           </select>
         </div>
 
-      {mode === ExamMode.Practice ? (
+        {mode === ExamMode.Practice ? (
           <p className="text-[12px] text-[#667085]">
             Чөлөөт сорилын горимд зөвхөн автоматаар үнэлэгдэх асуултууд харагдана.
           </p>
@@ -267,7 +321,7 @@ export function CreateExamQuestionLibrary({
                   ? "border-[#B8CFFF] bg-[#EEF4FF]"
                   : requiresApproval && requestStatus !== "APPROVED"
                     ? "border-[#FECACA] bg-[#FEF2F2]"
-                  : "border-[#DFE1E5] bg-white",
+                    : "border-[#DFE1E5] bg-white",
               ].join(" ")}
             >
               <div className="flex items-start gap-4">

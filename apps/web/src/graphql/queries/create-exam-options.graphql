@@ -2,6 +2,38 @@ query CreateExamOptions {
   me {
     id
   }
+  mineRepositoryTree: questionRepositoryTree(repository: MINE) {
+    subject
+    grades {
+      grade
+      topics {
+        topic
+        bankCount
+        questionCount
+        subtopics {
+          name
+          questionCount
+          bankIds
+        }
+      }
+    }
+  }
+  unifiedRepositoryTree: questionRepositoryTree(repository: UNIFIED) {
+    subject
+    grades {
+      grade
+      topics {
+        topic
+        bankCount
+        questionCount
+        subtopics {
+          name
+          questionCount
+          bankIds
+        }
+      }
+    }
+  }
   questionAccessRequests {
     id
     status
@@ -21,12 +53,14 @@ query CreateExamOptions {
   questionBanks {
     id
     title
+    repositoryKind
     subject
     grade
     topic
   }
   questions {
     id
+    repositoryKind
     title
     prompt
     type
@@ -44,6 +78,7 @@ query CreateExamOptions {
     bank {
       id
       title
+      repositoryKind
       subject
       grade
       topic

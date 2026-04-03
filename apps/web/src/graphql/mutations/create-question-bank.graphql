@@ -4,7 +4,7 @@ mutation CreateQuestionBankMutation(
   $grade: Int!
   $subject: String!
   $topic: String!
-  $visibility: QuestionBankVisibility!
+  $repositoryKind: QuestionRepositoryKind!
 ) {
   createQuestionBank(
     title: $title
@@ -12,10 +12,11 @@ mutation CreateQuestionBankMutation(
     grade: $grade
     subject: $subject
     topic: $topic
-    visibility: $visibility
+    repositoryKind: $repositoryKind
   ) {
     id
     title
+    repositoryKind
     grade
     subject
     topic

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@apollo/client/react";
 import {
   CreateQuestionMutationDocument,
+  QuestionRepositoryKind,
   QuestionShareScope,
   QuestionType,
   type CreateQuestionMutationMutation,
@@ -35,12 +36,14 @@ type CreateExamQuestionComposerProps = {
 
 export function CreateExamQuestionComposer(props: CreateExamQuestionComposerProps) {
   const [bankId, setBankId] = useState("");
+  const [repositoryKind, setRepositoryKind] = useState<QuestionRepositoryKind>(
+    QuestionRepositoryKind.Mine,
+  );
   const [bankSelection, setBankSelection] = useState(EMPTY_BANK_SELECTION);
   const {
     prompt, setPrompt,
     questionType, setQuestionType,
     difficulty, setDifficulty,
-    shareScope, setShareScope,
     requiresAccessRequest, setRequiresAccessRequest,
     options, correctIndex, setCorrectIndex,
     truthValue, setTruthValue,
@@ -60,9 +63,16 @@ export function CreateExamQuestionComposer(props: CreateExamQuestionComposerProp
     if (!bankId && props.initialBankId && props.bankOptions.length) {
       const nextBankId = props.initialBankId;
       setBankId(nextBankId);
+      const selectedBank = props.bankOptions.find((option) => option.id === nextBankId);
+      setRepositoryKind(selectedBank?.repositoryKind ?? QuestionRepositoryKind.Mine);
       setBankSelection(getBankSelectionFromId(props.bankOptions, nextBankId));
     }
   }, [bankId, props.bankOptions, props.initialBankId]);
+
+  const filteredBankOptions = useMemo(
+    () => props.bankOptions.filter((option) => option.repositoryKind === repositoryKind),
+    [props.bankOptions, repositoryKind],
+  );
 
   const handleBankSelectionChange = (
     field: keyof typeof bankSelection,
@@ -76,20 +86,29 @@ export function CreateExamQuestionComposer(props: CreateExamQuestionComposerProp
           : { ...bankSelection, topic: value };
 
     setBankSelection(nextSelection);
-    setBankId(findBankIdBySelection(props.bankOptions, nextSelection));
+    setBankId(findBankIdBySelection(filteredBankOptions, nextSelection));
+  };
+
+  const handleRepositoryKindChange = (value: QuestionRepositoryKind) => {
+    setRepositoryKind(value);
+    if (props.initialBankId) {
+      return;
+    }
+    setBankSelection(EMPTY_BANK_SELECTION);
+    setBankId("");
   };
 
   const bankSummary = useMemo(() => {
-    const selectedBank = props.bankOptions.find((option) => option.id === bankId);
+    const selectedBank = filteredBankOptions.find((option) => option.id === bankId);
     return selectedBank
-      ? `${selectedBank.grade}-р анги · ${selectedBank.subject} · ${selectedBank.topic}`
+      ? `${selectedBank.repositoryKind === QuestionRepositoryKind.Unified ? "Нэгдсэн сан" : "Миний сан"} · ${selectedBank.grade}-р анги · ${selectedBank.subject} · ${selectedBank.topic}`
       : null;
-  }, [bankId, props.bankOptions]);
+  }, [bankId, filteredBankOptions]);
 
   const submit = async () => {
     try {
-      if (!bankId) {
-        setErrorMessage("Асуултын сан сонгоно уу.");
+      if (!bankSelection.grade || !bankSelection.subject || !bankSelection.topic) {
+        setErrorMessage("Хадгалах сангийн анги, хичээл, сэдвээ сонгоно уу.");
         return;
       }
       if (!saveToBank) {
@@ -122,10 +141,20 @@ export function CreateExamQuestionComposer(props: CreateExamQuestionComposerProp
       }
       const result = await createQuestion({
         variables: {
-          bankId,
+          bankId: bankId || undefined,
+          grade: Number(bankSelection.grade),
+          subject: bankSelection.subject,
+          topic: bankSelection.topic,
+          repositoryKind,
           type: questionType,
-          shareScope,
-          requiresAccessRequest,
+          shareScope:
+            repositoryKind === QuestionRepositoryKind.Unified
+              ? QuestionShareScope.Public
+              : QuestionShareScope.Private,
+          requiresAccessRequest:
+            repositoryKind === QuestionRepositoryKind.Unified
+              ? false
+              : requiresAccessRequest,
           ...payload,
         },
       });
@@ -174,12 +203,14 @@ export function CreateExamQuestionComposer(props: CreateExamQuestionComposerProp
 
         <CreateExamQuestionComposerMeta
           bankOptions={props.bankOptions}
+          repositoryKind={repositoryKind}
           bankSelection={bankSelection}
           difficulty={difficulty as Difficulty}
           disabled={props.disabled}
           isBankLocked={Boolean(props.initialBankId)}
           loading={loading}
           questionType={questionType}
+          onRepositoryKindChange={handleRepositoryKindChange}
           onBankSelectionChange={handleBankSelectionChange}
           onDifficultyChange={setDifficulty}
           onQuestionTypeChange={setQuestionType}
@@ -205,30 +236,31 @@ export function CreateExamQuestionComposer(props: CreateExamQuestionComposerProp
         />
 
         <div className="grid gap-3 rounded-[10px] border border-[#EAECF0] bg-[#FCFCFD] p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-          <label className="grid gap-2">
+          <div className="grid gap-2">
             <span className="text-[12px] font-medium uppercase tracking-[0.3px] text-[#52555B]">
-              Хуваалцах хүрээ
+              Хадгалах газар
             </span>
-            <select
-              value={shareScope}
-              onChange={(event) => setShareScope(event.target.value as QuestionShareScope)}
-              disabled={props.disabled || loading}
-              className="h-10 rounded-[6px] border border-[#DFE1E5] bg-white px-3 text-[14px] text-[#101828] shadow-[0px_1px_2px_rgba(0,0,0,0.05)]"
-            >
-              <option value={QuestionShareScope.Private}>Миний сан дотор</option>
-              <option value={QuestionShareScope.Community}>Community дотор ашиглаж болно</option>
-              <option value={QuestionShareScope.Public}>Нэгдсэн санд нээлттэй</option>
-            </select>
-          </label>
+            <div className="h-10 rounded-[6px] border border-[#DFE1E5] bg-white px-3 text-[14px] leading-10 text-[#101828] shadow-[0px_1px_2px_rgba(0,0,0,0.05)]">
+              {repositoryKind === QuestionRepositoryKind.Unified ? "Нэгдсэн сан" : "Миний сан"}
+            </div>
+          </div>
           <label className="flex items-center gap-3 rounded-[8px] border border-[#E4E7EC] bg-white px-3 py-2.5 text-[13px] text-[#344054]">
             <input
               type="checkbox"
               checked={requiresAccessRequest}
               onChange={(event) => setRequiresAccessRequest(event.target.checked)}
-              disabled={props.disabled || loading}
+              disabled={
+                props.disabled ||
+                loading ||
+                repositoryKind === QuestionRepositoryKind.Unified
+              }
               className="h-4 w-4 rounded border-[#D0D5DD] text-[#00267F] focus:ring-[#00267F]"
             />
-            <span>Ашиглахын өмнө зөвшөөрөл авна</span>
+            <span>
+              {repositoryKind === QuestionRepositoryKind.Unified
+                ? "Нэгдсэн сангийн асуултыг шууд ашиглана"
+                : "Хүсэлтээр ашиглуулна"}
+            </span>
           </label>
         </div>
 

@@ -1,23 +1,31 @@
 mutation CreateQuestionMutation(
-  $bankId: ID!
+  $bankId: ID
+  $grade: Int
+  $subject: String
+  $topic: String
   $type: QuestionType!
   $title: String!
   $prompt: String!
   $options: [String!]
   $correctAnswer: String
   $difficulty: Difficulty!
+  $repositoryKind: QuestionRepositoryKind
   $shareScope: QuestionShareScope
   $requiresAccessRequest: Boolean
   $tags: [String!]
 ) {
   createQuestion(
     bankId: $bankId
+    grade: $grade
+    subject: $subject
+    topic: $topic
     type: $type
     title: $title
     prompt: $prompt
     options: $options
     correctAnswer: $correctAnswer
     difficulty: $difficulty
+    repositoryKind: $repositoryKind
     shareScope: $shareScope
     requiresAccessRequest: $requiresAccessRequest
     tags: $tags

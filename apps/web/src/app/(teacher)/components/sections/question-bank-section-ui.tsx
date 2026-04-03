@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { MenuIcon, ChevronDownIcon, PlusIcon, SearchIcon } from "../icons-more";
 import {
-  formatAccessKindLabel,
+  formatRepositoryKindLabel,
   formatGradeLabel,
   type QuestionBankItem,
 } from "../question-bank-utils";
@@ -344,14 +344,12 @@ export function QuestionBankGrid({
                 </div>
                 <span
                   className={`rounded-md px-2.5 py-1 text-[12px] font-medium ${
-                    item.accessKind === "PUBLIC"
+                    item.repositoryKind === "UNIFIED"
                       ? "bg-[#ECFDF3] text-[#027A48]"
-                      : item.accessKind === "SHARED"
-                        ? "bg-[#F4EBFF] text-[#7A2EAB]"
                       : "bg-[#EEF4FF] text-[#175CD3]"
                   }`}
                 >
-                  {formatAccessKindLabel(item.accessKind)}
+                  {formatRepositoryKindLabel(item.repositoryKind)}
                 </span>
               </div>
               <h3 className="mt-4 text-[16px] font-medium text-[#0F1216]">
@@ -383,11 +381,9 @@ export function QuestionBankGrid({
                 )}
               </div>
               <p className="mt-3 text-[13px] text-[#667085]">
-                {item.accessKind === "PUBLIC"
-                  ? `Нээлттэй эх сурвалж · ${item.ownerName}`
-                  : item.accessKind === "SHARED"
-                    ? `Community-ээр хуваалцсан · ${item.ownerName}`
-                    : "Зөвхөн танд харагдана"}
+                {item.repositoryKind === "UNIFIED"
+                  ? `Нэгдсэн сан · ${item.ownerName}`
+                  : "Зөвхөн танд харагдана"}
               </p>
               <div className="mt-4 flex items-center justify-between text-[14px] text-[#52555B]">
                 <span>{item.questions}</span>

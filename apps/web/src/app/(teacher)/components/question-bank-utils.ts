@@ -6,6 +6,7 @@ export type QuestionBankItem = {
   title: string;
   displayTitle: string;
   description: string;
+  repositoryKind: "MINE" | "UNIFIED";
   grade: number;
   subject: string;
   topic: string;
@@ -13,7 +14,6 @@ export type QuestionBankItem = {
   topics: string[];
   subtopics?: string[];
   visibility: "PRIVATE" | "PUBLIC";
-  accessKind: "MINE" | "PUBLIC" | "SHARED";
   ownerId: string;
   ownerName: string;
   questions: string;
@@ -135,12 +135,9 @@ export const formatGradeLabel = (grade: number) =>
 export const formatVisibilityLabel = (visibility: QuestionBankItem["visibility"]) =>
   visibility === "PUBLIC" ? "Нэгдсэн сан" : "Миний сан";
 
-export const formatAccessKindLabel = (accessKind: QuestionBankItem["accessKind"]) =>
-  accessKind === "MINE"
-    ? "Миний сан"
-    : accessKind === "PUBLIC"
-      ? "Нээлттэй сан"
-      : "Community сан";
+export const formatRepositoryKindLabel = (
+  repositoryKind: QuestionBankItem["repositoryKind"],
+) => (repositoryKind === "UNIFIED" ? "Нэгдсэн сан" : "Миний сан");
 
 export const buildQuestionBankRows = (
   questions: RawQuestion[],

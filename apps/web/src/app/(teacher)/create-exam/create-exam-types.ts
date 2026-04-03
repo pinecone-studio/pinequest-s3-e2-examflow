@@ -3,6 +3,7 @@ import type {
   ExamGenerationMode,
   ExamMode,
   PassingCriteriaType,
+  QuestionRepositoryKind,
 } from "@/graphql/generated";
 
 export type CreateExamGenerationRule = {
@@ -51,6 +52,7 @@ export type CreateExamClassOption = {
 
 export type CreateExamQuestionOption = {
   id: string;
+  repositoryKind: QuestionRepositoryKind;
   title: string;
   prompt: string;
   type: string;
@@ -66,6 +68,7 @@ export type CreateExamQuestionOption = {
   createdByName: string;
   bankId: string;
   bankTitle: string;
+  bankRepositoryKind: QuestionRepositoryKind;
   bankSubject: string;
   bankGrade: number;
   bankTopic: string;
@@ -74,6 +77,7 @@ export type CreateExamQuestionOption = {
 
 export type CreateExamQuestionBankOption = {
   id: string;
+  repositoryKind: QuestionRepositoryKind;
   title: string;
   subject: string;
   grade: number;
@@ -82,6 +86,7 @@ export type CreateExamQuestionBankOption = {
 
 export type CreateExamRuleSourceOption = {
   id: string;
+  repositoryKind: QuestionRepositoryKind;
   label: string;
   grade: number;
   subject: string;

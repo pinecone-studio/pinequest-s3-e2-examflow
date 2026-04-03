@@ -2,7 +2,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuestionBanksQueryQuery } from "@/graphql/generated";
+import {
+  QuestionRepositoryKind,
+  useQuestionBanksQueryQuery,
+} from "@/graphql/generated";
 import { useLiveQuestionBankEvents } from "@/lib/use-live-question-bank-events";
 import { PlusIcon } from "../icons";
 import {
@@ -32,6 +35,7 @@ const mapQuestionBankItems = (
     id: string;
     title: string;
     description?: string | null;
+    repositoryKind: "MINE" | "UNIFIED";
     grade: number;
     subject: string;
     topic: string;
@@ -44,7 +48,6 @@ const mapQuestionBankItems = (
       fullName: string;
     };
   }[],
-  viewerId: string | null,
 ): QuestionBankItem[] =>
   banks.map((bank) => ({
     id: bank.id,
@@ -52,6 +55,7 @@ const mapQuestionBankItems = (
     displayTitle:
       bank.topic !== "Ерөнхий" ? bank.topic : bank.topics[0] ?? bank.title,
     description: bank.description ?? "Тайлбар оруулаагүй асуултын сан",
+    repositoryKind: bank.repositoryKind,
     grade: bank.grade,
     subject: bank.subject,
     topic: bank.topic,
@@ -59,22 +63,16 @@ const mapQuestionBankItems = (
     topics: bank.topics,
     subtopics: bank.topic !== "Ерөнхий" ? [bank.topic] : bank.topics,
     visibility: bank.visibility,
-    accessKind:
-      viewerId && bank.owner.id === viewerId
-        ? "MINE"
-        : bank.visibility === "PUBLIC"
-          ? "PUBLIC"
-          : "SHARED",
     ownerId: bank.owner.id,
     ownerName: bank.owner.fullName,
     questions: `${bank.questionCount} асуулт`,
     date: formatQuestionBankDate(bank.createdAt),
   }));
 
-type LibraryTab = "public" | "shared" | "mine";
+type LibraryTab = "unified" | "mine";
 
 export function QuestionBankSection() {
-  const [activeTab, setActiveTab] = useState<LibraryTab>("public");
+  const [activeTab, setActiveTab] = useState<LibraryTab>("unified");
   const [search, setSearch] = useState("");
   const [grade, setGrade] = useState("");
   const [subject, setSubject] = useState("");
@@ -92,11 +90,15 @@ export function QuestionBankSection() {
     },
   });
 
-  const viewerId = data?.me?.id ?? null;
   const itemsState = useMemo(() => {
     try {
+      const combinedBanks = [
+        ...(data?.mineQuestionBanks ?? []),
+        ...(data?.unifiedQuestionBanks ?? []),
+      ];
+
       return {
-        items: mapQuestionBankItems(data?.questionBanks ?? [], viewerId),
+        items: mapQuestionBankItems(combinedBanks),
         errorMessage: error
           ? "Асуултын сангийн мэдээллийг ачаалахад алдаа гарлаа. Дахин оролдоно уу."
           : null,
@@ -108,21 +110,15 @@ export function QuestionBankSection() {
         errorMessage: "Асуултын сангийн өгөгдлийг боловсруулахад алдаа гарлаа.",
       };
     }
-  }, [data?.questionBanks, error, viewerId]);
+  }, [data?.mineQuestionBanks, data?.unifiedQuestionBanks, error]);
 
   const scopedItems = useMemo(() => {
-    if (!viewerId) {
-      return itemsState.items.filter((item) => item.accessKind === "PUBLIC");
-    }
-
     return itemsState.items.filter((item) =>
-      activeTab === "public"
-        ? item.accessKind === "PUBLIC"
-        : activeTab === "shared"
-          ? item.accessKind === "SHARED"
-          : item.ownerId === viewerId,
+      activeTab === "unified"
+        ? item.repositoryKind === "UNIFIED"
+        : item.repositoryKind === "MINE",
     );
-  }, [activeTab, itemsState.items, viewerId]);
+  }, [activeTab, itemsState.items]);
 
   const gradeOptions = useMemo(
     () =>
@@ -316,7 +312,7 @@ export function QuestionBankSection() {
               Асуултын сан
             </h1>
             <p className="mt-1 text-[14px] text-[#52555B]">
-              Эхлээд анги, дараа нь хичээлээ сонгоно. Ижил утгатай дэд сэдвүүдийг нэгтгэн харуулж, хүсвэл дэд сэдвээр нь нэмж шүүнэ.
+              Эхлээд хадгалах газраа, дараа нь анги ба хичээлээ сонгоно. Нэгдсэн сан нь community болон нээлттэй эх сурвалжуудыг нэгтгэнэ.
             </p>
             </div>
           </div>
@@ -332,14 +328,9 @@ export function QuestionBankSection() {
 
         <div className="flex flex-wrap gap-3">
           <QuestionBankTabButton
-            active={activeTab === "public"}
-            label="Нээлттэй сан"
-            onClick={() => setActiveTab("public")}
-          />
-          <QuestionBankTabButton
-            active={activeTab === "shared"}
-            label="Community сан"
-            onClick={() => setActiveTab("shared")}
+            active={activeTab === "unified"}
+            label="Нэгдсэн сан"
+            onClick={() => setActiveTab("unified")}
           />
           <QuestionBankTabButton
             active={activeTab === "mine"}
@@ -433,6 +424,11 @@ export function QuestionBankSection() {
           initialGrade={grade ? Number(grade) : null}
           initialSubject={subject || null}
           initialTopic={topic || null}
+          initialRepositoryKind={
+            activeTab === "unified"
+              ? QuestionRepositoryKind.Unified
+              : QuestionRepositoryKind.Mine
+          }
           onClose={() => setCreateOpen(false)}
         />
       ) : null}

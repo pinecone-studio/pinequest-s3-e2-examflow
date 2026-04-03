@@ -7,6 +7,7 @@ import { QuestionBankDetailSection } from "./question-bank-detail-section";
 export function QuestionBankDetailView({ bankId }: { bankId: string }) {
   const [open, setOpen] = useState(false);
   const [subject, setSubject] = useState("Хичээл");
+  const [repositoryKind, setRepositoryKind] = useState<"MINE" | "UNIFIED">("MINE");
 
   return (
     <>
@@ -14,9 +15,11 @@ export function QuestionBankDetailView({ bankId }: { bankId: string }) {
         bankId={bankId}
         onAddQuestion={() => setOpen(true)}
         onSubjectChange={setSubject}
+        onRepositoryKindChange={setRepositoryKind}
       />
       <QuestionBankAddQuestionDialog
         bankId={bankId}
+        repositoryKind={repositoryKind}
         open={open}
         subject={subject}
         onClose={() => setOpen(false)}

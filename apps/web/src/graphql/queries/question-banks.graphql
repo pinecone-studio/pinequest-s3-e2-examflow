@@ -2,10 +2,60 @@ query QuestionBanksQuery {
   me {
     id
   }
-  questionBanks {
+  mineRepositoryTree: questionRepositoryTree(repository: MINE) {
+    subject
+    grades {
+      grade
+      topics {
+        topic
+        bankCount
+        questionCount
+        subtopics {
+          name
+          questionCount
+          bankIds
+        }
+      }
+    }
+  }
+  unifiedRepositoryTree: questionRepositoryTree(repository: UNIFIED) {
+    subject
+    grades {
+      grade
+      topics {
+        topic
+        bankCount
+        questionCount
+        subtopics {
+          name
+          questionCount
+          bankIds
+        }
+      }
+    }
+  }
+  mineQuestionBanks: questionBanks(repository: MINE) {
     id
     title
     description
+    repositoryKind
+    grade
+    subject
+    topic
+    topics
+    visibility
+    questionCount
+    createdAt
+    owner {
+      id
+      fullName
+    }
+  }
+  unifiedQuestionBanks: questionBanks(repository: UNIFIED) {
+    id
+    title
+    description
+    repositoryKind
     grade
     subject
     topic
