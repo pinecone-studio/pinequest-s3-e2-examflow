@@ -1,6 +1,6 @@
 "use client";
 
-import { QuestionBankVisibility } from "@/graphql/generated";
+import { QuestionRepositoryKind } from "@/graphql/generated";
 import { QuestionBankDialogSelect } from "./question-bank-dialog-fields";
 
 export function QuestionBankCreateDialogForm({
@@ -9,7 +9,7 @@ export function QuestionBankCreateDialogForm({
   topic,
   title,
   description,
-  visibility,
+  repositoryKind,
   gradeOptions,
   subjectOptions,
   topicOptions,
@@ -18,14 +18,14 @@ export function QuestionBankCreateDialogForm({
   onTopicChange,
   onTitleChange,
   onDescriptionChange,
-  onVisibilityChange,
+  onRepositoryKindChange,
 }: {
   grade: string;
   subject: string;
   topic: string;
   title: string;
   description: string;
-  visibility: QuestionBankVisibility;
+  repositoryKind: QuestionRepositoryKind;
   gradeOptions: string[];
   subjectOptions: string[];
   topicOptions: string[];
@@ -34,7 +34,7 @@ export function QuestionBankCreateDialogForm({
   onTopicChange: (value: string) => void;
   onTitleChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
-  onVisibilityChange: (value: QuestionBankVisibility) => void;
+  onRepositoryKindChange: (value: QuestionRepositoryKind) => void;
 }) {
   return (
     <>
@@ -93,13 +93,13 @@ export function QuestionBankCreateDialogForm({
           />
         </label>
         <label className="block space-y-2">
-          <span className="text-[12px] font-medium text-[#52555B]">Харагдах байдал</span>
+          <span className="text-[12px] font-medium text-[#52555B]">Хадгалах газар</span>
           <QuestionBankDialogSelect
-            value={visibility}
-            onChange={(value) => onVisibilityChange(value as QuestionBankVisibility)}
+            value={repositoryKind}
+            onChange={(value) => onRepositoryKindChange(value as QuestionRepositoryKind)}
           >
-            <option value={QuestionBankVisibility.Private}>Миний сан</option>
-            <option value={QuestionBankVisibility.Public}>Нэгдсэн сан</option>
+            <option value={QuestionRepositoryKind.Mine}>Миний сан</option>
+            <option value={QuestionRepositoryKind.Unified}>Нэгдсэн сан</option>
           </QuestionBankDialogSelect>
         </label>
       </div>

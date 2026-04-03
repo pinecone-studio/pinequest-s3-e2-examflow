@@ -4,6 +4,8 @@
 import { useMutation } from "@apollo/client/react";
 import {
   CreateQuestionMutationDocument,
+  QuestionRepositoryKind,
+  QuestionShareScope,
   QuestionBankDetailQueryDocument,
   QuestionType,
   UpdateQuestionMutationDocument,
@@ -25,12 +27,14 @@ import type { QuestionBankQuestionRow } from "../question-bank-utils";
 
 export function QuestionBankAddQuestionDialog({
   bankId,
+  repositoryKind,
   open,
   subject,
   initialQuestion,
   onClose,
 }: {
   bankId: string;
+  repositoryKind: "MINE" | "UNIFIED";
   open: boolean;
   subject: string;
   initialQuestion?: QuestionBankQuestionRow | null;
@@ -40,7 +44,6 @@ export function QuestionBankAddQuestionDialog({
     prompt, setPrompt,
     questionType, setQuestionType,
     difficulty, setDifficulty,
-    shareScope, setShareScope,
     requiresAccessRequest, setRequiresAccessRequest,
     options, correctIndex, setCorrectIndex,
     truthValue, setTruthValue,
@@ -55,6 +58,16 @@ export function QuestionBankAddQuestionDialog({
   const [createQuestion, { loading }] = useMutation(CreateQuestionMutationDocument);
   const [updateQuestion, { loading: updateLoading }] = useMutation(UpdateQuestionMutationDocument);
   const isEditing = Boolean(initialQuestion);
+  const graphqlRepositoryKind =
+    repositoryKind === "UNIFIED"
+      ? QuestionRepositoryKind.Unified
+      : QuestionRepositoryKind.Mine;
+  const shareScope =
+    repositoryKind === "UNIFIED"
+      ? QuestionShareScope.Public
+      : QuestionShareScope.Private;
+  const resolvedRequiresAccessRequest =
+    repositoryKind === "UNIFIED" ? false : requiresAccessRequest;
 
   if (!open) {
     return null;
@@ -93,8 +106,9 @@ export function QuestionBankAddQuestionDialog({
           variables: {
             id: initialQuestion.id,
             type: questionType,
+            repositoryKind: graphqlRepositoryKind,
             shareScope,
-            requiresAccessRequest,
+            requiresAccessRequest: resolvedRequiresAccessRequest,
             ...payload,
           },
           refetchQueries: [{ query: QuestionBankDetailQueryDocument, variables: { id: bankId } }],
@@ -104,9 +118,10 @@ export function QuestionBankAddQuestionDialog({
         await createQuestion({
           variables: {
             bankId,
+            repositoryKind: graphqlRepositoryKind,
             type: questionType,
             shareScope,
-            requiresAccessRequest,
+            requiresAccessRequest: resolvedRequiresAccessRequest,
             ...payload,
           },
           refetchQueries: [{ query: QuestionBankDetailQueryDocument, variables: { id: bankId } }],
@@ -144,14 +159,13 @@ export function QuestionBankAddQuestionDialog({
           />
           <QuestionBankDialogMetaSection
             subject={subject}
+            repositoryKind={graphqlRepositoryKind}
             questionType={questionType}
             difficulty={difficulty}
-            shareScope={shareScope}
-            requiresAccessRequest={requiresAccessRequest}
+            requiresAccessRequest={resolvedRequiresAccessRequest}
             disabled={loading || updateLoading}
             onQuestionTypeChange={setQuestionType}
             onDifficultyChange={setDifficulty}
-            onShareScopeChange={setShareScope}
             onRequiresAccessRequestChange={setRequiresAccessRequest}
           />
           <QuestionBankAnswerSection

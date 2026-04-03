@@ -1,4 +1,5 @@
 import { ExamMode } from "@/graphql/generated";
+import type { QuestionRepositoryKind } from "@/graphql/generated";
 import { getCurriculumTopicGroupName } from "@/app/(teacher)/components/question-bank-curriculum";
 import type { CreateExamOptionsQuery } from "@/graphql/generated";
 import type { CreateExamRuleSourceOption } from "../create-exam-types";
@@ -9,6 +10,7 @@ export const getQuestionBankOptions = (
 ) => {
   const options = (data?.questionBanks ?? []).map((bank) => ({
     id: bank.id,
+    repositoryKind: bank.repositoryKind,
     title: bank.title,
     subject: bank.subject,
     grade: bank.grade,
@@ -35,6 +37,7 @@ export const getQuestionOptions = (
 
   const options = (data?.questions ?? []).map((question) => ({
     id: question.id,
+    repositoryKind: question.repositoryKind,
     title: question.title,
     prompt: question.prompt,
     type: question.type,
@@ -50,6 +53,7 @@ export const getQuestionOptions = (
     createdByName: question.createdBy.fullName,
     bankId: question.bank.id,
     bankTitle: question.bank.title,
+    bankRepositoryKind: question.bank.repositoryKind,
     bankSubject: question.bank.subject,
     bankGrade: question.bank.grade,
     bankTopic: question.bank.topic,
@@ -74,6 +78,7 @@ export const formatQuestionBankLabel = (
 export const getRuleSourceOptions = (
   questionBanks: Array<{
     id: string;
+    repositoryKind: QuestionRepositoryKind;
     title: string;
     subject: string;
     grade: number;
@@ -100,10 +105,11 @@ export const getRuleSourceOptions = (
       bank.subject,
       bank.topic || bank.title,
     );
-    const key = `${bank.grade}:${bank.subject}:${topicGroup}`;
+    const key = `${bank.repositoryKind}:${bank.grade}:${bank.subject}:${topicGroup}`;
     const current = grouped.get(key) ?? {
       id: key,
-      label: `${bank.grade}-р анги · ${bank.subject} · ${topicGroup}`,
+      repositoryKind: bank.repositoryKind,
+      label: `${bank.repositoryKind === "UNIFIED" ? "Нэгдсэн сан" : "Миний сан"} · ${bank.grade}-р анги · ${bank.subject} · ${topicGroup}`,
       grade: bank.grade,
       subject: bank.subject,
       topicGroup,

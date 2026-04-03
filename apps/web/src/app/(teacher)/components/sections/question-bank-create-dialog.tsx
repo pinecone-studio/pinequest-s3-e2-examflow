@@ -4,7 +4,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  QuestionBankVisibility,
+  QuestionRepositoryKind,
   QuestionBanksQueryDocument,
   useCreateQuestionBankMutationMutation,
 } from "@/graphql/generated";
@@ -21,6 +21,7 @@ type QuestionBankCreateDialogProps = {
   initialGrade?: number | null;
   initialSubject?: string | null;
   initialTopic?: string | null;
+  initialRepositoryKind?: QuestionRepositoryKind;
   onClose: () => void;
 };
 
@@ -57,6 +58,7 @@ export function QuestionBankCreateDialog({
   initialGrade = null,
   initialSubject = null,
   initialTopic = null,
+  initialRepositoryKind = QuestionRepositoryKind.Mine,
   onClose,
 }: QuestionBankCreateDialogProps) {
   const router = useRouter();
@@ -70,8 +72,8 @@ export function QuestionBankCreateDialog({
   const [grade, setGrade] = useState<string>(initialState.grade);
   const [subject, setSubject] = useState(initialState.subject);
   const [topic, setTopic] = useState(initialState.topic);
-  const [visibility, setVisibility] = useState<QuestionBankVisibility>(
-    QuestionBankVisibility.Private,
+  const [repositoryKind, setRepositoryKind] = useState<QuestionRepositoryKind>(
+    initialRepositoryKind,
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createQuestionBank, { loading }] =
@@ -111,7 +113,7 @@ export function QuestionBankCreateDialog({
           grade: numericGrade,
           subject,
           topic,
-          visibility,
+          repositoryKind,
         },
         refetchQueries: [{ query: QuestionBanksQueryDocument }],
         awaitRefetchQueries: true,
@@ -166,7 +168,7 @@ export function QuestionBankCreateDialog({
             topic={topic}
             title={title}
             description={description}
-            visibility={visibility}
+            repositoryKind={repositoryKind}
             gradeOptions={gradeOptions}
             subjectOptions={subjectOptions}
             topicOptions={topicOptions}
@@ -187,7 +189,7 @@ export function QuestionBankCreateDialog({
             }}
             onTitleChange={setTitle}
             onDescriptionChange={setDescription}
-            onVisibilityChange={setVisibility}
+            onRepositoryKindChange={setRepositoryKind}
           />
 
           {errorMessage ? (

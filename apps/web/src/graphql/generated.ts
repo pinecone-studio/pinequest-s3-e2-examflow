@@ -36,7 +36,10 @@ export type Attempt = {
   exam: Exam;
   generationSeed?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
+  isAdaptiveDiagnostic: Scalars['Boolean']['output'];
   manualScore: Scalars['Float']['output'];
+  plannedQuestions: Array<ExamQuestion>;
+  questionLimit: Scalars['Int']['output'];
   startedAt: Scalars['String']['output'];
   status: AttemptStatus;
   student: User;
@@ -396,6 +399,7 @@ export type Exam = {
   createdAt: Scalars['String']['output'];
   createdBy: User;
   description?: Maybe<Scalars['String']['output']>;
+  diagnosticConfig?: Maybe<ExamDiagnosticConfig>;
   durationMinutes: Scalars['Int']['output'];
   endsAt?: Maybe<Scalars['String']['output']>;
   generationMode: ExamGenerationMode;
@@ -415,6 +419,21 @@ export type Exam = {
   title: Scalars['String']['output'];
 };
 
+export type ExamDiagnosticConfig = {
+  __typename?: 'ExamDiagnosticConfig';
+  enabled: Scalars['Boolean']['output'];
+  questionLimit: Scalars['Int']['output'];
+  retakeMode: ExamRetakeMode;
+  startDifficulty: Difficulty;
+};
+
+export type ExamDiagnosticConfigInput = {
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  questionLimit?: InputMaybe<Scalars['Int']['input']>;
+  retakeMode?: InputMaybe<ExamRetakeMode>;
+  startDifficulty?: InputMaybe<Difficulty>;
+};
+
 export enum ExamGenerationMode {
   Manual = 'MANUAL',
   RuleBased = 'RULE_BASED'
@@ -425,16 +444,26 @@ export type ExamGenerationRule = {
   bankIds: Array<Scalars['ID']['output']>;
   count: Scalars['Int']['output'];
   difficulty?: Maybe<Difficulty>;
+  grade?: Maybe<Scalars['Int']['output']>;
   label: Scalars['String']['output'];
   points: Scalars['Int']['output'];
+  repository?: Maybe<QuestionRepositoryFilter>;
+  subject?: Maybe<Scalars['String']['output']>;
+  subtopics: Array<Scalars['String']['output']>;
+  topic?: Maybe<Scalars['String']['output']>;
 };
 
 export type ExamGenerationRuleInput = {
-  bankIds: Array<Scalars['ID']['input']>;
+  bankIds?: InputMaybe<Array<Scalars['ID']['input']>>;
   count: Scalars['Int']['input'];
   difficulty?: InputMaybe<Difficulty>;
+  grade?: InputMaybe<Scalars['Int']['input']>;
   label: Scalars['String']['input'];
   points: Scalars['Int']['input'];
+  repository?: InputMaybe<QuestionRepositoryFilter>;
+  subject?: InputMaybe<Scalars['String']['input']>;
+  subtopics?: InputMaybe<Array<Scalars['String']['input']>>;
+  topic?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type ExamImportJob = {
@@ -524,6 +553,11 @@ export type ExamQuestion = {
   points: Scalars['Int']['output'];
   question: Question;
 };
+
+export enum ExamRetakeMode {
+  RandomVariant = 'RANDOM_VARIANT',
+  SamePool = 'SAME_POOL'
+}
 
 export enum ExamStatus {
   Closed = 'CLOSED',
@@ -664,6 +698,7 @@ export type MutationCreateCommunityArgs = {
 export type MutationCreateExamArgs = {
   classId: Scalars['ID']['input'];
   description?: InputMaybe<Scalars['String']['input']>;
+  diagnosticConfig?: InputMaybe<ExamDiagnosticConfigInput>;
   durationMinutes: Scalars['Int']['input'];
   generationMode?: InputMaybe<ExamGenerationMode>;
   mode?: InputMaybe<ExamMode>;
@@ -695,15 +730,19 @@ export type MutationCreateExamImportJobArgs = {
 
 
 export type MutationCreateQuestionArgs = {
-  bankId: Scalars['ID']['input'];
+  bankId?: InputMaybe<Scalars['ID']['input']>;
   correctAnswer?: InputMaybe<Scalars['String']['input']>;
   difficulty?: InputMaybe<Difficulty>;
+  grade?: InputMaybe<Scalars['Int']['input']>;
   options?: InputMaybe<Array<Scalars['String']['input']>>;
   prompt: Scalars['String']['input'];
+  repositoryKind?: InputMaybe<QuestionRepositoryKind>;
   requiresAccessRequest?: InputMaybe<Scalars['Boolean']['input']>;
   shareScope?: InputMaybe<QuestionShareScope>;
+  subject?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   title: Scalars['String']['input'];
+  topic?: InputMaybe<Scalars['String']['input']>;
   type: QuestionType;
 };
 
@@ -711,6 +750,7 @@ export type MutationCreateQuestionArgs = {
 export type MutationCreateQuestionBankArgs = {
   description?: InputMaybe<Scalars['String']['input']>;
   grade?: InputMaybe<Scalars['Int']['input']>;
+  repositoryKind?: InputMaybe<QuestionRepositoryKind>;
   subject?: InputMaybe<Scalars['String']['input']>;
   title: Scalars['String']['input'];
   topic?: InputMaybe<Scalars['String']['input']>;
@@ -822,6 +862,7 @@ export type MutationSubmitAttemptArgs = {
 export type MutationUpdateExamDraftArgs = {
   classId: Scalars['ID']['input'];
   description?: InputMaybe<Scalars['String']['input']>;
+  diagnosticConfig?: InputMaybe<ExamDiagnosticConfigInput>;
   durationMinutes: Scalars['Int']['input'];
   examId: Scalars['ID']['input'];
   generationMode?: InputMaybe<ExamGenerationMode>;
@@ -843,6 +884,7 @@ export type MutationUpdateQuestionArgs = {
   id: Scalars['ID']['input'];
   options?: InputMaybe<Array<Scalars['String']['input']>>;
   prompt: Scalars['String']['input'];
+  repositoryKind?: InputMaybe<QuestionRepositoryKind>;
   requiresAccessRequest?: InputMaybe<Scalars['Boolean']['input']>;
   shareScope?: InputMaybe<QuestionShareScope>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -876,6 +918,7 @@ export type Query = {
   questionAccessRequests: Array<QuestionAccessRequest>;
   questionBank?: Maybe<QuestionBank>;
   questionBanks: Array<QuestionBank>;
+  questionRepositoryTree: Array<QuestionRepositorySubjectGroup>;
   questions: Array<Question>;
   users: Array<User>;
 };
@@ -922,8 +965,19 @@ export type QueryQuestionBankArgs = {
 };
 
 
+export type QueryQuestionBanksArgs = {
+  repository?: InputMaybe<QuestionRepositoryFilter>;
+};
+
+
+export type QueryQuestionRepositoryTreeArgs = {
+  repository?: InputMaybe<QuestionRepositoryFilter>;
+};
+
+
 export type QueryQuestionsArgs = {
   bankId?: InputMaybe<Scalars['ID']['input']>;
+  repository?: InputMaybe<QuestionRepositoryFilter>;
 };
 
 export type Question = {
@@ -938,6 +992,7 @@ export type Question = {
   id: Scalars['ID']['output'];
   options: Array<Scalars['String']['output']>;
   prompt: Scalars['String']['output'];
+  repositoryKind: QuestionRepositoryKind;
   requiresAccessRequest: Scalars['Boolean']['output'];
   shareScope: QuestionShareScope;
   tags: Array<Scalars['String']['output']>;
@@ -971,6 +1026,7 @@ export type QuestionBank = {
   owner: User;
   questionCount: Scalars['Int']['output'];
   questions: Array<Question>;
+  repositoryKind: QuestionRepositoryKind;
   subject: Scalars['String']['output'];
   title: Scalars['String']['output'];
   topic: Scalars['String']['output'];
@@ -982,6 +1038,44 @@ export enum QuestionBankVisibility {
   Private = 'PRIVATE',
   Public = 'PUBLIC'
 }
+
+export enum QuestionRepositoryFilter {
+  All = 'ALL',
+  Mine = 'MINE',
+  Unified = 'UNIFIED'
+}
+
+export type QuestionRepositoryGradeGroup = {
+  __typename?: 'QuestionRepositoryGradeGroup';
+  grade: Scalars['Int']['output'];
+  topics: Array<QuestionRepositoryTopicGroup>;
+};
+
+export enum QuestionRepositoryKind {
+  Mine = 'MINE',
+  Unified = 'UNIFIED'
+}
+
+export type QuestionRepositorySubjectGroup = {
+  __typename?: 'QuestionRepositorySubjectGroup';
+  grades: Array<QuestionRepositoryGradeGroup>;
+  subject: Scalars['String']['output'];
+};
+
+export type QuestionRepositorySubtopicGroup = {
+  __typename?: 'QuestionRepositorySubtopicGroup';
+  bankIds: Array<Scalars['ID']['output']>;
+  name: Scalars['String']['output'];
+  questionCount: Scalars['Int']['output'];
+};
+
+export type QuestionRepositoryTopicGroup = {
+  __typename?: 'QuestionRepositoryTopicGroup';
+  bankCount: Scalars['Int']['output'];
+  questionCount: Scalars['Int']['output'];
+  subtopics: Array<QuestionRepositorySubtopicGroup>;
+  topic: Scalars['String']['output'];
+};
 
 export enum QuestionShareScope {
   Community = 'COMMUNITY',
@@ -1132,11 +1226,11 @@ export type CreateQuestionBankMutationMutationVariables = Exact<{
   grade: Scalars['Int']['input'];
   subject: Scalars['String']['input'];
   topic: Scalars['String']['input'];
-  visibility: QuestionBankVisibility;
+  repositoryKind: QuestionRepositoryKind;
 }>;
 
 
-export type CreateQuestionBankMutationMutation = { __typename?: 'Mutation', createQuestionBank: { __typename?: 'QuestionBank', id: string, title: string, grade: number, subject: string, topic: string, visibility: QuestionBankVisibility } };
+export type CreateQuestionBankMutationMutation = { __typename?: 'Mutation', createQuestionBank: { __typename?: 'QuestionBank', id: string, title: string, repositoryKind: QuestionRepositoryKind, grade: number, subject: string, topic: string, visibility: QuestionBankVisibility } };
 
 export type CreateQuestionVariantsMutationMutationVariables = Exact<{
   sourceQuestionId: Scalars['ID']['input'];
@@ -1147,13 +1241,17 @@ export type CreateQuestionVariantsMutationMutationVariables = Exact<{
 export type CreateQuestionVariantsMutationMutation = { __typename?: 'Mutation', createQuestionVariants: Array<{ __typename?: 'Question', id: string }> };
 
 export type CreateQuestionMutationMutationVariables = Exact<{
-  bankId: Scalars['ID']['input'];
+  bankId?: InputMaybe<Scalars['ID']['input']>;
+  grade?: InputMaybe<Scalars['Int']['input']>;
+  subject?: InputMaybe<Scalars['String']['input']>;
+  topic?: InputMaybe<Scalars['String']['input']>;
   type: QuestionType;
   title: Scalars['String']['input'];
   prompt: Scalars['String']['input'];
   options?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
   correctAnswer?: InputMaybe<Scalars['String']['input']>;
   difficulty: Difficulty;
+  repositoryKind?: InputMaybe<QuestionRepositoryKind>;
   shareScope?: InputMaybe<QuestionShareScope>;
   requiresAccessRequest?: InputMaybe<Scalars['Boolean']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
@@ -1317,6 +1415,7 @@ export type UpdateQuestionMutationMutationVariables = Exact<{
   options?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
   correctAnswer?: InputMaybe<Scalars['String']['input']>;
   difficulty: Difficulty;
+  repositoryKind?: InputMaybe<QuestionRepositoryKind>;
   shareScope?: InputMaybe<QuestionShareScope>;
   requiresAccessRequest?: InputMaybe<Scalars['Boolean']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
@@ -1360,7 +1459,7 @@ export type CommunityOverviewQuery = { __typename?: 'Query', me?: { __typename?:
 export type CreateExamOptionsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type CreateExamOptionsQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string } | null, questionAccessRequests: Array<{ __typename?: 'QuestionAccessRequest', id: string, status: QuestionAccessRequestStatus, requester: { __typename?: 'User', id: string }, question: { __typename?: 'Question', id: string } }>, classes: Array<{ __typename?: 'Class', id: string, name: string, subject: string, grade: number }>, questionBanks: Array<{ __typename?: 'QuestionBank', id: string, title: string, subject: string, grade: number, topic: string }>, questions: Array<{ __typename?: 'Question', id: string, title: string, prompt: string, type: QuestionType, difficulty: Difficulty, shareScope: QuestionShareScope, requiresAccessRequest: boolean, createdAt: string, options: Array<string>, correctAnswer?: string | null, tags: Array<string>, createdBy: { __typename?: 'User', id: string, fullName: string }, bank: { __typename?: 'QuestionBank', id: string, title: string, subject: string, grade: number, topic: string, owner: { __typename?: 'User', id: string } } }> };
+export type CreateExamOptionsQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string } | null, mineRepositoryTree: Array<{ __typename?: 'QuestionRepositorySubjectGroup', subject: string, grades: Array<{ __typename?: 'QuestionRepositoryGradeGroup', grade: number, topics: Array<{ __typename?: 'QuestionRepositoryTopicGroup', topic: string, bankCount: number, questionCount: number, subtopics: Array<{ __typename?: 'QuestionRepositorySubtopicGroup', name: string, questionCount: number, bankIds: Array<string> }> }> }> }>, unifiedRepositoryTree: Array<{ __typename?: 'QuestionRepositorySubjectGroup', subject: string, grades: Array<{ __typename?: 'QuestionRepositoryGradeGroup', grade: number, topics: Array<{ __typename?: 'QuestionRepositoryTopicGroup', topic: string, bankCount: number, questionCount: number, subtopics: Array<{ __typename?: 'QuestionRepositorySubtopicGroup', name: string, questionCount: number, bankIds: Array<string> }> }> }> }>, questionAccessRequests: Array<{ __typename?: 'QuestionAccessRequest', id: string, status: QuestionAccessRequestStatus, requester: { __typename?: 'User', id: string }, question: { __typename?: 'Question', id: string } }>, classes: Array<{ __typename?: 'Class', id: string, name: string, subject: string, grade: number }>, questionBanks: Array<{ __typename?: 'QuestionBank', id: string, title: string, repositoryKind: QuestionRepositoryKind, subject: string, grade: number, topic: string }>, questions: Array<{ __typename?: 'Question', id: string, repositoryKind: QuestionRepositoryKind, title: string, prompt: string, type: QuestionType, difficulty: Difficulty, shareScope: QuestionShareScope, requiresAccessRequest: boolean, createdAt: string, options: Array<string>, correctAnswer?: string | null, tags: Array<string>, createdBy: { __typename?: 'User', id: string, fullName: string }, bank: { __typename?: 'QuestionBank', id: string, title: string, repositoryKind: QuestionRepositoryKind, subject: string, grade: number, topic: string, owner: { __typename?: 'User', id: string } } }> };
 
 export type DashboardOverviewQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1401,12 +1500,12 @@ export type QuestionBankDetailQueryQueryVariables = Exact<{
 }>;
 
 
-export type QuestionBankDetailQueryQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string } | null, questionAccessRequests: Array<{ __typename?: 'QuestionAccessRequest', id: string, status: QuestionAccessRequestStatus, createdAt: string, reviewedAt?: string | null, requester: { __typename?: 'User', id: string, fullName: string }, owner: { __typename?: 'User', id: string, fullName: string }, question: { __typename?: 'Question', id: string, title: string, prompt: string, bank: { __typename?: 'QuestionBank', id: string, title: string } } }>, questionBanks: Array<{ __typename?: 'QuestionBank', id: string, title: string, grade: number, subject: string, topic: string, owner: { __typename?: 'User', id: string } }>, questionBank?: { __typename?: 'QuestionBank', id: string, title: string, description?: string | null, grade: number, subject: string, topic: string, topics: Array<string>, visibility: QuestionBankVisibility, questionCount: number, owner: { __typename?: 'User', id: string, fullName: string }, questions: Array<{ __typename?: 'Question', id: string, title: string, prompt: string, type: QuestionType, difficulty: Difficulty, shareScope: QuestionShareScope, requiresAccessRequest: boolean, options: Array<string>, correctAnswer?: string | null, tags: Array<string>, createdBy: { __typename?: 'User', id: string, fullName: string } }> } | null };
+export type QuestionBankDetailQueryQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string } | null, questionAccessRequests: Array<{ __typename?: 'QuestionAccessRequest', id: string, status: QuestionAccessRequestStatus, createdAt: string, reviewedAt?: string | null, requester: { __typename?: 'User', id: string, fullName: string }, owner: { __typename?: 'User', id: string, fullName: string }, question: { __typename?: 'Question', id: string, title: string, prompt: string, bank: { __typename?: 'QuestionBank', id: string, title: string } } }>, myQuestionBanks: Array<{ __typename?: 'QuestionBank', id: string, title: string, grade: number, subject: string, topic: string, repositoryKind: QuestionRepositoryKind, owner: { __typename?: 'User', id: string } }>, questionBank?: { __typename?: 'QuestionBank', id: string, title: string, description?: string | null, repositoryKind: QuestionRepositoryKind, grade: number, subject: string, topic: string, topics: Array<string>, visibility: QuestionBankVisibility, questionCount: number, owner: { __typename?: 'User', id: string, fullName: string }, questions: Array<{ __typename?: 'Question', id: string, repositoryKind: QuestionRepositoryKind, title: string, prompt: string, type: QuestionType, difficulty: Difficulty, shareScope: QuestionShareScope, requiresAccessRequest: boolean, options: Array<string>, correctAnswer?: string | null, tags: Array<string>, createdBy: { __typename?: 'User', id: string, fullName: string } }> } | null };
 
 export type QuestionBanksQueryQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type QuestionBanksQueryQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string } | null, questionBanks: Array<{ __typename?: 'QuestionBank', id: string, title: string, description?: string | null, grade: number, subject: string, topic: string, topics: Array<string>, visibility: QuestionBankVisibility, questionCount: number, createdAt: string, owner: { __typename?: 'User', id: string, fullName: string } }> };
+export type QuestionBanksQueryQuery = { __typename?: 'Query', me?: { __typename?: 'User', id: string } | null, mineRepositoryTree: Array<{ __typename?: 'QuestionRepositorySubjectGroup', subject: string, grades: Array<{ __typename?: 'QuestionRepositoryGradeGroup', grade: number, topics: Array<{ __typename?: 'QuestionRepositoryTopicGroup', topic: string, bankCount: number, questionCount: number, subtopics: Array<{ __typename?: 'QuestionRepositorySubtopicGroup', name: string, questionCount: number, bankIds: Array<string> }> }> }> }>, unifiedRepositoryTree: Array<{ __typename?: 'QuestionRepositorySubjectGroup', subject: string, grades: Array<{ __typename?: 'QuestionRepositoryGradeGroup', grade: number, topics: Array<{ __typename?: 'QuestionRepositoryTopicGroup', topic: string, bankCount: number, questionCount: number, subtopics: Array<{ __typename?: 'QuestionRepositorySubtopicGroup', name: string, questionCount: number, bankIds: Array<string> }> }> }> }>, mineQuestionBanks: Array<{ __typename?: 'QuestionBank', id: string, title: string, description?: string | null, repositoryKind: QuestionRepositoryKind, grade: number, subject: string, topic: string, topics: Array<string>, visibility: QuestionBankVisibility, questionCount: number, createdAt: string, owner: { __typename?: 'User', id: string, fullName: string } }>, unifiedQuestionBanks: Array<{ __typename?: 'QuestionBank', id: string, title: string, description?: string | null, repositoryKind: QuestionRepositoryKind, grade: number, subject: string, topic: string, topics: Array<string>, visibility: QuestionBankVisibility, questionCount: number, createdAt: string, owner: { __typename?: 'User', id: string, fullName: string } }> };
 
 export type StudentExamRoomQueryVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -1993,17 +2092,18 @@ export type CreateExamMutationHookResult = ReturnType<typeof useCreateExamMutati
 export type CreateExamMutationResult = ApolloReactCommon.MutationResult<CreateExamMutation>;
 export type CreateExamMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateExamMutation, CreateExamMutationVariables>;
 export const CreateQuestionBankMutationDocument = gql`
-    mutation CreateQuestionBankMutation($title: String!, $description: String, $grade: Int!, $subject: String!, $topic: String!, $visibility: QuestionBankVisibility!) {
+    mutation CreateQuestionBankMutation($title: String!, $description: String, $grade: Int!, $subject: String!, $topic: String!, $repositoryKind: QuestionRepositoryKind!) {
   createQuestionBank(
     title: $title
     description: $description
     grade: $grade
     subject: $subject
     topic: $topic
-    visibility: $visibility
+    repositoryKind: $repositoryKind
   ) {
     id
     title
+    repositoryKind
     grade
     subject
     topic
@@ -2031,7 +2131,7 @@ export type CreateQuestionBankMutationMutationFn = ApolloReactCommon.MutationFun
  *      grade: // value for 'grade'
  *      subject: // value for 'subject'
  *      topic: // value for 'topic'
- *      visibility: // value for 'visibility'
+ *      repositoryKind: // value for 'repositoryKind'
  *   },
  * });
  */
@@ -2080,15 +2180,19 @@ export type CreateQuestionVariantsMutationMutationHookResult = ReturnType<typeof
 export type CreateQuestionVariantsMutationMutationResult = ApolloReactCommon.MutationResult<CreateQuestionVariantsMutationMutation>;
 export type CreateQuestionVariantsMutationMutationOptions = ApolloReactCommon.BaseMutationOptions<CreateQuestionVariantsMutationMutation, CreateQuestionVariantsMutationMutationVariables>;
 export const CreateQuestionMutationDocument = gql`
-    mutation CreateQuestionMutation($bankId: ID!, $type: QuestionType!, $title: String!, $prompt: String!, $options: [String!], $correctAnswer: String, $difficulty: Difficulty!, $shareScope: QuestionShareScope, $requiresAccessRequest: Boolean, $tags: [String!]) {
+    mutation CreateQuestionMutation($bankId: ID, $grade: Int, $subject: String, $topic: String, $type: QuestionType!, $title: String!, $prompt: String!, $options: [String!], $correctAnswer: String, $difficulty: Difficulty!, $repositoryKind: QuestionRepositoryKind, $shareScope: QuestionShareScope, $requiresAccessRequest: Boolean, $tags: [String!]) {
   createQuestion(
     bankId: $bankId
+    grade: $grade
+    subject: $subject
+    topic: $topic
     type: $type
     title: $title
     prompt: $prompt
     options: $options
     correctAnswer: $correctAnswer
     difficulty: $difficulty
+    repositoryKind: $repositoryKind
     shareScope: $shareScope
     requiresAccessRequest: $requiresAccessRequest
     tags: $tags
@@ -2113,12 +2217,16 @@ export type CreateQuestionMutationMutationFn = ApolloReactCommon.MutationFunctio
  * const [createQuestionMutationMutation, { data, loading, error }] = useCreateQuestionMutationMutation({
  *   variables: {
  *      bankId: // value for 'bankId'
+ *      grade: // value for 'grade'
+ *      subject: // value for 'subject'
+ *      topic: // value for 'topic'
  *      type: // value for 'type'
  *      title: // value for 'title'
  *      prompt: // value for 'prompt'
  *      options: // value for 'options'
  *      correctAnswer: // value for 'correctAnswer'
  *      difficulty: // value for 'difficulty'
+ *      repositoryKind: // value for 'repositoryKind'
  *      shareScope: // value for 'shareScope'
  *      requiresAccessRequest: // value for 'requiresAccessRequest'
  *      tags: // value for 'tags'
@@ -2870,7 +2978,7 @@ export type UpdateExamDraftMutationHookResult = ReturnType<typeof useUpdateExamD
 export type UpdateExamDraftMutationResult = ApolloReactCommon.MutationResult<UpdateExamDraftMutation>;
 export type UpdateExamDraftMutationOptions = ApolloReactCommon.BaseMutationOptions<UpdateExamDraftMutation, UpdateExamDraftMutationVariables>;
 export const UpdateQuestionMutationDocument = gql`
-    mutation UpdateQuestionMutation($id: ID!, $type: QuestionType!, $title: String!, $prompt: String!, $options: [String!], $correctAnswer: String, $difficulty: Difficulty!, $shareScope: QuestionShareScope, $requiresAccessRequest: Boolean, $tags: [String!]) {
+    mutation UpdateQuestionMutation($id: ID!, $type: QuestionType!, $title: String!, $prompt: String!, $options: [String!], $correctAnswer: String, $difficulty: Difficulty!, $repositoryKind: QuestionRepositoryKind, $shareScope: QuestionShareScope, $requiresAccessRequest: Boolean, $tags: [String!]) {
   updateQuestion(
     id: $id
     type: $type
@@ -2879,6 +2987,7 @@ export const UpdateQuestionMutationDocument = gql`
     options: $options
     correctAnswer: $correctAnswer
     difficulty: $difficulty
+    repositoryKind: $repositoryKind
     shareScope: $shareScope
     requiresAccessRequest: $requiresAccessRequest
     tags: $tags
@@ -2909,6 +3018,7 @@ export type UpdateQuestionMutationMutationFn = ApolloReactCommon.MutationFunctio
  *      options: // value for 'options'
  *      correctAnswer: // value for 'correctAnswer'
  *      difficulty: // value for 'difficulty'
+ *      repositoryKind: // value for 'repositoryKind'
  *      shareScope: // value for 'shareScope'
  *      requiresAccessRequest: // value for 'requiresAccessRequest'
  *      tags: // value for 'tags'
@@ -3461,6 +3571,38 @@ export const CreateExamOptionsDocument = gql`
   me {
     id
   }
+  mineRepositoryTree: questionRepositoryTree(repository: MINE) {
+    subject
+    grades {
+      grade
+      topics {
+        topic
+        bankCount
+        questionCount
+        subtopics {
+          name
+          questionCount
+          bankIds
+        }
+      }
+    }
+  }
+  unifiedRepositoryTree: questionRepositoryTree(repository: UNIFIED) {
+    subject
+    grades {
+      grade
+      topics {
+        topic
+        bankCount
+        questionCount
+        subtopics {
+          name
+          questionCount
+          bankIds
+        }
+      }
+    }
+  }
   questionAccessRequests {
     id
     status
@@ -3480,12 +3622,14 @@ export const CreateExamOptionsDocument = gql`
   questionBanks {
     id
     title
+    repositoryKind
     subject
     grade
     topic
   }
   questions {
     id
+    repositoryKind
     title
     prompt
     type
@@ -3503,6 +3647,7 @@ export const CreateExamOptionsDocument = gql`
     bank {
       id
       title
+      repositoryKind
       subject
       grade
       topic
@@ -4067,12 +4212,13 @@ export const QuestionBankDetailQueryDocument = gql`
       }
     }
   }
-  questionBanks {
+  myQuestionBanks: questionBanks(repository: MINE) {
     id
     title
     grade
     subject
     topic
+    repositoryKind
     owner {
       id
     }
@@ -4081,6 +4227,7 @@ export const QuestionBankDetailQueryDocument = gql`
     id
     title
     description
+    repositoryKind
     grade
     subject
     topic
@@ -4093,6 +4240,7 @@ export const QuestionBankDetailQueryDocument = gql`
     }
     questions {
       id
+      repositoryKind
       title
       prompt
       type
@@ -4151,10 +4299,60 @@ export const QuestionBanksQueryDocument = gql`
   me {
     id
   }
-  questionBanks {
+  mineRepositoryTree: questionRepositoryTree(repository: MINE) {
+    subject
+    grades {
+      grade
+      topics {
+        topic
+        bankCount
+        questionCount
+        subtopics {
+          name
+          questionCount
+          bankIds
+        }
+      }
+    }
+  }
+  unifiedRepositoryTree: questionRepositoryTree(repository: UNIFIED) {
+    subject
+    grades {
+      grade
+      topics {
+        topic
+        bankCount
+        questionCount
+        subtopics {
+          name
+          questionCount
+          bankIds
+        }
+      }
+    }
+  }
+  mineQuestionBanks: questionBanks(repository: MINE) {
     id
     title
     description
+    repositoryKind
+    grade
+    subject
+    topic
+    topics
+    visibility
+    questionCount
+    createdAt
+    owner {
+      id
+      fullName
+    }
+  }
+  unifiedQuestionBanks: questionBanks(repository: UNIFIED) {
+    id
+    title
+    description
+    repositoryKind
     grade
     subject
     topic

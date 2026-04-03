@@ -18,6 +18,7 @@ type QuestionAccessStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 type QuestionBankDetailTableProps = {
   bankId: string;
+  repositoryKind: "MINE" | "UNIFIED";
   subject: string;
   editable: boolean;
   loading: boolean;
@@ -33,6 +34,7 @@ type QuestionBankDetailTableProps = {
 
 export function QuestionBankDetailTable({
   bankId,
+  repositoryKind,
   subject,
   editable,
   loading,
@@ -361,6 +363,7 @@ export function QuestionBankDetailTable({
         <QuestionBankAddQuestionDialog
           key={`edit-${editingRow.id}`}
           bankId={bankId}
+          repositoryKind={repositoryKind}
           open
           subject={subject}
           initialQuestion={editingRow}

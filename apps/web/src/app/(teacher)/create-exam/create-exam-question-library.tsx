@@ -6,6 +6,7 @@ import { getCurriculumTopicGroupName, getCurriculumTopicGroups } from "../compon
 import {
   ExamMode,
   Difficulty as GraphqlDifficulty,
+  QuestionRepositoryKind,
   QuestionType as GraphqlQuestionType,
   useCreateQuestionMutationMutation,
 } from "@/graphql/generated";
@@ -470,6 +471,9 @@ export function CreateExamQuestionLibrary({
   onAddSelected,
 }: CreateExamQuestionLibraryProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [repositoryKind, setRepositoryKind] = useState<QuestionRepositoryKind>(
+    QuestionRepositoryKind.Unified,
+  );
   const [draftEdits, setDraftEdits] = useState<DraftEditState[]>([]);
   const [draftTemplateLabel, setDraftTemplateLabel] = useState<string | null>(null);
   const [draftsAutoFilled, setDraftsAutoFilled] = useState(false);
@@ -479,18 +483,32 @@ export function CreateExamQuestionLibrary({
   const initialSelection = initialBankId
     ? getBankSelectionFromId(questionBankOptions, initialBankId)
     : EMPTY_BANK_SELECTION;
+  const initialBank = questionBankOptions.find((bank) => bank.id === initialBankId);
   const [grade, setGrade] = useState(initialSelection.grade);
   const [subject, setSubject] = useState(initialSelection.subject);
   const [topic, setTopic] = useState(initialSelection.topic);
   const [difficulty, setDifficulty] = useState("all");
   const [type, setType] = useState("all");
-
-  const gradeOptions = getBankGradeOptions(questionBankOptions);
-  const subjectOptions = getBankSubjectOptions(questionBankOptions, grade);
-  const topicOptions = getGroupedTopicOptions(questionBankOptions, grade, subject);
-  const filteredQuestions = useMemo(
+  const resolvedRepositoryKind = initialBank?.repositoryKind ?? repositoryKind;
+  const filteredBankOptions = useMemo(
+    () =>
+      questionBankOptions.filter((bank) => bank.repositoryKind === resolvedRepositoryKind),
+    [questionBankOptions, resolvedRepositoryKind],
+  );
+  const scopedQuestionOptions = useMemo(
     () =>
       questionOptions.filter(
+        (question) => question.bankRepositoryKind === resolvedRepositoryKind,
+      ),
+    [questionOptions, resolvedRepositoryKind],
+  );
+
+  const gradeOptions = getBankGradeOptions(filteredBankOptions);
+  const subjectOptions = getBankSubjectOptions(filteredBankOptions, grade);
+  const topicOptions = getGroupedTopicOptions(filteredBankOptions, grade, subject);
+  const filteredQuestions = useMemo(
+    () =>
+      scopedQuestionOptions.filter(
         (question) =>
           !question.tags.includes("variant_draft:true") &&
           (mode !== ExamMode.Practice ||
@@ -505,11 +523,11 @@ export function CreateExamQuestionLibrary({
             type,
           ),
       ),
-    [difficulty, grade, mode, questionOptions, searchTerm, subject, topic, type],
+    [difficulty, grade, mode, scopedQuestionOptions, searchTerm, subject, topic, type],
   );
   const selectedQuestion = useMemo(
-    () => questionOptions.find((question) => question.id === checkedQuestionIds[0]),
-    [checkedQuestionIds, questionOptions],
+    () => scopedQuestionOptions.find((question) => question.id === checkedQuestionIds[0]),
+    [checkedQuestionIds, scopedQuestionOptions],
   );
   const selectedQuestionSupportsVariants =
     selectedQuestion?.type === "MCQ" ||
@@ -569,6 +587,7 @@ export function CreateExamQuestionLibrary({
         const created = await createQuestion({
           variables: {
             bankId: selectedQuestion.bankId,
+            repositoryKind: selectedQuestion.bankRepositoryKind,
             type: toGraphqlQuestionType(selectedQuestion.type),
             title: `${selectedQuestion.title || selectedQuestion.prompt} (${draft.label})`,
             prompt: draft.prompt.trim(),
@@ -616,6 +635,42 @@ export function CreateExamQuestionLibrary({
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-4">
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            className={`inline-flex h-9 items-center rounded-full border px-4 text-[14px] font-medium transition ${
+              resolvedRepositoryKind === QuestionRepositoryKind.Unified
+                ? "border-[#00267F] bg-[#00267F] text-white"
+                : "border-[#DFE1E5] bg-white text-[#344054] hover:border-[#BFC5D0]"
+            }`}
+            disabled={disabled || Boolean(initialBankId)}
+            onClick={() => {
+              setRepositoryKind(QuestionRepositoryKind.Unified);
+              setGrade("");
+              setSubject("");
+              setTopic("");
+            }}
+          >
+            Нэгдсэн сан
+          </button>
+          <button
+            type="button"
+            className={`inline-flex h-9 items-center rounded-full border px-4 text-[14px] font-medium transition ${
+              resolvedRepositoryKind === QuestionRepositoryKind.Mine
+                ? "border-[#00267F] bg-[#00267F] text-white"
+                : "border-[#DFE1E5] bg-white text-[#344054] hover:border-[#BFC5D0]"
+            }`}
+            disabled={disabled || Boolean(initialBankId)}
+            onClick={() => {
+              setRepositoryKind(QuestionRepositoryKind.Mine);
+              setGrade("");
+              setSubject("");
+              setTopic("");
+            }}
+          >
+            Миний сан
+          </button>
+        </div>
         <input
           type="search"
           className="w-full rounded-xl border border-[#DFE1E5] px-4 py-3 text-[14px] text-[#0F1216]"
