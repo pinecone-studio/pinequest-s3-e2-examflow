@@ -173,10 +173,10 @@ export function StudentExamSubmittedScreen({
   const details = [
     {
       label: "Төлөв",
-      value: isPractice ? "Practice дууссан" : isReviewed ? "Reviewed" : "Pending Review",
+      value: isPractice ? "Сорил дууссан" : isReviewed ? "Шалгасан" : "Шалгалт хүлээгдэж байна",
     },
     ...(isReviewed
-      ? [{ label: isPractice ? "Practice score" : "Final score", value: `${currentAttempt.totalScore} / ${totalPoints}` }]
+      ? [{ label: isPractice ? "Сорилын оноо" : "Эцсийн оноо", value: `${currentAttempt.totalScore} / ${totalPoints}` }]
       : []),
     {
       label: "Илгээсэн огноо, цаг",
@@ -186,7 +186,7 @@ export function StudentExamSubmittedScreen({
     { label: "Хариулсан асуултын тоо", value: String(answeredCount) },
     ...(practiceMastery
       ? [
-          { label: "Ерөнхий mastery", value: `${practiceMastery.overallMasteryPercent}%` },
+          { label: "Ерөнхий эзэмшилт", value: `${practiceMastery.overallMasteryPercent}%` },
           { label: "Тооцсон түвшин", value: practiceMastery.estimatedLevel },
         ]
       : []),
@@ -205,7 +205,7 @@ export function StudentExamSubmittedScreen({
                 : "bg-[#FFF4E5] text-[#B54708]"
             }`}
           >
-            {isPractice ? "Practice Complete" : isReviewed ? "Reviewed" : "Pending Review"}
+            {isPractice ? "Сорил дууссан" : isReviewed ? "Шалгасан" : "Шалгалт хүлээгдэж байна"}
           </span>
           <h1 className="mt-4 text-[32px] font-semibold tracking-[-0.03em] text-[#101828]">
             {exam.title}
@@ -213,9 +213,9 @@ export function StudentExamSubmittedScreen({
           <p className="mt-4 max-w-[760px] text-[16px] leading-7 text-[#475467]">
             {isReviewed
               ? isPractice
-                ? "Та энэ self-test-ийг дуусгалаа. Доор зөв хариу, өөрийн хариулт, сул сэдвийн зөвлөмж харагдана."
-                : "Багш таны шалгалтыг шалгасан байна. Final score болон feedback доор харагдана."
-              : "Таны шалгалт хүлээн авлаа. Review дуусмагц энэ хуудсанд final score болон feedback харагдана."}
+                ? "Та энэ чөлөөт сорилыг дуусгалаа. Доор зөв хариу, өөрийн хариулт, сул сэдвийн зөвлөмж харагдана."
+                : "Багш таны шалгалтыг шалгасан байна. Эцсийн оноо болон тайлбар доор харагдана."
+              : "Таны шалгалт хүлээн авлаа. Шалгалт дуусмагц энэ хуудсанд эцсийн оноо болон тайлбар харагдана."}
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -237,10 +237,10 @@ export function StudentExamSubmittedScreen({
           </p>
           <h2 className="mt-3 text-[24px] font-semibold tracking-[-0.03em] text-[#101828]">
             {isPractice
-              ? "Self-review ба зөвлөмж"
+              ? "Өөрийн дүгнэлт ба зөвлөмж"
               : isReviewed
-                ? "Final result бэлэн боллоо"
-                : "Багшийн review-г хүлээнэ үү"}
+                ? "Эцсийн үр дүн бэлэн боллоо"
+                : "Багшийн шалгалтыг хүлээнэ үү"}
           </h2>
           <p className="mt-3 text-[15px] leading-7 text-[#475467]">
             {isPractice
@@ -249,7 +249,7 @@ export function StudentExamSubmittedScreen({
                 : "Сайн байна. Ихэнх асуултад зөв хариулсан тул ахиад нэг удаа өөр хувилбараар өөрийгөө сорьж болно."
               : isReviewed
                 ? "Хэрэв багш нэмэлт тайлбар үлдээсэн бол доорх асуулт бүрийн card дээрээс уншина уу."
-                : "Review хийгдсэний дараа энэ хуудас автоматаар Reviewed төлөв, final score, feedback-тайгаар шинэчлэгдэнэ."}
+                : "Шалгалт хийгдсэний дараа энэ хуудас автоматаар шинэчлэгдэж, эцсийн оноо ба тайлбар харагдана."}
           </p>
           {practiceMastery ? (
             <div className="mt-5 space-y-4 rounded-[20px] border border-[#D5E3FF] bg-[#F8FAFF] p-4">
@@ -351,10 +351,10 @@ export function StudentExamSubmittedScreen({
         <section className="rounded-[28px] border border-[#E4E7EC] bg-white p-6 shadow-[0_20px_45px_rgba(16,24,40,0.08)]">
           <div className="mb-5">
             <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#2466D0]">
-              Teacher Review
+              Багшийн тайлбар
             </p>
             <h2 className="mt-2 text-[24px] font-semibold tracking-[-0.03em] text-[#101828]">
-              Хариулт бүрийн үнэлгээ ба feedback
+              Хариулт бүрийн үнэлгээ ба тайлбар
             </h2>
           </div>
 
@@ -419,14 +419,14 @@ export function StudentExamSubmittedScreen({
 
                     <div className="rounded-md border border-[#D5E3FF] bg-[#EEF4FF] px-4 py-3">
                       <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#2466D0]">
-                        {isPractice ? "Feedback / Зөвлөмж" : "Feedback"}
+                        {isPractice ? "Тайлбар / Зөвлөмж" : "Тайлбар"}
                       </p>
                       <p className="mt-2 text-[14px] leading-6 text-[#344054]">
                         {isPractice
                           ? answer && ((answer.autoScore ?? 0) + (answer.manualScore ?? 0)) >= item.points
                             ? "Зөв хариулсан байна. Хүсвэл ижил сэдвээр дараагийн түвшний дасгал ажиллаарай."
                             : `Энэ асуулт дээр ${answer?.question.bank?.topic ?? "энэ сэдэв"}-ээ дахин давтаад, зөв хариутайгаа харьцуулж бодоорой.`
-                          : answer?.feedback?.trim() || "Багш энэ асуултад нэмэлт feedback үлдээгээгүй байна."}
+                          : answer?.feedback?.trim() || "Багш энэ асуултад нэмэлт тайлбар үлдээгээгүй байна."}
                       </p>
                     </div>
                   </div>

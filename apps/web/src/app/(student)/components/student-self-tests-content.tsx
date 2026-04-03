@@ -1,108 +1,77 @@
 "use client";
 
-import { useMemo } from "react";
-import { CheckCirclesIcon, ClipboardIcon } from "@/app/(teacher)/components/icons";
-import { CompletedExamCard, ExamCard, SectionTitle } from "./student-exam-card";
+import { useDeferredValue, useMemo, useState } from "react";
+import { StudentEmptyState } from "./student-empty-state";
+import { StudentPageHeader } from "./student-page-header";
+import { StudentPracticeCard } from "./student-practice-card";
 import { useStudentHomeData } from "./use-student-home-data";
 
 export function StudentSelfTestsContent() {
+  const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const { data, error, loading } = useStudentHomeData();
 
   const view = useMemo(() => {
     if (!data) {
-      return { available: [], completed: [], live: null };
+      return { easy: [], hard: [], medium: [] };
     }
-
     return {
-      available: data.availableExams.filter((exam) => exam.mode === "PRACTICE"),
-      completed: data.completedExams.filter((exam) => exam.mode === "PRACTICE"),
-      live: data.liveExam?.mode === "PRACTICE" ? data.liveExam : null,
+      easy: data.practice.easy.filter((exam) => !deferredSearch || exam.searchText.includes(deferredSearch)),
+      hard: data.practice.hard.filter((exam) => !deferredSearch || exam.searchText.includes(deferredSearch)),
+      medium: data.practice.medium.filter((exam) => !deferredSearch || exam.searchText.includes(deferredSearch)),
     };
-  }, [data]);
+  }, [data, deferredSearch]);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-8 pb-[60px]">
-      <section className="rounded-[24px] border border-[#D7E3FF] bg-[radial-gradient(circle_at_top_left,#EAF1FF_0%,#F8FAFF_42%,#FFFFFF_100%)] px-6 py-8 shadow-[0_24px_60px_rgba(36,102,208,0.12)] sm:px-8">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#2466D0]">
-          Нээлттэй сорил
-        </p>
-        <h1 className="mt-3 text-[32px] font-semibold tracking-[-0.03em] text-[#101828]">
-          Өөрийгөө сорьё
-        </h1>
-        <p className="mt-3 max-w-[720px] text-[15px] leading-7 text-[#475467]">
-          Энд нийтлэгдсэн free test-үүд үргэлж идэвхтэй байна. Хэдэн ч удаа орж өгөөд,
-          оролдлого бүрийн дараа шууд оноо ба зөвлөгөөгөө харж болно.
-        </p>
-      </section>
+    <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-8 pb-12">
+      <StudentPageHeader
+        description="Хэзээ ч орж болох чөлөөт сорилоор XP цуглуулж, шат ахиарай."
+        searchPlaceholder="Сорил хайх..."
+        searchValue={search}
+        title="Өөрийгөө сорьё"
+        onSearchChange={setSearch}
+      />
 
-      {view.live ? (
-        <section className="flex flex-col gap-4">
-          <SectionTitle
-            icon={<span className="h-2 w-2 rounded-full bg-[#D40924]" />}
-            title="Яг одоо үргэлжилж буй сорил"
-          />
-          <div className="max-w-[410px]">
-            <ExamCard card={view.live} tone="live" />
-          </div>
-        </section>
-      ) : null}
-
-      <section className="flex flex-col gap-4">
-        <SectionTitle
-          badge={String(view.available.length)}
-          badgeTone="bg-[#F63D6B] text-white"
-          icon={<ClipboardIcon className="h-5 w-5 text-[#F63D6B]" />}
-          title="Нээлттэй сорилууд"
-        />
-        {loading ? (
-          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            <div className="h-[270px] animate-pulse rounded-[16px] bg-white/80" />
-            <div className="hidden h-[270px] animate-pulse rounded-[16px] bg-white/80 lg:block" />
-            <div className="hidden h-[270px] animate-pulse rounded-[16px] bg-white/80 xl:block" />
-          </div>
-        ) : null}
-        {!loading && view.available.length ? (
-          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            {view.available.map((exam) => (
-              <ExamCard key={exam.id} card={exam} tone="available" />
-            ))}
-          </div>
-        ) : null}
-        {!loading && !view.available.length ? (
-          <div className="rounded-[16px] border border-[#E7ECF6] bg-white px-5 py-6 text-[14px] text-[#667085] shadow-[0_4px_8px_-2px_rgba(0,0,0,0.06)]">
-            Одоогоор нийтлэгдсэн free test алга.
-          </div>
-        ) : null}
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <SectionTitle
-          badge={String(view.completed.length)}
-          badgeTone="border border-[#DFE1E5] bg-white text-[#98A2B3]"
-          icon={<CheckCirclesIcon className="h-5 w-5 text-[#52555B]" />}
-          title="Өмнөх оролдлогууд"
-        />
-        {loading ? (
-          <div className="h-[218px] max-w-[373px] animate-pulse rounded-[12px] bg-white/80" />
-        ) : null}
-        {!loading && view.completed.length ? (
-          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            {view.completed.map((exam) => (
-              <CompletedExamCard key={exam.attemptId} card={exam} />
-            ))}
-          </div>
-        ) : null}
-        {!loading && !view.completed.length ? (
-          <div className="rounded-[16px] border border-[#E7ECF6] bg-white px-5 py-6 text-[14px] text-[#667085] shadow-[0_4px_8px_-2px_rgba(0,0,0,0.06)]">
-            Free test дээрх өмнөх оролдлого хараахан алга.
-          </div>
-        ) : null}
-        {error ? (
-          <p className="text-[14px] text-[#B42318]">
-            Өөрийгөө сорьё өгөгдөл уншихад алдаа гарлаа.
+      <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <article className="rounded-[30px] bg-[linear-gradient(135deg,#6434F8_0%,#9B7CFF_100%)] p-6 text-white shadow-[0_24px_60px_rgba(100,52,248,0.22)]">
+          <p className="text-[13px] font-semibold uppercase tracking-[0.12em] text-white/70">Ахицын сорил</p>
+          <h1 className="mt-3 text-[34px] font-semibold tracking-[-0.03em]">Шат ахиулдаг чөлөөт сорил</h1>
+          <p className="mt-3 max-w-[620px] text-[15px] leading-7 text-white/85">
+            Хялбар, дунд, хэцүү шаттай сорилуудаас сонгож хүссэн үедээ ажиллана. Оролдлого бүр XP болж хуримтлагдана.
           </p>
-        ) : null}
+        </article>
+        <article className="rounded-[30px] border border-[#E5E7EB] bg-white p-6 shadow-[0_18px_44px_rgba(15,23,42,0.07)]">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#6434F8]">Нийт XP</p>
+          <p className="mt-3 text-[42px] font-semibold tracking-[-0.04em] text-[#101828]">{data?.practice.totalXpLabel ?? "0 XP"}</p>
+          <p className="mt-3 text-[14px] leading-6 text-[#667085]">Товлосон шалгалтаас тусдаа, зөвхөн чөлөөт сорилын ахиц энд цугларна.</p>
+        </article>
       </section>
+
+      {([
+        { key: "easy", label: "Хялбар түвшин", items: view.easy },
+        { key: "medium", label: "Дунд түвшин", items: view.medium },
+        { key: "hard", label: "Хэцүү түвшин", items: view.hard },
+      ] as const).map((section) => (
+        <section key={section.key} className="space-y-4">
+          <div>
+            <h2 className="text-[24px] font-semibold tracking-[-0.03em] text-[#101828]">{section.label}</h2>
+            <p className="mt-1 text-[14px] text-[#667085]">Чөлөөт сорилын {section.label.toLowerCase()} багц</p>
+          </div>
+
+          {loading ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, index) => <div key={index} className="h-[280px] animate-pulse rounded-[26px] bg-white" />)}
+            </div>
+          ) : section.items.length ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {section.items.map((exam) => <StudentPracticeCard key={exam.id} exam={exam} />)}
+            </div>
+          ) : (
+            <StudentEmptyState message={`${section.label} хараахан нийтлэгдээгүй байна.`} />
+          )}
+        </section>
+      ))}
+      {error ? <p className="text-[14px] text-[#B42318]">Өөрийгөө сорьё өгөгдөл уншихад алдаа гарлаа.</p> : null}
     </div>
   );
 }

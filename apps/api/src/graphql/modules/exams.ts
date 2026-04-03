@@ -25,27 +25,6 @@ import {
 import { findQuestionBankById } from "./questions";
 import { canActorUseQuestion } from "./questions";
 
-const examSelectFields = `id,
-      class_id,
-      is_template,
-      source_exam_id,
-      title,
-      description,
-      mode,
-      status,
-      duration_minutes,
-      started_at,
-      ends_at,
-      created_by_id,
-      scheduled_for,
-      shuffle_questions,
-      shuffle_answers,
-      generation_mode,
-      rules_json,
-      passing_criteria_type,
-      passing_threshold,
-      created_at`;
-
 const fullQuestionSelectFields = `id,
       bank_id,
       canonical_question_id,
@@ -73,6 +52,48 @@ const legacyQuestionSelectFields = `id,
       tags_json,
       created_by_id,
       created_at`;
+
+const examSelectFields = `id,
+      class_id,
+      is_template,
+      source_exam_id,
+      title,
+      description,
+      mode,
+      status,
+      duration_minutes,
+      started_at,
+      ends_at,
+      created_by_id,
+      scheduled_for,
+      shuffle_questions,
+      shuffle_answers,
+      generation_mode,
+      rules_json,
+      passing_criteria_type,
+      passing_threshold,
+      created_at`;
+
+const hashString = (value: string) => {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+};
+
+const stableShuffle = <T,>(items: T[], seed: string, getKey: (item: T) => string) =>
+  items
+    .map((item, index) => ({
+      item,
+      index,
+      rank: hashString(`${seed}:${getKey(item)}:${index}`),
+    }))
+    .sort((left, right) => left.rank - right.rank || left.index - right.index)
+    .map(({ item }) => item);
 
 const isMissingQuestionSharingColumnError = (error: unknown) =>
   error instanceof Error &&
@@ -123,27 +144,6 @@ const allQuestionsCompat = async (
     return legacyRows.map((row) => toCompatQuestionRow(row));
   }
 };
-
-const hashString = (value: string) => {
-  let hash = 2166136261;
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  return hash >>> 0;
-};
-
-const stableShuffle = <T,>(items: T[], seed: string, getKey: (item: T) => string) =>
-  items
-    .map((item, index) => ({
-      item,
-      index,
-      rank: hashString(`${seed}:${getKey(item)}:${index}`),
-    }))
-    .sort((left, right) => left.rank - right.rank || left.index - right.index)
-    .map(({ item }) => item);
 
 const normalizeExamRules = (rules: CreateExamArgs["rules"]) =>
   (rules ?? []).map((rule) => ({
@@ -756,6 +756,7 @@ export const createExamQueriesAndMutations = ({
       mode: resolvedMode,
       scheduledFor,
     });
+    const isTemplate = resolvedMode === "PRACTICE" ? 1 : 0;
 
     await run(
       db,
@@ -785,7 +786,7 @@ export const createExamQueriesAndMutations = ({
       [
         id,
         classId,
-        1,
+        isTemplate,
         null,
         title,
         description ?? null,
@@ -1092,10 +1093,6 @@ export const createExamQueriesAndMutations = ({
   publishExam: async ({ examId }: PublishExamArgs, context: RequestContext) => {
     const actor = await requireActor(context, ["ADMIN", "TEACHER"]);
     const exam = await findExamById(db, examId);
-    invariant(
-      !exam.is_template || exam.mode === "PRACTICE",
-      "Template шалгалтыг ангид оноосны дараа эхлүүлнэ үү.",
-    );
     if (actor.role === "TEACHER") {
       const classroom = await findClass(db, exam.class_id);
       invariant(
@@ -1113,9 +1110,7 @@ export const createExamQueriesAndMutations = ({
       : exam.ends_at ?? getExamEndTimestamp(startedAt, exam.duration_minutes);
     await run(
       db,
-      exam.mode === "PRACTICE"
-        ? "UPDATE exams SET is_template = 0, status = 'PUBLISHED', started_at = ?, ends_at = ? WHERE id = ?"
-        : "UPDATE exams SET status = 'PUBLISHED', started_at = ?, ends_at = ? WHERE id = ?",
+      "UPDATE exams SET is_template = 0, status = 'PUBLISHED', started_at = ?, ends_at = ? WHERE id = ?",
       [startedAt, endsAt, examId],
     );
     const publishedExam = await findExamById(db, examId);

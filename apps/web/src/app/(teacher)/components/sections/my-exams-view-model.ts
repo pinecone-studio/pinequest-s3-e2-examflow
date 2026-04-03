@@ -133,7 +133,7 @@ const buildBaseExamView = (
     mode: exam.mode,
     title: exam.title,
     subject: exam.mode === "PRACTICE" ? "Нээлттэй сорил" : exam.class.name,
-    className: exam.mode === "PRACTICE" ? "Free test" : exam.class.name,
+    className: exam.mode === "PRACTICE" ? "Чөлөөт сорил" : exam.class.name,
     subjectName: exam.class.subject,
     classGrade: exam.class.grade,
     createdDateLabel: formatDateOnly(exam.createdAt),
@@ -146,7 +146,7 @@ const buildBaseExamView = (
     secondaryLabel:
       exam.mode === "PRACTICE"
         ? exam.status === ExamStatus.Draft
-          ? "Free test ноорог"
+          ? "Чөлөөт сорилын ноорог"
           : `Нээлттэй • ${submittedAttempts.length} оролдлого`
         : exam.status === ExamStatus.Draft
           ? "Хувийн сан"

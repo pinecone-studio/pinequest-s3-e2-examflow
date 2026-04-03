@@ -71,7 +71,7 @@ export const buildRulePreview = ({
 
     return {
       ruleId: rule.id,
-      label: source?.label ?? `Rule ${index + 1}`,
+      label: source?.label ?? `Дүрэм ${index + 1}`,
       difficultyLabel: difficultyLabel(rule.difficulty),
       count: Number(rule.count) || 0,
       questions: stableShuffle(availableQuestions, previewSeed, (question) => question.id).slice(

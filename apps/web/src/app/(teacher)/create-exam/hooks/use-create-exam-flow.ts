@@ -168,8 +168,7 @@ export const useCreateExamFlow = (
       }
 
       if (field === "mode") {
-        const nextMode = value as CreateExamFormValues["mode"];
-        nextValues.publishOnCreate = nextMode === ExamMode.Practice;
+        nextValues.publishOnCreate = true;
       }
 
       return nextValues;
@@ -310,7 +309,7 @@ export const useCreateExamFlow = (
         status: "error",
         message:
           formValues.mode === ExamMode.Practice
-            ? "Free test үүсгэхэд эзэмшигч хичээлийн анги олдсонгүй."
+            ? "Чөлөөт сорил үүсгэхэд эзэмшигч хичээлийн анги олдсонгүй."
             : "Анги сонгоно уу.",
       });
       return null;
@@ -346,7 +345,7 @@ export const useCreateExamFlow = (
         setSubmitState({
           status: "error",
           message:
-            "Practice mode-д гараар сонгох үед задгай даалгавар болон зураг оруулах асуулт дэмжигдэхгүй. Автоматаар үнэлэгддэг асуултууд сонгоно уу.",
+            "Чөлөөт сорилын горимд гараар сонгох үед задгай даалгавар болон зураг оруулах асуулт дэмжигдэхгүй. Автоматаар үнэлэгддэг асуултууд сонгоно уу.",
         });
         return null;
       }
@@ -481,7 +480,7 @@ export const useCreateExamFlow = (
 
       const targetExamId = resolvedAssignedExamId ?? createdExam.id;
 
-      if (formValues.mode === ExamMode.Practice && formValues.publishOnCreate) {
+      if (formValues.publishOnCreate) {
         await runPublishExam({
           variables: { examId: targetExamId },
         });
@@ -520,8 +519,8 @@ export const useCreateExamFlow = (
     }
   };
 
-  const publishPracticeDraft = async (): Promise<string | null> => {
-    if (!isEditMode || !draftExam || formValues.mode !== ExamMode.Practice) {
+  const publishDraft = async (): Promise<string | null> => {
+    if (!isEditMode || !draftExam) {
       return null;
     }
 
@@ -536,7 +535,7 @@ export const useCreateExamFlow = (
       });
       const publishedExam = publishResult.data?.publishExam;
       if (!publishedExam) {
-        throw new Error("Free test нийтлэгдсэн мэдээлэл ирсэнгүй.");
+        throw new Error("Шалгалт нийтлэгдсэн мэдээлэл ирсэнгүй.");
       }
 
       setSubmitState({
@@ -569,8 +568,7 @@ export const useCreateExamFlow = (
     errors,
     submitState,
     isEditMode,
-    canPublishPracticeDraft:
-      Boolean(isEditMode && draftExam?.status === ExamStatus.Draft && formValues.mode === ExamMode.Practice),
+    canPublishDraft: Boolean(isEditMode && draftExam?.status === ExamStatus.Draft),
     isOptionsLoading: optionsQuery.loading || (isEditMode && draftQuery.loading && !hasHydratedDraft),
     optionsError: optionsQuery.error ?? draftQuery.error,
     isSubmitting:
@@ -590,7 +588,7 @@ export const useCreateExamFlow = (
     updateGenerationRule,
     replaceWithPracticeDifficultyRules,
     submitForm,
-    publishPracticeDraft,
+    publishDraft,
     refetchOptions: async () => Promise.all([optionsQuery.refetch(), isEditMode ? draftQuery.refetch() : Promise.resolve()]),
   };
 };

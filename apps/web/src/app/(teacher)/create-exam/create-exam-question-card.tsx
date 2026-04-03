@@ -27,7 +27,6 @@ type CreateExamQuestionCardProps = {
   errors: CreateExamFieldErrors;
   disabled: boolean;
   onToggleQuestion: (questionId: string) => void;
-  onReplaceSelectedQuestions: (questionIds: string[]) => void;
   onAddQuestion: (questionId: string) => void;
   onPointsChange: (questionId: string, value: string) => void;
   onAddGenerationRule: () => void;
@@ -60,7 +59,6 @@ export function CreateExamQuestionCard({
   errors,
   disabled,
   onToggleQuestion,
-  onReplaceSelectedQuestions,
   onAddQuestion,
   onPointsChange,
   onAddGenerationRule,
@@ -170,9 +168,7 @@ export function CreateExamQuestionCard({
               mode={values.mode}
               disabled={disabled}
               checkedQuestionIds={drawerSelectedIds}
-              variantCount={values.variantCount}
               initialBankId={initialBankId}
-              onQuestionsRefresh={onQuestionsRefresh}
               onToggleChecked={(questionId) =>
                 setDrawerSelectedIds((current) =>
                   current.includes(questionId)
@@ -180,10 +176,6 @@ export function CreateExamQuestionCard({
                     : [...current, questionId],
                 )
               }
-              onReplaceChecked={(questionIds) => {
-                setDrawerSelectedIds(questionIds);
-                onReplaceSelectedQuestions(questionIds);
-              }}
               onAddSelected={() => {
                 drawerSelectedIds.forEach((questionId) => onAddQuestion(questionId));
                 setIsLibraryOpen(false);

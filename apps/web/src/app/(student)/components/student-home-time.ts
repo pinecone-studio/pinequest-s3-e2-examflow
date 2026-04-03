@@ -17,6 +17,19 @@ export const formatMonthDay = (value: string | null | undefined) => {
   return `${date.getMonth() + 1} сарын ${date.getDate()}`;
 };
 
+export const formatMonthYear = (value: Date) =>
+  value.toLocaleDateString("mn-MN", { year: "numeric", month: "long" });
+
+export const formatMonthDayWithYear = (value: string | null | undefined) => {
+  const date = parseDate(value);
+  if (!date) return "Огноо тодорхойгүй";
+  return date.toLocaleDateString("mn-MN", {
+    day: "numeric",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
 export const formatClock = (value: string | null | undefined) => {
   const date = parseDate(value);
   if (!date) return "Цаг тодорхойгүй";

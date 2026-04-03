@@ -37,7 +37,7 @@ export function StudentExamSessionHeader({
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.7fr)_360px]">
       <section className="overflow-hidden rounded-[28px] border border-[#DCE6FF] bg-[linear-gradient(135deg,#123B7A_0%,#2466D0_52%,#6F90FF_100%)] p-7 text-white shadow-[0_24px_60px_rgba(36,102,208,0.2)] sm:p-8">
         <Link className="inline-flex text-[14px] font-medium text-white/88" href="/student">
-          Student home руу буцах
+          Нүүр рүү буцах
         </Link>
         <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-[720px]">
