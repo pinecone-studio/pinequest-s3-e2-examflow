@@ -9,10 +9,14 @@ import {
   type CloseExamArgs,
   type ByIdArgs,
   type CreateExamArgs,
+  type ExamDiagnosticConfig,
+  type QuestionBankRow,
   type ExamQuestionRow,
   type ExamMode,
   type ExamRow,
   type PublishExamArgs,
+  parseJsonArray,
+  type QuestionRepositoryFilter,
   type QuestionRow,
   type Role,
   type UpdateExamDraftArgs,
@@ -22,32 +26,32 @@ import { findQuestionBankById } from "./questions";
 import { canActorUseQuestion } from "./questions";
 
 const fullQuestionSelectFields = `id,
-        bank_id,
-        canonical_question_id,
-        forked_from_question_id,
-        type,
-        title,
-        prompt,
-        options_json,
-        correct_answer,
-        difficulty,
-        share_scope,
-        requires_access_request,
-        tags_json,
-        created_by_id,
-        created_at`;
+      bank_id,
+      canonical_question_id,
+      forked_from_question_id,
+      type,
+      title,
+      prompt,
+      options_json,
+      correct_answer,
+      difficulty,
+      share_scope,
+      requires_access_request,
+      tags_json,
+      created_by_id,
+      created_at`;
 
 const legacyQuestionSelectFields = `id,
-        bank_id,
-        type,
-        title,
-        prompt,
-        options_json,
-        correct_answer,
-        difficulty,
-        tags_json,
-        created_by_id,
-        created_at`;
+      bank_id,
+      type,
+      title,
+      prompt,
+      options_json,
+      correct_answer,
+      difficulty,
+      tags_json,
+      created_by_id,
+      created_at`;
 
 const examSelectFields = `id,
       class_id,
@@ -97,6 +101,10 @@ const isMissingQuestionSharingColumnError = (error: unknown) =>
     error.message,
   );
 
+const isMissingQuestionAccessRequestsTableError = (error: unknown) =>
+  error instanceof Error &&
+  /no such table:\s*question_access_requests/i.test(error.message);
+
 const toCompatQuestionRow = (
   row: Omit<QuestionRow, "canonical_question_id" | "forked_from_question_id" | "share_scope" | "requires_access_request"> &
     Partial<
@@ -140,11 +148,150 @@ const allQuestionsCompat = async (
 const normalizeExamRules = (rules: CreateExamArgs["rules"]) =>
   (rules ?? []).map((rule) => ({
     label: rule.label,
-    bankIds: rule.bankIds,
+    bankIds: rule.bankIds ?? [],
+    repository: rule.repository ?? "ALL",
+    subject: rule.subject?.trim() || null,
+    grade: rule.grade ?? null,
+    topic: rule.topic?.trim() || null,
+    subtopics: (rule.subtopics ?? []).map((value) => value.trim()).filter(Boolean),
     difficulty: rule.difficulty ?? null,
     count: rule.count,
     points: rule.points,
   }));
+
+type AccessibleRuleBank = {
+  bank: QuestionBankRow;
+  communityAccessible: boolean;
+};
+
+const listAccessibleRuleBanksForTeacher = async (
+  db: D1DatabaseLike,
+  actorId: string,
+): Promise<AccessibleRuleBank[]> => {
+  const rows = await all<
+    QuestionBankRow & {
+      community_access: number | null;
+    }
+  >(
+    db,
+    `SELECT
+      qb.id,
+      qb.title,
+      qb.description,
+      qb.grade,
+      qb.subject,
+      qb.topic,
+      qb.visibility,
+      qb.owner_id,
+      qb.created_at,
+      MAX(
+        CASE
+          WHEN c.visibility = 'PUBLIC' OR c.owner_id = ? OR cm.id IS NOT NULL
+          THEN 1
+          ELSE 0
+        END
+      ) AS community_access
+     FROM question_banks qb
+     LEFT JOIN community_shared_banks csb
+       ON csb.bank_id = qb.id AND csb.status != 'ARCHIVED'
+     LEFT JOIN communities c
+       ON c.id = csb.community_id
+     LEFT JOIN community_members cm
+       ON cm.community_id = c.id AND cm.user_id = ?
+     WHERE qb.visibility = 'PUBLIC'
+        OR qb.owner_id = ?
+        OR c.visibility = 'PUBLIC'
+        OR c.owner_id = ?
+        OR cm.id IS NOT NULL
+     GROUP BY
+      qb.id,
+      qb.title,
+      qb.description,
+      qb.grade,
+      qb.subject,
+      qb.topic,
+      qb.visibility,
+      qb.owner_id,
+      qb.created_at
+     ORDER BY qb.created_at DESC`,
+    [actorId, actorId, actorId, actorId],
+  );
+
+  return rows.map(({ community_access, ...bank }) => ({
+    bank,
+    communityAccessible: (community_access ?? 0) === 1,
+  }));
+};
+
+const getRuleRepositoryKind = (bank: QuestionBankRow, communityAccessible: boolean) =>
+  bank.visibility === "PUBLIC" || communityAccessible ? "UNIFIED" : "MINE";
+
+const matchesRuleRepository = (
+  repository: QuestionRepositoryFilter | null | undefined,
+  bank: QuestionBankRow,
+  communityAccessible: boolean,
+) =>
+  !repository ||
+  repository === "ALL" ||
+  repository === getRuleRepositoryKind(bank, communityAccessible);
+
+const matchesRuleSubtopics = (
+  row: QuestionRow,
+  bank: QuestionBankRow,
+  subtopics: string[],
+) => {
+  if (subtopics.length === 0) {
+    return true;
+  }
+
+  const tagSet = new Set(parseJsonArray(row.tags_json));
+  return subtopics.some((subtopic) => tagSet.has(subtopic) || bank.topic === subtopic);
+};
+
+const normalizeDiagnosticConfig = (
+  config: CreateExamArgs["diagnosticConfig"] | undefined,
+): ExamDiagnosticConfig | null => {
+  if (!config) {
+    return null;
+  }
+
+  return {
+    enabled: config.enabled ?? false,
+    questionLimit: Math.max(1, config.questionLimit ?? 10),
+    startDifficulty: config.startDifficulty ?? "MEDIUM",
+    retakeMode: config.retakeMode ?? "RANDOM_VARIANT",
+  };
+};
+
+const serializeExamConfiguration = ({
+  rules,
+  diagnosticConfig,
+}: {
+  rules: ReturnType<typeof normalizeExamRules>;
+  diagnosticConfig: ExamDiagnosticConfig | null;
+}) =>
+  JSON.stringify({
+    rules,
+    diagnosticConfig,
+  });
+
+const validateDiagnosticConfig = ({
+  diagnosticConfig,
+  mode,
+}: {
+  diagnosticConfig: ExamDiagnosticConfig | null;
+  mode: ExamMode;
+}) => {
+  if (!diagnosticConfig || !diagnosticConfig.enabled) {
+    return;
+  }
+
+  invariant(mode === "PRACTICE", "Diagnostic тохиргоо зөвхөн free test дээр ажиллана.");
+  invariant(
+    diagnosticConfig.questionLimit >= 5 && diagnosticConfig.questionLimit <= 60,
+    "Diagnostic асуултын тоо 5-60 хооронд байна.",
+  );
+};
 
 const insertExamQuestions = async (
   db: D1DatabaseLike,
@@ -222,15 +369,50 @@ const buildRuleBasedQuestions = async ({
     invariant(rule.count > 0, "Rule бүрийн асуултын тоо 1-ээс их байна.");
     invariant(rule.points > 0, "Rule бүрийн оноо 1-ээс их байна.");
 
-    invariant(rule.bankIds.length > 0, "Rule бүр дор хаяж нэг сантай байна.");
-    const ownedBankIds = new Set<string>();
+    const sourceBanks =
+      rule.bankIds.length > 0
+        ? await Promise.all(
+            rule.bankIds.map(async (bankId) => ({
+              bank: await findQuestionBankById(db, bankId),
+              communityAccessible: false,
+            })),
+          )
+        : actor.role === "TEACHER"
+          ? (await listAccessibleRuleBanksForTeacher(db, actor.id)).filter(
+              ({ bank, communityAccessible }) =>
+                matchesRuleRepository(rule.repository, bank, communityAccessible) &&
+                (!rule.subject || bank.subject === rule.subject) &&
+                (rule.grade === null || bank.grade === rule.grade) &&
+                (!rule.topic || bank.topic === rule.topic),
+            )
+          : (
+              await all<QuestionBankRow>(
+                db,
+                `SELECT id, title, description, grade, subject, topic, visibility, owner_id, created_at
+                 FROM question_banks
+                 ORDER BY created_at DESC`,
+              )
+            )
+              .map((bank) => ({ bank, communityAccessible: false }))
+              .filter(
+                ({ bank, communityAccessible }) =>
+                  matchesRuleRepository(rule.repository, bank, communityAccessible) &&
+                  (!rule.subject || bank.subject === rule.subject) &&
+                  (rule.grade === null || bank.grade === rule.grade) &&
+                  (!rule.topic || bank.topic === rule.topic),
+              );
 
-    for (const bankId of rule.bankIds) {
-      const bank = await findQuestionBankById(db, bankId);
+    invariant(sourceBanks.length > 0, "Rule-д тохирох сан олдсонгүй.");
+
+    const ownedBankIds = new Set<string>();
+    const sourceBankIds: string[] = [];
+
+    for (const { bank, communityAccessible } of sourceBanks) {
+      sourceBankIds.push(bank.id);
       if (actor.role === "TEACHER") {
         invariant(
-          bank.visibility === "PUBLIC" || bank.owner_id === actor.id,
-          "Зөвхөн өөрийн эсвэл нээлттэй сангаас rule ашиглана.",
+          bank.owner_id === actor.id || bank.visibility === "PUBLIC" || communityAccessible,
+          "Rule-д ашиглах сангуудын эрх хүрэхгүй байна.",
         );
         if (bank.owner_id === actor.id) {
           ownedBankIds.add(bank.id);
@@ -238,24 +420,26 @@ const buildRuleBasedQuestions = async ({
       }
     }
 
-    const placeholders = rule.bankIds.map(() => "?").join(", ");
-    const rows = await allQuestionsCompat(
-      db,
-      `SELECT
-        ${fullQuestionSelectFields}
-      FROM questions
-      WHERE bank_id IN (${placeholders})
-        AND (? != 'PRACTICE' OR type NOT IN ('ESSAY', 'IMAGE_UPLOAD'))
-        AND (? IS NULL OR difficulty = ?)
-      ORDER BY created_at DESC`,
-      `SELECT
-        ${legacyQuestionSelectFields}
-      FROM questions
-      WHERE bank_id IN (${placeholders})
-        AND (? != 'PRACTICE' OR type NOT IN ('ESSAY', 'IMAGE_UPLOAD'))
-        AND (? IS NULL OR difficulty = ?)
-      ORDER BY created_at DESC`,
-      [...rule.bankIds, mode, rule.difficulty, rule.difficulty],
+    const placeholders = sourceBankIds.map(() => "?").join(", ");
+    const rows = (
+      await allQuestionsCompat(
+        db,
+        `SELECT
+          ${fullQuestionSelectFields}
+         FROM questions
+         WHERE bank_id IN (${placeholders})
+         ORDER BY created_at DESC`,
+        `SELECT
+          ${legacyQuestionSelectFields}
+         FROM questions
+         WHERE bank_id IN (${placeholders})
+         ORDER BY created_at DESC`,
+        sourceBankIds,
+      )
+    ).filter(
+      (row) =>
+        (mode !== "PRACTICE" || !["ESSAY", "IMAGE_UPLOAD"].includes(row.type)) &&
+        (rule.difficulty === null || row.difficulty === rule.difficulty),
     );
 
     const accessRequiredQuestionIds =
@@ -272,29 +456,44 @@ const buildRuleBasedQuestions = async ({
 
     if (accessRequiredQuestionIds.length > 0) {
       const approvedPlaceholders = accessRequiredQuestionIds.map(() => "?").join(", ");
-      const approvedRows = await all<{ question_id: string }>(
-        db,
-        `SELECT question_id
-         FROM question_access_requests
-         WHERE requester_user_id = ?
-           AND status = 'APPROVED'
-           AND question_id IN (${approvedPlaceholders})`,
-        [actor.id, ...accessRequiredQuestionIds],
-      );
+      try {
+        const approvedRows = await all<{ question_id: string }>(
+          db,
+          `SELECT question_id
+           FROM question_access_requests
+           WHERE requester_user_id = ?
+             AND status = 'APPROVED'
+             AND question_id IN (${approvedPlaceholders})`,
+          [actor.id, ...accessRequiredQuestionIds],
+        );
 
-      for (const approvedRow of approvedRows) {
-        approvedQuestionIds.add(approvedRow.question_id);
+        for (const approvedRow of approvedRows) {
+          approvedQuestionIds.add(approvedRow.question_id);
+        }
+      } catch (error) {
+        if (!isMissingQuestionAccessRequestsTableError(error)) {
+          throw error;
+        }
       }
     }
 
-    const availableRows = rows.filter(
-      (row) =>
+    const bankById = new Map(sourceBanks.map((entry) => [entry.bank.id, entry.bank] as const));
+
+    const availableRows = rows.filter((row) => {
+      const bank = bankById.get(row.bank_id);
+      if (!bank) {
+        return false;
+      }
+
+      return (
         !usedQuestionIds.has(row.id) &&
+        matchesRuleSubtopics(row, bank, rule.subtopics ?? []) &&
         (actor.role !== "TEACHER" ||
           row.requires_access_request !== 1 ||
           ownedBankIds.has(row.bank_id) ||
-          approvedQuestionIds.has(row.id)),
-    );
+          approvedQuestionIds.has(row.id))
+      );
+    });
     invariant(
       availableRows.length >= rule.count,
       `${rule.label} сэдвээс ${rule.count} асуулт бүрдүүлэхэд хүрэлцэхгүй байна.`,
@@ -302,7 +501,7 @@ const buildRuleBasedQuestions = async ({
 
     const picked = stableShuffle(
       availableRows,
-      `${examId}:${rule.bankIds.join("|")}:${rule.difficulty ?? "ALL"}:${index}`,
+      `${examId}:${sourceBankIds.join("|")}:${rule.topic ?? "ALL"}:${(rule.subtopics ?? []).join("|")}:${rule.difficulty ?? "ALL"}:${index}`,
       (row) => row.id,
     ).slice(0, rule.count);
 
@@ -524,6 +723,7 @@ export const createExamQueriesAndMutations = ({
       shuffleAnswers,
       generationMode,
       rules,
+      diagnosticConfig,
       passingCriteriaType,
       passingThreshold,
     }: CreateExamArgs,
@@ -541,11 +741,16 @@ export const createExamQueriesAndMutations = ({
     const id = makeId("exam");
     const createdAt = now();
     const normalizedRules = normalizeExamRules(rules);
+    const normalizedDiagnosticConfig = normalizeDiagnosticConfig(diagnosticConfig);
 
     if ((generationMode ?? "MANUAL") === "RULE_BASED") {
       invariant(normalizedRules.length > 0, "Rule-based шалгалтад дор хаяж нэг rule хэрэгтэй.");
     }
     const resolvedMode = mode ?? "SCHEDULED";
+    validateDiagnosticConfig({
+      diagnosticConfig: normalizedDiagnosticConfig,
+      mode: resolvedMode,
+    });
     const timing = resolveDraftTiming({
       durationMinutes,
       mode: resolvedMode,
@@ -595,7 +800,10 @@ export const createExamQueriesAndMutations = ({
         shuffleQuestions ? 1 : 0,
         shuffleAnswers ? 1 : 0,
         generationMode ?? "MANUAL",
-        JSON.stringify(normalizedRules),
+        serializeExamConfiguration({
+          rules: normalizedRules,
+          diagnosticConfig: normalizedDiagnosticConfig,
+        }),
         passingCriteriaType ?? "PERCENTAGE",
         passingThreshold ?? 40,
         createdAt,
@@ -769,6 +977,7 @@ export const createExamQueriesAndMutations = ({
       shuffleAnswers,
       generationMode,
       rules,
+      diagnosticConfig,
       passingCriteriaType,
       passingThreshold,
       questionItems,
@@ -790,6 +999,7 @@ export const createExamQueriesAndMutations = ({
     }
 
     const normalizedRules = normalizeExamRules(rules);
+    const normalizedDiagnosticConfig = normalizeDiagnosticConfig(diagnosticConfig);
     if ((generationMode ?? "MANUAL") === "RULE_BASED") {
       invariant(normalizedRules.length > 0, "Rule-based шалгалтад дор хаяж нэг rule хэрэгтэй.");
     } else {
@@ -810,6 +1020,10 @@ export const createExamQueriesAndMutations = ({
       }
     }
     const resolvedMode = mode ?? exam.mode;
+    validateDiagnosticConfig({
+      diagnosticConfig: normalizedDiagnosticConfig,
+      mode: resolvedMode,
+    });
     const timing = resolveDraftTiming({
       currentScheduledFor: exam.scheduled_for,
       currentStartedAt: exam.started_at,
@@ -848,7 +1062,10 @@ export const createExamQueriesAndMutations = ({
         shuffleQuestions ? 1 : 0,
         shuffleAnswers ? 1 : 0,
         generationMode ?? "MANUAL",
-        JSON.stringify(normalizedRules),
+        serializeExamConfiguration({
+          rules: normalizedRules,
+          diagnosticConfig: normalizedDiagnosticConfig,
+        }),
         passingCriteriaType ?? "PERCENTAGE",
         passingThreshold ?? 40,
         examId,
