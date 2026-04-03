@@ -21,6 +21,34 @@ import {
 import { findQuestionBankById } from "./questions";
 import { canActorUseQuestion } from "./questions";
 
+const fullQuestionSelectFields = `id,
+        bank_id,
+        canonical_question_id,
+        forked_from_question_id,
+        type,
+        title,
+        prompt,
+        options_json,
+        correct_answer,
+        difficulty,
+        share_scope,
+        requires_access_request,
+        tags_json,
+        created_by_id,
+        created_at`;
+
+const legacyQuestionSelectFields = `id,
+        bank_id,
+        type,
+        title,
+        prompt,
+        options_json,
+        correct_answer,
+        difficulty,
+        tags_json,
+        created_by_id,
+        created_at`;
+
 const examSelectFields = `id,
       class_id,
       is_template,
@@ -62,6 +90,52 @@ const stableShuffle = <T,>(items: T[], seed: string, getKey: (item: T) => string
     }))
     .sort((left, right) => left.rank - right.rank || left.index - right.index)
     .map(({ item }) => item);
+
+const isMissingQuestionSharingColumnError = (error: unknown) =>
+  error instanceof Error &&
+  /no such column: (?:[a-z_]+\.)?(canonical_question_id|forked_from_question_id|share_scope|requires_access_request)/i.test(
+    error.message,
+  );
+
+const toCompatQuestionRow = (
+  row: Omit<QuestionRow, "canonical_question_id" | "forked_from_question_id" | "share_scope" | "requires_access_request"> &
+    Partial<
+      Pick<
+        QuestionRow,
+        "canonical_question_id" | "forked_from_question_id" | "share_scope" | "requires_access_request"
+      >
+    >,
+): QuestionRow => ({
+  ...row,
+  canonical_question_id: row.canonical_question_id ?? row.id,
+  forked_from_question_id: row.forked_from_question_id ?? null,
+  share_scope: row.share_scope ?? "PRIVATE",
+  requires_access_request: row.requires_access_request ?? 0,
+});
+
+const allQuestionsCompat = async (
+  db: D1DatabaseLike,
+  fullSql: string,
+  legacySql: string,
+  params: unknown[],
+) => {
+  try {
+    return await all<QuestionRow>(db, fullSql, params);
+  } catch (error) {
+    if (!isMissingQuestionSharingColumnError(error)) {
+      throw error;
+    }
+
+    const legacyRows = await all<
+      Omit<
+        QuestionRow,
+        "canonical_question_id" | "forked_from_question_id" | "share_scope" | "requires_access_request"
+      >
+    >(db, legacySql, params);
+
+    return legacyRows.map((row) => toCompatQuestionRow(row));
+  }
+};
 
 const normalizeExamRules = (rules: CreateExamArgs["rules"]) =>
   (rules ?? []).map((rule) => ({
@@ -165,24 +239,17 @@ const buildRuleBasedQuestions = async ({
     }
 
     const placeholders = rule.bankIds.map(() => "?").join(", ");
-    const rows = await all<QuestionRow>(
+    const rows = await allQuestionsCompat(
       db,
       `SELECT
-        id,
-        bank_id,
-        canonical_question_id,
-        forked_from_question_id,
-        type,
-        title,
-        prompt,
-        options_json,
-        correct_answer,
-        difficulty,
-        share_scope,
-        requires_access_request,
-        tags_json,
-        created_by_id,
-        created_at
+        ${fullQuestionSelectFields}
+      FROM questions
+      WHERE bank_id IN (${placeholders})
+        AND (? != 'PRACTICE' OR type NOT IN ('ESSAY', 'IMAGE_UPLOAD'))
+        AND (? IS NULL OR difficulty = ?)
+      ORDER BY created_at DESC`,
+      `SELECT
+        ${legacyQuestionSelectFields}
       FROM questions
       WHERE bank_id IN (${placeholders})
         AND (? != 'PRACTICE' OR type NOT IN ('ESSAY', 'IMAGE_UPLOAD'))
@@ -484,6 +551,7 @@ export const createExamQueriesAndMutations = ({
       mode: resolvedMode,
       scheduledFor,
     });
+    const isTemplate = resolvedMode === "PRACTICE" ? 1 : 0;
 
     await run(
       db,
@@ -513,7 +581,7 @@ export const createExamQueriesAndMutations = ({
       [
         id,
         classId,
-        1,
+        isTemplate,
         null,
         title,
         description ?? null,
@@ -808,10 +876,6 @@ export const createExamQueriesAndMutations = ({
   publishExam: async ({ examId }: PublishExamArgs, context: RequestContext) => {
     const actor = await requireActor(context, ["ADMIN", "TEACHER"]);
     const exam = await findExamById(db, examId);
-    invariant(
-      !exam.is_template || exam.mode === "PRACTICE",
-      "Template шалгалтыг ангид оноосны дараа эхлүүлнэ үү.",
-    );
     if (actor.role === "TEACHER") {
       const classroom = await findClass(db, exam.class_id);
       invariant(
@@ -829,9 +893,7 @@ export const createExamQueriesAndMutations = ({
       : exam.ends_at ?? getExamEndTimestamp(startedAt, exam.duration_minutes);
     await run(
       db,
-      exam.mode === "PRACTICE"
-        ? "UPDATE exams SET is_template = 0, status = 'PUBLISHED', started_at = ?, ends_at = ? WHERE id = ?"
-        : "UPDATE exams SET status = 'PUBLISHED', started_at = ?, ends_at = ? WHERE id = ?",
+      "UPDATE exams SET is_template = 0, status = 'PUBLISHED', started_at = ?, ends_at = ? WHERE id = ?",
       [startedAt, endsAt, examId],
     );
     const publishedExam = await findExamById(db, examId);

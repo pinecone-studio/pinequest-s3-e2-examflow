@@ -1,11 +1,11 @@
 export { gql, type ApolloCache, type OperationVariables } from "@apollo/client";
-import {
-  skipToken as apolloSkipToken,
-  useLazyQuery,
-  useMutation,
-  useQuery,
-  useSuspenseQuery as apolloUseSuspenseQuery,
-} from "@apollo/client/react";
+import * as ApolloReactHooks from "@apollo/client/react";
+
+const { useLazyQuery, useMutation, useQuery } = ApolloReactHooks;
+const apolloUseSuspenseQuery = ApolloReactHooks.useSuspenseQuery;
+const localSkipToken = {};
+const apolloSkipToken =
+  "skipToken" in ApolloReactHooks ? ApolloReactHooks.skipToken : localSkipToken;
 
 export { useLazyQuery, useMutation, useQuery };
 export type {
@@ -46,8 +46,15 @@ export type UseSuspenseQueryResult<
   _TVariables extends OperationVariables = OperationVariables,
 > = { data: TData };
 
-export const skipToken = apolloSkipToken as unknown as SkipToken;
-export const useSuspenseQuery = apolloUseSuspenseQuery as <
+export const skipToken = apolloSkipToken as SkipToken;
+export const useSuspenseQuery = ((
+  query: unknown,
+  options?: SkipToken | SuspenseQueryHookOptions,
+) =>
+  apolloUseSuspenseQuery(
+    query as never,
+    options === skipToken && apolloSkipToken === localSkipToken ? undefined : options,
+  )) as <
   TData = unknown,
   TVariables extends OperationVariables = OperationVariables,
 >(

@@ -88,7 +88,9 @@ export const validateCreateExamForm = (
       `Хугацаа ${MIN_DURATION_MINUTES}-${MAX_DURATION_MINUTES} минутын хооронд байна.`;
   }
 
-  if (values.scheduledFor.trim().length && !toScheduledForIso(values.scheduledFor)) {
+  if (values.mode !== "PRACTICE" && !values.scheduledFor.trim().length) {
+    errors.scheduledFor = "Эхлэх огноо, цагаа сонгоно уу.";
+  } else if (values.scheduledFor.trim().length && !toScheduledForIso(values.scheduledFor)) {
     errors.scheduledFor = "Огноо, цагаа зөв форматаар оруулна уу.";
   }
 
@@ -113,7 +115,7 @@ export const validateCreateExamForm = (
 
   if (values.generationMode === ExamGenerationMode.RuleBased) {
     if (!values.generationRules.length) {
-      errors.generationRules = "Дор хаяж нэг rule нэмнэ үү.";
+      errors.generationRules = "Дор хаяж нэг дүрэм нэмнэ үү.";
       return errors;
     }
 
@@ -125,7 +127,7 @@ export const validateCreateExamForm = (
 
     if (hasInvalidRule) {
       errors.generationRules =
-        "Rule бүр дээр сан, асуултын тоо, нэг асуултын оноог зөв оруулна уу.";
+        "Дүрэм бүр дээр сан, асуултын тоо, нэг асуултын оноог зөв оруулна уу.";
     }
 
     return errors;

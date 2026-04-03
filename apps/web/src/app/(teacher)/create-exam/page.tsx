@@ -1,31 +1,44 @@
-import { AppShell } from "../components/app-shell";
 import { CreateExamContent } from "./create-exam-content";
-import { RoleGuard } from "@/components/role-guard";
+import { CreateExamPlanner } from "./create-exam-planner";
+import type { ExamMode } from "@/graphql/generated";
 
 type CreateExamPageProps = {
   searchParams: Promise<{
     bankId?: string;
     classId?: string;
     examId?: string;
+    mode?: string;
     returnTo?: string;
+    scheduledFor?: string;
   }>;
 };
+
+const parseExamMode = (value?: string): ExamMode | undefined =>
+  value === "PRACTICE" || value === "SCHEDULED" ? (value as ExamMode) : undefined;
 
 export default async function CreateExamPage({
   searchParams,
 }: CreateExamPageProps) {
   const params = await searchParams;
+  const initialMode = parseExamMode(params.mode);
+  const showPlanner =
+    !params.bankId
+    && params.mode === "SCHEDULED"
+    && !params.classId
+    && !params.examId
+    && !params.returnTo
+    && !params.scheduledFor;
 
-  return (
-    <RoleGuard allowedRoles={["TEACHER"]}>
-      <AppShell contentClassName="px-6 pb-10 pt-6 sm:px-7 lg:px-8 lg:pb-12 lg:pt-8">
-        <CreateExamContent
-          initialBankId={params.bankId}
-          initialClassId={params.classId}
-          examId={params.examId}
-          returnTo={params.returnTo}
-        />
-      </AppShell>
-    </RoleGuard>
+  return showPlanner ? (
+    <CreateExamPlanner />
+  ) : (
+    <CreateExamContent
+      initialBankId={params.bankId}
+      initialClassId={params.classId}
+      initialMode={initialMode}
+      initialScheduledFor={params.scheduledFor}
+      examId={params.examId}
+      returnTo={params.returnTo}
+    />
   );
 }

@@ -182,7 +182,7 @@ export function MyExamCard({ exam, mode, onView, onResults }: MyExamCardProps) {
         </div>
         <div className="relative min-w-0">
           <p className="truncate text-[14px] font-bold leading-[1.2] text-[#D8A028]">
-            {isPractice ? "Нээлттэй free test" : exam.className}
+            {isPractice ? "Нээлттэй чөлөөт сорил" : exam.className}
           </p>
         </div>
         <span

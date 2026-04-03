@@ -10,7 +10,20 @@ type DraftExam = NonNullable<EditExamDraftQuery["exam"]>;
 const matchesBankIds = (left: string[], right: string[]) =>
   left.length === right.length && left.every((id, index) => id === right[index]);
 
-export const toDraftScheduledInput = (scheduledFor?: string | null) => scheduledFor ?? "";
+const formatTwoDigits = (value: number) => String(value).padStart(2, "0");
+
+export const toDraftScheduledInput = (scheduledFor?: string | null) => {
+  if (!scheduledFor) {
+    return "";
+  }
+
+  const parsed = new Date(scheduledFor);
+  if (Number.isNaN(parsed.getTime())) {
+    return scheduledFor;
+  }
+
+  return `${parsed.getFullYear()}-${formatTwoDigits(parsed.getMonth() + 1)}-${formatTwoDigits(parsed.getDate())}T${formatTwoDigits(parsed.getHours())}:${formatTwoDigits(parsed.getMinutes())}`;
+};
 
 export const toDraftSelectedQuestionPoints = (exam: DraftExam): SelectedQuestionPoints =>
   Object.fromEntries(exam.questions.map((item) => [item.question.id, String(item.points)]));
@@ -40,7 +53,6 @@ export const toDraftFormValues = (
   scheduledFor: toDraftScheduledInput(exam.scheduledFor),
   shuffleQuestions: exam.shuffleQuestions,
   shuffleAnswers: exam.shuffleAnswers,
-  variantCount: 1,
   generationMode: exam.generationMode,
   generationRules:
     exam.generationMode === ExamGenerationMode.RuleBased

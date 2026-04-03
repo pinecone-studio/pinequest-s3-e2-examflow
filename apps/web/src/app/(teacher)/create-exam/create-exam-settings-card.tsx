@@ -214,39 +214,10 @@ export function CreateExamSettingsCard({
             className="h-9 w-[220px] appearance-none rounded-[6px] border border-[#DFE1E5] px-3 pr-8 text-[14px] leading-5 text-[#0F1216] shadow-[0px_1px_2px_rgba(0,0,0,0.05)] outline-none"
           >
             <option value={ExamGenerationMode.Manual}>Гараар сонгох</option>
-            <option value={ExamGenerationMode.RuleBased}>Rule-based үүсгэх</option>
+            <option value={ExamGenerationMode.RuleBased}>Дүрмээр бүрдүүлэх</option>
           </select>
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#52555B] opacity-50">⌄</span>
         </label>
-      </label>
-
-      <label className="space-y-2">
-        <span className="block text-[12px] font-medium leading-4 text-[#52555B]">
-          Хувилбарын тоо
-        </span>
-        <label className="relative block w-[160px]">
-          <select
-            value={String(values.variantCount)}
-            onChange={(event) =>
-              onFieldChange(
-                "variantCount",
-                Number(event.target.value) as CreateExamFormValues["variantCount"],
-              )
-            }
-            disabled={disabled || values.generationMode === ExamGenerationMode.RuleBased}
-            className="h-9 w-[160px] appearance-none rounded-[6px] border border-[#DFE1E5] px-3 pr-8 text-[14px] leading-5 text-[#0F1216] shadow-[0px_1px_2px_rgba(0,0,0,0.05)] outline-none"
-          >
-            <option value="1">1 хувилбар</option>
-            <option value="2">2 хувилбар</option>
-            <option value="4">4 хувилбар</option>
-          </select>
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#52555B] opacity-50">⌄</span>
-        </label>
-        <span className="block text-[12px] text-[#52555B]">
-          {values.generationMode === ExamGenerationMode.RuleBased
-            ? "Rule-based горимд variant draft одоогоор дэмжигдээгүй."
-            : "1 асуултаас 2 эсвэл 4 хувилбарын draft үүсгээд review хийж болно."}
-        </span>
       </label>
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -266,11 +237,15 @@ export function CreateExamSettingsCard({
         />
       </div>
 
-      {values.mode === "PRACTICE" && !isEditMode ? (
+      {!isEditMode ? (
         <div className="rounded-[10px] border border-[#C7D7FE] bg-[#F5F8FF] p-3">
           <ToggleBox
             title="Үүсгээд шууд нийтлэх"
-            description="Нийтэлсэн даруйд бүх сурагчийн “Өөрийгөө сорьё” хэсэгт харагдаж, үргэлж идэвхтэй байна."
+            description={
+              values.mode === "PRACTICE"
+                ? "Нийтэлсэн даруйд бүх сурагчийн “Өөрийгөө сорьё” хэсэгт харагдаж, үргэлж идэвхтэй байна."
+                : "Нийтэлсэн даруйд сурагч дээр харагдаж, эхлэх цагаас өмнө “Хүлээгдэж байна” төлөвтэй байна."
+            }
             checked={values.publishOnCreate}
             disabled={disabled}
             onChange={(value) => onFieldChange("publishOnCreate", value)}
