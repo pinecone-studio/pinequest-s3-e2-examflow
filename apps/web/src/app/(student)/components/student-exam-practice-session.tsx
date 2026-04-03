@@ -140,10 +140,10 @@ export function StudentExamPracticeSession({
           <div className="w-full max-w-[720px] rounded-[32px] border border-white/50 bg-white/92 p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.22)]">
             <div className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full text-[32px] ${activeLevel.passed ? "animate-bounce bg-[#ECFDF3] text-[#027A48]" : "bg-[#FEF3F2] text-[#B42318]"}`}>{activeLevel.passed ? "↑" : "!"}</div>
             <p className="mt-5 text-[14px] font-semibold uppercase tracking-[0.16em] text-[#2553B8]">{activeLevel.label}</p>
-            <h2 className="mt-3 text-[34px] font-semibold tracking-[-0.03em] text-[#101828]">{activeLevel.passed ? (allPassed ? "Practice complete" : "Level unlocked") : "Дахин оролдоё"}</h2>
-            <p className="mt-4 text-[16px] leading-8 text-[#475467]">Accuracy {(activeLevel.accuracy * 100).toFixed(0)}% • Threshold 70% • {activeLevel.correct}/{Math.max(activeLevel.gradable, 1)} зөв</p>
+            <h2 className="mt-3 text-[34px] font-semibold tracking-[-0.03em] text-[#101828]">{activeLevel.passed ? (allPassed ? "Сорил дууслаа" : "Дараагийн шат нээгдлээ") : "Дахин оролдоё"}</h2>
+            <p className="mt-4 text-[16px] leading-8 text-[#475467]">Нарийвчлал {(activeLevel.accuracy * 100).toFixed(0)}% • Босго 70% • {activeLevel.correct}/{Math.max(activeLevel.gradable, 1)} зөв</p>
             <button className={`mt-6 inline-flex h-14 items-center justify-center rounded-[20px] px-7 text-[15px] font-semibold text-white shadow-[0_16px_32px_rgba(37,83,184,0.26)] ${activeLevel.passed ? "bg-[#2553B8]" : "bg-[#B42318]"}`} onClick={handleNext} type="button">
-              {activeLevel.passed ? (allPassed ? "Practice дуусгах" : "Next level") : "Retry level"}
+              {activeLevel.passed ? (allPassed ? "Сорилыг дуусгах" : "Дараагийн шат") : "Шатыг дахин оролдох"}
             </button>
           </div>
         ) : (
@@ -160,7 +160,7 @@ export function StudentExamPracticeSession({
 
         {feedbackOpen && !levelFinished ? (
           <button className="rounded-full bg-white px-6 py-3 text-[15px] font-semibold text-[#2553B8] shadow-[0_12px_30px_rgba(15,23,42,0.14)]" onClick={handleNext} type="button">
-            {result ? "Next" : "Зөв хариуг харлаа, үргэлжлүүлье"}
+            {result ? "Дараах" : "Зөв хариуг харлаа, үргэлжлүүлье"}
           </button>
         ) : null}
         {errorMessage ? <p className="text-center text-[14px] font-medium text-white">{errorMessage}</p> : null}

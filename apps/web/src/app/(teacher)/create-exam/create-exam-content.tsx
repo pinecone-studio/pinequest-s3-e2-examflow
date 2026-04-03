@@ -1,21 +1,23 @@
 /* eslint-disable max-lines */
 "use client";
 
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ExamMode } from "@/graphql/generated";
 import { CreateExamDetailsCard } from "./create-exam-details-card";
 import { CreateExamHeader } from "./create-exam-header";
+import { CreateExamBuilderSkeleton } from "./create-exam-loading-skeletons";
 import { CreateExamQuestionCard } from "./create-exam-question-card";
 import { CreateExamSettingsCard } from "./create-exam-settings-card";
 import { CreateExamSubmitAlert } from "./create-exam-submit-alert";
-import { TeacherBackButton } from "../components/teacher-back-button";
 import { useCreateExamFlow } from "./hooks/use-create-exam-flow";
 
 type CreateExamContentProps = {
   initialClassId?: string;
   initialBankId?: string;
   examId?: string;
+  initialMode?: ExamMode;
+  initialScheduledFor?: string;
   returnTo?: string;
 };
 
@@ -25,12 +27,12 @@ type ModeChooserProps = {
 
 function CreateExamModeChooser({ onSelect }: ModeChooserProps) {
   return (
-    <section className="rounded-[20px] border border-[#DFE1E5] bg-white p-6 shadow-[0px_1px_3px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] sm:p-7">
-      <div className="space-y-2">
+    <section className="mx-auto max-w-[760px] rounded-[20px] border border-[#DFE1E5] bg-white p-6 shadow-[0px_1px_3px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] sm:p-7">
+      <div className="space-y-2 text-center">
         <h2 className="text-[24px] font-semibold leading-8 text-[#101828]">
           Ямар төрлийн шалгалт үүсгэх вэ?
         </h2>
-        <p className="max-w-[560px] text-[15px] leading-6 text-[#667085]">
+        <p className="mx-auto max-w-[560px] text-[15px] leading-6 text-[#667085]">
           Эхлээд урсгалаа сонговол дараагийн алхмууд илүү ойлгомжтой болно.
         </p>
       </div>
@@ -42,10 +44,10 @@ function CreateExamModeChooser({ onSelect }: ModeChooserProps) {
           onClick={() => onSelect(ExamMode.Scheduled)}
         >
           <div className="inline-flex rounded-full bg-[#EEF4FF] px-3 py-1 text-[12px] font-semibold text-[#2466D0]">
-            Ангитай
+            Товлосон
           </div>
           <h3 className="mt-4 text-[18px] font-semibold leading-7 text-[#101828]">
-            Ангийн шалгалт
+            Товлосон шалгалт
           </h3>
           <p className="mt-2 text-[14px] leading-6 text-[#667085]">
             Тодорхой ангид оноож, хугацаатай явуулна. Дууссаны дараа багш үр дүн, тайлан,
@@ -62,10 +64,10 @@ function CreateExamModeChooser({ onSelect }: ModeChooserProps) {
             Нээлттэй
           </div>
           <h3 className="mt-4 text-[18px] font-semibold leading-7 text-[#101828]">
-            Free test / Practice
+            Чөлөөт сорил
           </h3>
           <p className="mt-2 text-[14px] leading-6 text-[#667085]">
-            Сурагчид шууд ажиллаж болно. Дуусмагц оноо, зөв хариу, feedback-ээ тэр дор нь харна.
+            Сурагчид шууд ажиллаж болно. Дуусмагц оноо, зөв хариу, тайлбараа тэр дор нь харна.
           </p>
         </button>
       </div>
@@ -77,6 +79,8 @@ export function CreateExamContent({
   initialClassId = "",
   initialBankId = "",
   examId = "",
+  initialMode,
+  initialScheduledFor = "",
   returnTo = "",
 }: CreateExamContentProps) {
   const router = useRouter();
@@ -93,8 +97,10 @@ export function CreateExamContent({
     !flow.classOptions.length ||
     !flow.questionBankOptions.length;
   const isEditMode = flow.isEditMode;
+  const hasAppliedInitialMode = useRef(false);
+  const hasAppliedInitialScheduledFor = useRef(false);
   const [isModeChosen, setIsModeChosen] = useState(
-    Boolean(isEditMode || isClassAssignmentFlow),
+    Boolean(isEditMode || isClassAssignmentFlow || initialMode || initialScheduledFor),
   );
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -116,8 +122,12 @@ export function CreateExamContent({
     })();
   };
 
-  const backHref = returnTo || (initialBankId ? `/question-bank/${initialBankId}` : "/my-exams");
   const handleModeSelect = (mode: ExamMode) => {
+    if (!isEditMode && !isClassAssignmentFlow && mode === ExamMode.Scheduled) {
+      router.push("/create-exam?mode=SCHEDULED");
+      return;
+    }
+
     flow.setFieldValue("mode", mode);
     setIsModeChosen(true);
   };
@@ -132,10 +142,37 @@ export function CreateExamContent({
     setFieldValue("mode", ExamMode.Scheduled);
   }, [currentMode, isClassAssignmentFlow, setFieldValue]);
 
+  useEffect(() => {
+    if (
+      hasAppliedInitialMode.current
+      || !initialMode
+      || isEditMode
+      || flow.formValues.mode === initialMode
+    ) {
+      return;
+    }
+
+    hasAppliedInitialMode.current = true;
+    setFieldValue("mode", initialMode);
+  }, [flow.formValues.mode, initialMode, isEditMode, setFieldValue]);
+
+  useEffect(() => {
+    if (
+      hasAppliedInitialScheduledFor.current
+      || !initialScheduledFor
+      || isEditMode
+      || flow.formValues.scheduledFor === initialScheduledFor
+    ) {
+      return;
+    }
+
+    hasAppliedInitialScheduledFor.current = true;
+    setFieldValue("scheduledFor", initialScheduledFor);
+  }, [flow.formValues.scheduledFor, initialScheduledFor, isEditMode, setFieldValue]);
+
   return (
     <div className="mx-auto w-full max-w-[836px]">
       <form className="space-y-6" onSubmit={handleSubmit}>
-        <TeacherBackButton fallbackHref={backHref} />
         {!isEditMode && !isModeChosen ? (
           <CreateExamModeChooser onSelect={handleModeSelect} />
         ) : null}
@@ -146,8 +183,8 @@ export function CreateExamContent({
               Одоогийн төрөл:{" "}
               <span className="font-semibold text-[#101828]">
                 {flow.formValues.mode === ExamMode.Practice
-                  ? "Free test / Practice"
-                  : "Ангийн шалгалт"}
+                  ? "Чөлөөт сорил"
+                  : "Товлосон шалгалт"}
               </span>
             </span>
             {!isClassAssignmentFlow ? (
@@ -169,11 +206,11 @@ export function CreateExamContent({
           disabled={isDisabled}
           isEditMode={flow.isEditMode}
           isPublishing={false}
-          showPublishAction={flow.canPublishPracticeDraft}
+          showPublishAction={flow.canPublishDraft}
           onPublish={() => {
             void (async () => {
-              const publishedExamId = await flow.publishPracticeDraft();
-              if (publishedExamId) {
+              const publishedExamId = await flow.publishDraft();
+              if (publishedExamId && flow.formValues.mode === ExamMode.Practice) {
                 router.push("/evaluation");
               }
             })();
@@ -183,12 +220,13 @@ export function CreateExamContent({
 
         {flow.resolvedBankId ? (
           <div className="mt-4 rounded-md border border-[#B2DDFF] bg-[#F0F9FF] px-4 py-3 text-[13px] text-[#175CD3]">
-            Энэ шалгалт тухайн question bank-аас эхэлж байна. Хэрэв өөр bank сонгох бол энэ хуудсыг question bank-гүй нээнэ.
+            Энэ шалгалт тухайн асуултын сангаас эхэлж байна. Хэрэв өөр сан сонгох бол энэ
+            хуудсыг асуултын сангүй нээнэ.
           </div>
         ) : null}
 
         {flow.isOptionsLoading ? (
-          <p className="text-[13px] text-[#667085]">Системийн өгөгдөл ачаалж байна...</p>
+          <CreateExamBuilderSkeleton />
         ) : null}
 
         {flow.optionsError ? (
@@ -214,7 +252,7 @@ export function CreateExamContent({
           errors={flow.errors}
           disabled={isDisabled}
           classOptions={flow.classOptions}
-          isClassSelectionLocked={flow.isClassSelectionLocked}
+          isClassSelectionLocked={isClassAssignmentFlow}
           showModeSelector={isEditMode}
           onFieldChange={flow.setFieldValue}
         />
@@ -236,7 +274,6 @@ export function CreateExamContent({
           errors={flow.errors}
           disabled={isDisabled}
           onToggleQuestion={flow.toggleQuestion}
-          onReplaceSelectedQuestions={flow.replaceSelectedQuestions}
           onAddQuestion={flow.addQuestion}
           onPointsChange={flow.setQuestionPoints}
           onAddGenerationRule={flow.addGenerationRule}

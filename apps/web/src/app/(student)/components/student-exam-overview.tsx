@@ -31,19 +31,19 @@ export function StudentExamOverview({
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.7fr)_360px]">
       <section className="overflow-hidden rounded-[28px] border border-[#D7E3FF] bg-[radial-gradient(circle_at_top_left,#EAF1FF_0%,#F8FAFF_42%,#FFFFFF_100%)] p-7 shadow-[0_24px_60px_rgba(36,102,208,0.12)] sm:p-8">
         <Link className="inline-flex text-[14px] font-medium text-[#2466D0]" href="/student">
-          Student home руу буцах
+          Нүүр рүү буцах
         </Link>
         <div className="mt-5 flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-[720px]">
             <span className="inline-flex rounded-full bg-white px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#2466D0] shadow-[0_4px_16px_rgba(36,102,208,0.08)]">
-              {isPractice ? "Self test" : "Шалгалтын тойм"}
+              {isPractice ? "Чөлөөт сорил" : "Шалгалтын тойм"}
             </span>
             <h1 className="mt-4 text-[32px] font-semibold tracking-[-0.03em] text-[#0F172A]">
               {exam.title}
             </h1>
             <p className="mt-3 text-[15px] leading-7 text-[#475467]">
               {exam.description?.trim() || (isPractice
-                ? "Энэ practice mode нь Easy, Medium, Hard шаттай. 70%-иас дээш зөв байвал дараагийн түвшин unlock хийж, Kahoot-style нэг нэгээрээ асуулттай явна."
+                ? "Энэ чөлөөт сорил нь хялбар, дунд, хэцүү шаттай. 70%-иас дээш зөв байвал дараагийн шат нээгдэж, асуултууд нэг нэгээрээ үргэлжилнэ."
                 : "Энэ шалгалтыг эхлүүлэхээс өмнө ерөнхий мэдээллийг нягталж, бэлэн болмогц орж ажиллана.")}
             </p>
             <p className="mt-4 text-[14px] leading-6 text-[#667085]">
@@ -52,11 +52,11 @@ export function StudentExamOverview({
           </div>
           <div className="rounded-[20px] bg-[#2466D0] px-5 py-4 text-white shadow-[0_14px_30px_rgba(36,102,208,0.24)]">
             <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-white/72">
-              {isPractice ? "Шууд feedback" : "Асуултууд түгжигдсэн"}
+              {isPractice ? "Шууд тайлбар" : "Асуултууд түгжигдсэн"}
             </p>
             <p className="mt-2 max-w-[220px] text-[14px] leading-6 text-white/92">
               {isPractice
-                ? "Instant feedback, streak bonus XP, level up flow-оор ахицaa шууд мэдэрнэ."
+                ? "Хариулт бүрийн дараа шууд тайлбар авч, XP цуглуулан шат ахина."
                 : "Эхлүүлэх товч дарсны дараа асуултууд харагдаж, хугацаатай бол хугацаа шууд явж эхэлнэ."}
             </p>
           </div>
@@ -84,11 +84,11 @@ export function StudentExamOverview({
         </h2>
         <p className="mt-3 text-[15px] leading-7 text-[#475467]">
           {isPractice
-            ? "Хариулт бүр автоматаар хадгалагдана. Easy-ээс эхэлж, threshold давбал дараагийн шат нээгдэнэ. Алдаа их байвал тухайн шат дээрээ дахин оролдоно."
+            ? "Хариулт бүр автоматаар хадгалагдана. Хялбар шатнаас эхэлж, босго давбал дараагийн шат нээгдэнэ. Алдаа их байвал тухайн шатандаа дахин оролдоно."
             : "Хариулт бүр автоматаар хадгалагдана. Шалгалт эхэлсний дараа тойм дэлгэц асуултын дэлгэц рүү шилжинэ."}
         </p>
         <div className="mt-6 rounded-[20px] bg-[#F8FAFF] px-4 py-4 text-[14px] leading-6 text-[#475467]">
-          Хадгалах товч байхгүй. Хэрэглэгчийн бүх өөрчлөлт автоматаар хадгалагдах тул refresh эсвэл crash болсон ч алдагдах эрсдэл багасна.
+          Хадгалах товч байхгүй. Хэрэглэгчийн бүх өөрчлөлт автоматаар хадгалагдах тул дахин ачаалсан ч алдагдах эрсдэл багасна.
         </div>
         <button
           className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-[16px] bg-[#2466D0] text-[15px] font-semibold text-white shadow-[0_16px_36px_rgba(36,102,208,0.32)] transition hover:bg-[#1E56B2] disabled:cursor-not-allowed disabled:bg-[#98A2B3] disabled:shadow-none"
@@ -97,13 +97,13 @@ export function StudentExamOverview({
           type="button"
         >
           {isStarting
-            ? (isPractice ? "Practice test-ийг эхлүүлж байна..." : "Шалгалтыг эхлүүлж байна...")
-            : (isPractice ? "Practice test эхлүүлэх" : "Шалгалт эхлүүлэх")}
+            ? (isPractice ? "Чөлөөт сорилыг эхлүүлж байна..." : "Шалгалтыг эхлүүлж байна...")
+            : (isPractice ? "Чөлөөт сорил эхлүүлэх" : "Шалгалт эхлүүлэх")}
         </button>
         {!canStart ? (
           <p className="mt-3 text-[13px] leading-6 text-[#667085]">
             {isPractice
-              ? "Энэ practice test-ийг одоогоор эхлүүлэх боломжгүй байна."
+              ? "Энэ чөлөөт сорилыг одоогоор эхлүүлэх боломжгүй байна."
               : "Энэ шалгалтыг одоогоор эхлүүлэх боломжгүй байна."}
           </p>
         ) : null}

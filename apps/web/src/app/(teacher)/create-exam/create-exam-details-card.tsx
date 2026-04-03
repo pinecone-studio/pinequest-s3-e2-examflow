@@ -5,6 +5,7 @@ import {
   type CreateExamFieldErrors,
   type CreateExamFormValues,
 } from "./create-exam-types";
+import { CreateExamScheduleFields } from "./create-exam-schedule-fields";
 
 type CreateExamDetailsCardProps = {
   values: CreateExamFormValues;
@@ -70,9 +71,9 @@ export function CreateExamDetailsCard({
                 disabled={disabled}
                 onClick={() => onFieldChange("mode", ExamMode.Scheduled)}
               >
-                <p className="text-[14px] font-semibold text-[#0F1216]">Ангийн шалгалт</p>
+                <p className="text-[14px] font-semibold text-[#0F1216]">Товлосон шалгалт</p>
                 <p className="mt-1 text-[12px] leading-5 text-[#52555B]">
-                  Нэг удаагийн formal шалгалт. Дууссаны дараа багш review хийж болно.
+                  Нэг удаагийн албан шалгалт. Дууссаны дараа багш үнэлгээ, дүгнэлтээ хийж болно.
                 </p>
               </button>
               <button
@@ -85,9 +86,9 @@ export function CreateExamDetailsCard({
                 disabled={disabled}
                 onClick={() => onFieldChange("mode", ExamMode.Practice)}
               >
-                <p className="text-[14px] font-semibold text-[#0F1216]">Practice / Free test</p>
+                <p className="text-[14px] font-semibold text-[#0F1216]">Чөлөөт сорил</p>
                 <p className="mt-1 text-[12px] leading-5 text-[#52555B]">
-                  Олон дахин ажиллаж болно. Дуусмагц шууд дүн, feedback харуулна.
+                  Олон дахин ажиллаж болно. Дуусмагц шууд дүн, тайлбар харуулна.
                 </p>
               </button>
             </div>
@@ -108,7 +109,7 @@ export function CreateExamDetailsCard({
 
       {values.mode === ExamMode.Practice ? (
         <div className="rounded-[8px] border border-[#D5E7FF] bg-[#F5F9FF] px-4 py-3 text-[13px] leading-6 text-[#175CD3]">
-          Энэ free test ангид оноогдохгүй. Нийтэлсний дараа бүх сурагчийн
+          Энэ чөлөөт сорил ангид оноогдохгүй. Нийтэлсний дараа бүх сурагчийн
           <span className="font-semibold"> “Өөрийгөө сорьё” </span>
           хэсэгт харагдана.
         </div>
@@ -152,6 +153,14 @@ export function CreateExamDetailsCard({
         </Field>
         <span className="text-[14px] leading-5 text-[#52555B]">мин</span>
       </div>
+
+      <CreateExamScheduleFields
+        disabled={disabled}
+        errors={errors}
+        onFieldChange={onFieldChange}
+        value={values.scheduledFor}
+        values={values}
+      />
 
       <Field htmlFor="exam-description">
         <textarea

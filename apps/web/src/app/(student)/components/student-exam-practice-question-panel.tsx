@@ -112,7 +112,7 @@ export function StudentExamPracticeQuestionPanel({
 
       {!isOptionQuestion && !isShortAnswer ? (
         <div className="mt-8 rounded-[24px] border border-dashed border-[#D0D5DD] bg-[#F8FAFF] px-5 py-4 text-[15px] leading-7 text-[#475467]">
-          Энэ асуултын төрөлд instant feedback байхгүй. Хариултаа оруулаад Next-ээр үргэлжлүүлнэ.
+          Энэ асуултын төрөлд шууд тайлбар байхгүй. Хариултаа оруулаад дараах товчоор үргэлжлүүлнэ.
         </div>
       ) : null}
 

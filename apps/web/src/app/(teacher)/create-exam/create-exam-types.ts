@@ -23,7 +23,6 @@ export type CreateExamFormValues = {
   scheduledFor: string;
   shuffleQuestions: boolean;
   shuffleAnswers: boolean;
-  variantCount: 1 | 2 | 4;
   generationMode: ExamGenerationMode;
   generationRules: CreateExamGenerationRule[];
   passingCriteriaType: PassingCriteriaType;

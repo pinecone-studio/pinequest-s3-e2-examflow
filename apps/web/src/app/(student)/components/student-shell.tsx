@@ -10,13 +10,13 @@ export function StudentShell({
   contentClassName,
 }: StudentShellProps) {
   return (
-    <main className="min-h-screen bg-[#F8FAFF]">
+    <main className="min-h-screen bg-[#FCFCFD]">
       <div className="flex min-h-screen flex-col lg:flex-row">
         <StudentSidebar />
         <section className="flex-1">
           <div
             className={[
-              "min-h-full px-5 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-10",
+              "min-h-full px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10",
               contentClassName ?? "",
             ].join(" ")}
           >

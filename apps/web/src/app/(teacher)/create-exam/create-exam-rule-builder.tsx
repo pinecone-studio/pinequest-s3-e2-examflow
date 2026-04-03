@@ -74,13 +74,13 @@ export function CreateExamRuleBuilder({
           <div>
             <h3 className="text-[14px] font-semibold text-[#0F1216]">
               {mode === ExamMode.Practice
-                ? "Practice pool-оо rule-ээр бүрдүүлэх"
-                : "Rule-based асуулт бүрдүүлэлт"}
+                ? "Чөлөөт сорилын асуултыг дүрмээр бүрдүүлэх"
+                : "Дүрэмд суурилсан асуулт бүрдүүлэлт"}
             </h3>
             <p className="mt-1 text-[13px] text-[#52555B]">
               {mode === ExamMode.Practice
-                ? "Нэг сэдэв дээр Easy, Medium, Hard rule-үүдээ тусад нь өгөөд free test-ийн асуултын pool-оо автоматаар бүрдүүлнэ."
-                : "Сан, түвшин, тоо, онооны rule-үүдээ өгвөл system шалгалтын асуултуудыг автоматаар бүрдүүлнэ."}
+                ? "Нэг сэдэв дээр хялбар, дунд, хүнд дүрмүүдээ тусад нь өгөөд чөлөөт сорилын асуултыг автоматаар бүрдүүлнэ."
+                : "Сан, түвшин, тоо, онооны дүрмүүдээ өгвөл систем шалгалтын асуултуудыг автоматаар бүрдүүлнэ."}
             </p>
           </div>
           <button
@@ -89,7 +89,7 @@ export function CreateExamRuleBuilder({
             disabled={disabled}
             onClick={onAddRule}
           >
-            Rule нэмэх
+            Дүрэм нэмэх
           </button>
         </div>
 
@@ -98,7 +98,7 @@ export function CreateExamRuleBuilder({
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
               <label className="grid gap-1.5">
                 <span className="text-[12px] font-medium text-[#166534]">
-                  Сэдэв сонгоод 3 түвшний pool үүсгэх
+                  Сэдэв сонгоод 3 түвшний багц үүсгэх
                 </span>
                 <select
                   value={resolvedQuickSourceId}
@@ -120,11 +120,11 @@ export function CreateExamRuleBuilder({
                 disabled={disabled || !resolvedQuickSourceId}
                 onClick={() => onQuickFillPracticeRules(resolvedQuickSourceId)}
               >
-                Easy / Medium / Hard бэлдэх
+                Хялбар / Дунд / Хүнд бэлдэх
               </button>
             </div>
             <p className="mt-2 text-[12px] text-[#166534]">
-              Default-аар хялбар 3, дунд 4, хүнд 3 асуултын rule үүсгэнэ.
+              Анхдагчаар хялбар 3, дунд 4, хүнд 3 асуултын дүрэм үүсгэнэ.
             </p>
           </div>
         ) : null}
@@ -147,7 +147,7 @@ export function CreateExamRuleBuilder({
               >
             <div className="mb-3 flex items-center justify-between gap-3">
               <div className="text-[14px] font-medium text-[#0F1216]">
-                {`Rule ${index + 1}`}
+                {`Дүрэм ${index + 1}`}
               </div>
               {rules.length > 1 ? (
                 <button
@@ -257,7 +257,7 @@ export function CreateExamRuleBuilder({
                           Урьдчилсан сонгогдох асуултууд
                         </p>
                         <p className="mt-1 text-[12px] text-[#667085]">
-                          Save хийхээс өмнөх preview. Rule-д тулгуурласан тогтвортой санамсаргүй сонголт.
+                          Хадгалахаас өмнөх урьдчилсан харагдац. Дүрэмд тулгуурласан тогтвортой санамсаргүй сонголт.
                         </p>
                       </div>
                       <span className="rounded-full bg-white px-2.5 py-1 text-[12px] text-[#344054]">

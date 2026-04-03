@@ -36,8 +36,8 @@ export function StudentSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-full flex-col border-b border-[#E9EDF5] bg-[#F8FAFF] [background-image:radial-gradient(circle_at_1px_1px,#DCE6FF_1px,transparent_0)] [background-size:12px_12px] lg:sticky lg:top-0 lg:h-screen lg:w-[256px] lg:min-w-[256px] lg:flex-shrink-0 lg:border-b-0 lg:border-r">
-      <div className="flex h-16 items-center justify-center px-5 pt-5">
+    <aside className="flex w-full flex-col border-b border-[#EAECF0] bg-white lg:sticky lg:top-0 lg:h-screen lg:w-[270px] lg:min-w-[270px] lg:flex-shrink-0 lg:border-b-0 lg:border-r">
+      <div className="flex h-20 items-center justify-center px-6 pt-6">
         <Link
           className="flex h-14 flex-col items-center justify-center"
           href="/student"
@@ -49,7 +49,7 @@ export function StudentSidebar() {
         </Link>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 px-4 pb-4 pt-7 lg:min-h-0">
+      <nav className="flex flex-1 flex-col gap-2 px-5 pb-4 pt-6 lg:min-h-0">
         {studentNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.exact
@@ -60,10 +60,10 @@ export function StudentSidebar() {
             <Link
               key={item.label}
               href={item.href}
-              className={`flex h-11 items-center gap-3 rounded-[12px] px-4 transition ${
+              className={`flex min-h-[48px] items-center gap-3 rounded-[14px] px-4 transition ${
                 isActive
-                  ? "bg-[#6F90FF] text-[#F6F9FC] shadow-[0_12px_24px_rgba(111,144,255,0.24)]"
-                  : "text-[#6B6E72] hover:bg-white/80"
+                  ? "bg-[#6434F8] text-white shadow-[0_12px_24px_rgba(100,52,248,0.24)]"
+                  : "text-[#667085] hover:bg-[#F9FAFB]"
               }`}
             >
               <Icon className="h-[18px] w-[18px]" />
@@ -73,8 +73,8 @@ export function StudentSidebar() {
         })}
       </nav>
 
-      <div className="mt-auto p-4">
-        <div className="border-t border-[#E9EDF5] bg-[#F8FAFF] pt-4">
+      <div className="mt-auto p-5">
+        <div className="border-t border-[#EAECF0] pt-4">
           <StudentSidebarProfile />
         </div>
       </div>
